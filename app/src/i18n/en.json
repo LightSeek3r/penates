@@ -1,0 +1,75 @@
+{
+  "app": {
+    "title": "settling-map",
+    "tagline": "French property prices, and how reliable they are"
+  },
+  "search": {
+    "label": "Search for a commune",
+    "placeholder": "Commune",
+    "none": "No commune found",
+    "error": "Search is unavailable"
+  },
+  "lang": { "switch": "Français" },
+  "layers": {
+    "title": "Layers",
+    "open": "Layers and legend",
+    "close": "Close",
+    "price": "Median price per m²",
+    "priceHint": "Houses and flats sold (DVF)",
+    "typeLabel": "Property type",
+    "type": { "all": "All", "mai": "Houses", "app": "Flats" }
+  },
+  "legend": {
+    "title": "Median price, €/m²",
+    "under": "under {{value}}",
+    "over": "{{value}} and above",
+    "range": "{{from}} to {{to}}",
+    "stateTitle": "Reliability",
+    "solid": "10 sales or more",
+    "low": "Fewer than 10 sales: indicative",
+    "none": "No sales kept",
+    "noCoverage": "Outside DVF"
+  },
+  "inspector": {
+    "title": "Place details",
+    "empty": "Tap a commune to see its median price and how solid the figure is.",
+    "close": "Close details",
+    "department": "Département",
+    "median": "Median price",
+    "unit": "€/m²",
+    "noPrice": "No price shown",
+    "sales": "Sales kept: {{count}}",
+    "window": "Over {{months}} months",
+    "period": "Period: {{period}}",
+    "trend": "Yearly median, 2021 to 2025",
+    "trendMissing": "Trend unavailable",
+    "confidence": {
+      "0": "No sales kept in the period. A lack of data does not mean a low price.",
+      "1": "Few sales: treat this figure with caution.",
+      "2": "A moderate number of sales: a fairly solid figure.",
+      "3": "A high number of sales: a solid figure.",
+      "4": "Alsace-Moselle and Mayotte: these sales are not in the DVF database. A lack of data does not mean a low price."
+    },
+    "disclaimer": "Indicative: median sale price divided by built surface. It is not a valuation of any property."
+  },
+  "sources": {
+    "short": "Sources",
+    "open": "Sources and limits",
+    "title": "Sources and limits",
+    "close": "Close",
+    "method": "Price per m² is the median of house and flat sales (one dwelling per sale, off-plan sales excluded) divided by built surface. Land sold with a house is included in its price. Sales are aggregated by commune: no individual sale is shown.",
+    "limits": "Départements 57, 67, 68 and Mayotte are not covered by the DVF database. The data lags by about one semester.",
+    "dataAsOf": "Data up to {{date}}",
+    "credits": "Credits",
+    "creditsDvf": "Property transactions: DGFiP / Etalab, Licence Ouverte v2.0",
+    "creditsIgn": "Administrative boundaries: IGN, Licence Ouverte v2.0",
+    "creditsOsm": "Basemap: © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap",
+    "privacy": "No account, no cookies, no tracking. Map tiles are loaded from OpenFreeMap and Cloudflare."
+  },
+  "status": {
+    "loading": "Loading the map…",
+    "error": "The map could not load. Please try again shortly.",
+    "mapLabel": "Map of property prices in France"
+  },
+  "skip": "Skip to content"
+}

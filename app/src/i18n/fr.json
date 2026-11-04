@@ -1,0 +1,75 @@
+{
+  "app": {
+    "title": "settling-map",
+    "tagline": "Prix de l'immobilier en France, et leur fiabilité"
+  },
+  "search": {
+    "label": "Rechercher une commune",
+    "placeholder": "Commune",
+    "none": "Aucune commune trouvée",
+    "error": "La recherche est indisponible"
+  },
+  "lang": { "switch": "English" },
+  "layers": {
+    "title": "Couches",
+    "open": "Couches et légende",
+    "close": "Fermer",
+    "price": "Prix médian au m²",
+    "priceHint": "Ventes de maisons et d'appartements (DVF)",
+    "typeLabel": "Type de bien",
+    "type": { "all": "Tous", "mai": "Maisons", "app": "Appartements" }
+  },
+  "legend": {
+    "title": "Prix médian, €/m²",
+    "under": "moins de {{value}}",
+    "over": "{{value}} et plus",
+    "range": "{{from}} à {{to}}",
+    "stateTitle": "Fiabilité",
+    "solid": "10 ventes ou plus",
+    "low": "Moins de 10 ventes : indicatif",
+    "none": "Aucune vente retenue",
+    "noCoverage": "Hors base DVF"
+  },
+  "inspector": {
+    "title": "Fiche du lieu",
+    "empty": "Touchez une commune pour voir son prix médian et la solidité du chiffre.",
+    "close": "Fermer la fiche",
+    "department": "Département",
+    "median": "Prix médian",
+    "unit": "€/m²",
+    "noPrice": "Pas de prix affiché",
+    "sales": "Ventes retenues : {{count}}",
+    "window": "Sur {{months}} mois",
+    "period": "Période : {{period}}",
+    "trend": "Médiane annuelle, 2021 à 2025",
+    "trendMissing": "Évolution indisponible",
+    "confidence": {
+      "0": "Aucune vente retenue sur la période. Absence de donnée ne veut pas dire prix bas.",
+      "1": "Peu de ventes : chiffre à prendre avec prudence.",
+      "2": "Nombre de ventes moyen : chiffre assez solide.",
+      "3": "Nombre de ventes élevé : chiffre solide.",
+      "4": "Alsace-Moselle et Mayotte : ces ventes ne figurent pas dans la base DVF. Absence de donnée ne veut pas dire prix bas."
+    },
+    "disclaimer": "Indicatif : médiane des prix de vente rapportés à la surface bâtie. Ce n'est pas une estimation de bien."
+  },
+  "sources": {
+    "short": "Sources",
+    "open": "Sources et limites",
+    "title": "Sources et limites",
+    "close": "Fermer",
+    "method": "Le prix au m² est la médiane des ventes de maisons et d'appartements (une seule habitation par vente, hors VEFA), rapportées à la surface réelle bâtie. Les terrains attenants sont compris dans le prix des maisons. Les ventes sont agrégées par commune : aucune vente individuelle n'est affichée.",
+    "limits": "Les départements 57, 67, 68 et Mayotte ne sont pas couverts par la base DVF. Les données ont environ un semestre de retard.",
+    "dataAsOf": "Données jusqu'au {{date}}",
+    "credits": "Crédits",
+    "creditsDvf": "Valeurs foncières : DGFiP / Etalab, Licence Ouverte v2.0",
+    "creditsIgn": "Contours administratifs : IGN, Licence Ouverte v2.0",
+    "creditsOsm": "Fond de carte : © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap",
+    "privacy": "Aucun compte, aucun cookie, aucun suivi. Les tuiles de carte sont chargées depuis OpenFreeMap et Cloudflare."
+  },
+  "status": {
+    "loading": "Chargement de la carte…",
+    "error": "La carte n'a pas pu se charger. Réessayez dans un instant.",
+    "mapLabel": "Carte des prix de l'immobilier en France"
+  },
+  "skip": "Aller au contenu"
+}

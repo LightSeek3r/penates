@@ -1,0 +1,46 @@
+:root {
+  /* midnight enamel */
+  --ground: #0b1b3a;
+  --panel: #10264a;
+  --panel-raised: #17335f;
+  --line: rgb(244 247 251 / 14%);
+  --line-strong: rgb(244 247 251 / 32%);
+
+  /* porcelain ink */
+  --text: #f4f7fb;
+  --text-dim: #b4c2dc;
+
+  /* line inks */
+  --cobalt: #2f6fdb;
+  --amber: #f2a81d;
+  --scarlet: #e03a2f;
+  --emerald: #2fa36b;
+
+  /* price ladder (mirrors src/domain/priceLadder.ts) */
+  --price-0: #1d3f85;
+  --price-1: #2457b5;
+  --price-2: #2f73d9;
+  --price-3: #5e97ea;
+  --price-4: #93baf3;
+  --price-5: #c9dbf8;
+  --price-6: #f4f7fb;
+  --no-price: #14264a;
+
+  --font-ui: 'Hanken Grotesk Variable', system-ui, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 2.25rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --radius: 6px;
+  --target: 44px;
+  --topbar: 64px;
+  --rail: 288px;
+  --inspector: 320px;
+}

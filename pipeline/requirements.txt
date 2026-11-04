@@ -1,0 +1,9 @@
+duckdb==2.0.0
+mapbox-vector-tile==2.2.0
+numpy==2.4.6
+pmtiles==3.8.1
+pyarrow==26.0.1
+pytest==9.2.0
+requests==2.34.2
+shapely==2.2.0
+truststore==0.10.5

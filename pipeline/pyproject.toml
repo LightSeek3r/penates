@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=65"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "settling"
+version = "0.1.0"
+description = "settling-map data pipeline: DVF median price per m2 by commune, as PMTiles"
+requires-python = ">=3.11"
+
+[tool.setuptools]
+packages = ["settling"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
