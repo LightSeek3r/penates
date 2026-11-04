@@ -7,7 +7,7 @@ on:
     inputs:
       app_url:
         description: App URL to check (leave empty to skip)
-        default: https://settling.unit42.fr
+        default: ''
 
 permissions:
   contents: read
@@ -38,13 +38,14 @@ jobs:
           grep -qi '^content-range: bytes 0-16383/' range.txt
           head -c 7 range.bin | grep -q PMTiles
           echo "range + CORS + magic OK"
-      - name: Edge cache (second request should HIT)
+      - name: Edge cache behaviour (range vs full GET)
         run: |
           file=$(python3 -c "import json; print(json.load(open('manifest.json'))['tiles']['file'])")
-          for i in 1 2; do
-            curl -sS -D - -o /dev/null -H "Range: bytes=0-16383" "$TILES/$file" | grep -i -E '^(cf-cache-status|age|cache-control):' || true
-            echo ---
-          done
+          show() { grep -i -E '^(cf-cache-status|age):' | paste -sd' ' -; }
+          echo "range #1:"; curl -sS -D - -o /dev/null -H "Range: bytes=0-16383" "$TILES/$file" | show
+          echo "full   #1:"; curl -sS -D - -o /dev/null "$TILES/$file" | show
+          echo "full   #2:"; curl -sS -D - -o /dev/null "$TILES/$file" | show
+          echo "range #2 (after full GETs):"; curl -sS -D - -o /dev/null -H "Range: bytes=0-16383" "$TILES/$file" | show
       - name: CORS preflight
         run: |
           file=$(python3 -c "import json; print(json.load(open('manifest.json'))['tiles']['file'])")
