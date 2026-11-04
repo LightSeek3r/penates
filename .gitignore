@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+pat*.txt
+*.pem
+*.key
+
+# build artefacts: data lives on R2, not in git
+data/raw/
+data/build/
+*.pmtiles
+*.parquet
+*.gpkg
+*.csv.gz
+
+.DS_Store
+Thumbs.db
+.wrangler/
+.venv/
+__pycache__/
