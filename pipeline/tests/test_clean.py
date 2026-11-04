@@ -1,3 +1,4 @@
+from pathlib import Path
 from datetime import date
 
 import duckdb
@@ -52,3 +53,16 @@ def test_department_filter_scopes_rows(con: duckdb.DuckDBPyConnection) -> None:
     result = clean_sales(con, FIXTURE_CSV, departments=["75"])
     assert result.steps["source_rows_in_scope"] == 1
     assert _retained_ids(con) == [("75101", "app", 10000.0)]
+
+
+def test_quoted_commas_in_text_columns_do_not_shift_columns(tmp_path: Path, con: duckdb.DuckDBPyConnection) -> None:
+    csv = tmp_path / "dvf.csv"
+    csv.write_text(
+        "id_mutation,date_mutation,nature_mutation,valeur_fonciere,adresse_nom_voie,code_commune,code_departement,"
+        "id_parcelle,type_local,surface_reelle_bati,nombre_pieces_principales,lot1_numero,longitude,latitude\n"
+        '2025-1,2025-06-01,Vente,200000.00,"RUE ANNE, COMTE DE TOURVILLE",49007,49,49007000BK0904,Appartement,50,2,,-0.55,47.47\n',
+        encoding="utf-8",
+    )
+    result = clean_sales(con, csv, None)
+    assert result.steps["mutations_price_m2_in_bounds"] == 1
+    assert con.execute("SELECT code_commune, price_m2 FROM sales").fetchone() == ("49007", 4000.0)

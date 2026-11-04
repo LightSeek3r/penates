@@ -66,7 +66,9 @@ def source_relation(path: Path) -> str:
     if path.suffix == ".parquet":
         return f"read_parquet('{posix}')"
     # all_varchar keeps INSEE codes such as 01001 / 2A004 as text; casts happen in SOURCE_COLUMNS.
-    return f"read_csv('{posix}', header = true, all_varchar = true)"
+    # Dialect is pinned: auto-detection once settled on "no quote char" for the official file,
+    # which breaks street names like "RUE ANNE, COMTE DE TOURVILLE".
+    return f"read_csv('{posix}', header = true, all_varchar = true, delim = ',', quote = '\"', escape = '\"')"
 
 
 def clean_sales(con: duckdb.DuckDBPyConnection, source: Path, departments: list[str] | None) -> CleanResult:
