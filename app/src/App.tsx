@@ -15,6 +15,7 @@ export default function App() {
   const manifest = useAppStore((state) => state.manifest)
   const setManifest = useAppStore((state) => state.setManifest)
   const mapStatus = useAppStore((state) => state.mapStatus)
+  const layersOpen = useAppStore((state) => state.layersOpen)
   const setMapStatus = useAppStore((state) => state.setMapStatus)
   const [failed, setFailed] = useState(false)
 
@@ -41,7 +42,7 @@ export default function App() {
         {t('skip')}
       </a>
       <TopBar />
-      <main id="map" className="stage">
+      <main id="map" className="stage" data-layers-open={layersOpen}>
         {manifest && <MapView manifest={manifest} />}
         <div className="stage__left">
           <LayerPanel />

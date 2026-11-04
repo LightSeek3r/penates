@@ -1,4 +1,5 @@
-import { Map as MapLibreMap, NavigationControl, ScaleControl, addProtocol, type MapGeoJSONFeature, type PointLike } from 'maplibre-gl'
+import { Map as MapLibreMap, NavigationControl, ScaleControl, addProtocol, setWorkerUrl, type MapGeoJSONFeature, type PointLike } from 'maplibre-gl'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef } from 'react'
@@ -14,6 +15,8 @@ import { priceFillExpression } from '../domain/priceLadder'
 let protocolRegistered = false
 function registerProtocol() {
   if (protocolRegistered) return
+  // MapLibre 6 starts a module worker from a URL the bundler does not emit on its own.
+  setWorkerUrl(workerUrl)
   addProtocol('pmtiles', new Protocol().tile)
   protocolRegistered = true
 }

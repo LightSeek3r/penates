@@ -37,7 +37,7 @@ test('restores a selected commune from a shared link', async ({ page }) => {
 test('changing the property type updates the shared link', async ({ page }) => {
   await page.goto(`/${LYON_3E}`)
   await openLayersOnPhone(page)
-  await page.getByLabel('Appartements').check({ force: true })
+  await page.getByRole('radio', { name: 'Appartements' }).check()
   await expect(page).toHaveURL(/t=app/)
 })
 

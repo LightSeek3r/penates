@@ -3,8 +3,8 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react()],
-  // MapLibre 6 resolves its module worker relative to its own file; pre-bundling breaks that path.
-  optimizeDeps: { exclude: ['maplibre-gl'] },
+  // MapLibre 6 starts its worker with { type: 'module' }, so the bundled worker must be an ES module.
+  worker: { format: 'es' },
   build: { target: 'es2023', chunkSizeWarningLimit: 1100 },
   test: { environment: 'node', include: ['src/**/*.test.ts'] },
 })

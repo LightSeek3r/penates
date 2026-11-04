@@ -718,6 +718,11 @@ ol {
     display: none;
   }
 
+  /* The two bottom sheets would overlap, so details step aside while layers are open. */
+  .stage[data-layers-open='true'] .stage__right {
+    display: none;
+  }
+
   .maplibregl-ctrl-bottom-right {
     bottom: 120px;
   }
