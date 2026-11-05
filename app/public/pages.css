@@ -1,0 +1,136 @@
+/* Styles of the generated documentation pages (method, sources, legal). The app itself uses src/styles. */
+:root {
+  --ground: #0b1b3a;
+  --panel: #10264a;
+  --raised: #17335f;
+  --line: rgb(244 247 251 / 14%);
+  --text: #f4f7fb;
+  --dim: #b4c2dc;
+  --link: #93baf3;
+  --amber: #f2a81d;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font: 400 1rem/1.6 'Noto Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.site-header nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.site-header a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.site-header a:hover {
+  background: var(--raised);
+}
+
+.site-header a[aria-current='page'] {
+  background: var(--raised);
+  font-weight: 700;
+}
+
+.site-header .brand {
+  font-weight: 700;
+}
+
+.site-header .lang {
+  margin-left: auto;
+  color: var(--dim);
+}
+
+.doc {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.doc h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.doc h2 {
+  margin-top: 2rem;
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.doc a {
+  color: var(--link);
+}
+
+.doc table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.doc th,
+.doc td {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.doc th {
+  background: var(--panel);
+}
+
+.doc code {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--panel);
+  font-size: 0.9em;
+}
+
+.doc .back a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.site-footer {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 0.875rem;
+}

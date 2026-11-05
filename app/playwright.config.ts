@@ -9,7 +9,7 @@ const remote = process.env.E2E_BASE_URL
 export default defineConfig({
   testDir: 'e2e',
   fullyParallel: true,
-  retries: process.env.CI ? 1 : 0,
+  retries: 1,
   reporter: [['list']],
   use: { baseURL: remote ?? `http://localhost:${APP_PORT}`, trace: 'retain-on-failure' },
   projects: [

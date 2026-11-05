@@ -38,6 +38,8 @@ test.describe('search engines see real, per-language pages', () => {
       ['/en/sources/', 'sources', '/sources/'],
     ] as const) {
       const html = await rawHtml(page, path)
+      const css = await page.request.get('/pages.css')
+      expect(css.headers()['content-type'], 'pages.css must be served as CSS').toContain('text/css')
       expect(html, path).toContain(title)
       expect(html, path).toContain(`href="${other}"`)
       expect(html, path).toContain('BreadcrumbList')
@@ -132,10 +134,13 @@ test.describe('installable app', () => {
 test.describe('security headers', () => {
   test('the page ships a CSP and the map still loads under it', async ({ page }) => {
     const violations: string[] = []
+    // The zone's Cloudflare Web Analytics snippet (an inline script and an external beacon) is injected by the host on the
+    // deployed site and is meant to be blocked: this site runs no analytics. The local production build has no injection, so
+    // there the check stays strict and would catch any inline script of our own.
+    const injectedByHost = process.env.E2E_BASE_URL ? /cloudflareinsights|Executing inline script/ : /(?!)/
     page.on('console', (message) => {
       const text = message.text()
-      // The zone's Cloudflare Web Analytics beacon is injected by the host and is meant to be blocked: this site runs no analytics.
-      if (/Content Security Policy|Refused to/.test(text) && !text.includes('static.cloudflareinsights.com')) violations.push(text)
+      if (/Content Security Policy|Refused to/.test(text) && !injectedByHost.test(text)) violations.push(text)
     })
     const response = await page.goto('/')
     expect(response?.headers()['content-security-policy']).toContain("default-src 'self'")

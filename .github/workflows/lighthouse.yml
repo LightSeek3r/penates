@@ -2,6 +2,7 @@ name: Lighthouse
 
 # Audits the live pages from GitHub's network. Scores for performance are reported, not enforced:
 # a WebGL map spends its first seconds loading tiles, so the enforced categories are the ones we control.
+# SEO is floored at 90: the zone's managed robots.txt adds a Content-Signal line that Lighthouse reports as an unknown directive (-8 points).
 on:
   workflow_dispatch:
     inputs:
@@ -41,7 +42,7 @@ jobs:
             console.log("${{ matrix.page }} ${{ matrix.preset }}", JSON.stringify(s));
             const failing = Object.values(r.audits).filter((a) => a.score === 0 && a.scoreDisplayMode === "binary").map((a) => a.id);
             if (failing.length) console.log("failing audits:", failing.join(", "));
-            const floor = { accessibility: 90, "best-practices": 85, seo: 95 };
+            const floor = { accessibility: 90, "best-practices": 85, seo: 90 };
             const bad = Object.entries(floor).filter(([k, min]) => s[k] < min);
             if (bad.length) { console.error("below floor:", JSON.stringify(bad)); process.exit(1); }
           '

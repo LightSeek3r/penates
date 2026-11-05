@@ -42,7 +42,7 @@ export function TopBar() {
         <div className="lang" role="group" aria-label={t('lang.label')}>
           {(['fr', 'en'] as const).map((code) =>
             code === lang ? (
-              <span key={code} className="lang__option" lang={code} aria-label={t(`lang.${code}`)} aria-current="true">
+              <span key={code} className="lang__option" lang={code} aria-label={`${code.toUpperCase()}, ${t(`lang.${code}`)}`} aria-current="true">
                 {code.toUpperCase()}
               </span>
             ) : (
@@ -52,7 +52,7 @@ export function TopBar() {
                 href={pathForLang(code)}
                 hrefLang={code}
                 lang={code}
-                aria-label={t(`lang.${code}`)}
+                aria-label={`${code.toUpperCase()}, ${t(`lang.${code}`)}`}
                 onClick={(event) => {
                   event.preventDefault()
                   window.location.assign(`${pathForLang(code)}${window.location.hash}`)
