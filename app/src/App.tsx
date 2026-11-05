@@ -42,7 +42,7 @@ export default function App() {
         {t('skip')}
       </a>
       <TopBar />
-      <main id="map" className="stage" data-layers-open={layersOpen}>
+      <main id="map" className="stage" data-layers-open={layersOpen} data-map-status={mapStatus}>
         {manifest && <MapView manifest={manifest} />}
         <div className="stage__left">
           <LayerPanel />

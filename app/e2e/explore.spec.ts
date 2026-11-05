@@ -9,6 +9,11 @@ async function openLayersOnPhone(page: Page) {
   if (await toggle.isVisible()) await toggle.click()
 }
 
+// The shareable URL is written by the map, so interactions wait until it is ready.
+async function mapReady(page: Page) {
+  await expect(page.locator('main')).toHaveAttribute('data-map-status', 'ready', { timeout: 20_000 })
+}
+
 test('opens on the national price map with legend and reliability key', async ({ page }) => {
   await page.goto('/#l=fr')
   await expect(page.getByRole('region', { name: /Carte des prix/ })).toBeVisible()
@@ -20,6 +25,7 @@ test('opens on the national price map with legend and reliability key', async ({
 
 test('switches language and keeps it in the URL', async ({ page }) => {
   await page.goto('/#l=fr')
+  await mapReady(page)
   await page.getByRole('button', { name: 'English' }).click()
   await expect(page.getByRole('region', { name: 'Median price, €/m²' })).toBeVisible()
   await expect(page).toHaveURL(/l=en/)
@@ -36,6 +42,7 @@ test('restores a selected commune from a shared link', async ({ page }) => {
 
 test('changing the property type updates the shared link', async ({ page }) => {
   await page.goto(`/${LYON_3E}`)
+  await mapReady(page)
   await openLayersOnPhone(page)
   await page.getByRole('radio', { name: 'Appartements' }).check()
   await expect(page).toHaveURL(/t=app/)
