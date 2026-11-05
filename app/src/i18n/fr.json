@@ -25,7 +25,13 @@
       "all": "Tous",
       "mai": "Maisons",
       "app": "Appartements"
-    }
+    },
+    "colourTab": "Couleur",
+    "filtersTab": "Filtres",
+    "colourBy": "Colorier la carte selon",
+    "groupPrice": "Prix",
+    "groupRisk": "Risques",
+    "groupAccess": "Proximité (à vol d'oiseau)"
   },
   "legend": {
     "title": "Prix médian, €/m²",
@@ -36,7 +42,16 @@
     "solid": "10 ventes ou plus",
     "low": "Moins de 10 ventes : indicatif",
     "none": "Aucune vente retenue",
-    "noCoverage": "Hors base DVF"
+    "noCoverage": "Hors base DVF",
+    "seismicTitle": "Zone sismique",
+    "distanceTitle": "Distance au plus proche : {{theme}}",
+    "noData": "Pas de donnée",
+    "dimmed": "Hors critères",
+    "underKm": "moins de {{value}} km",
+    "overKm": "{{value}} km et plus",
+    "rangeKm": "{{from}} à {{to}} km",
+    "zone": "Zone {{zone}} : {{name}}",
+    "priceOnlyNote": "Les textures décrivent la fiabilité du prix."
   },
   "inspector": {
     "title": "Fiche du lieu",
@@ -59,7 +74,12 @@
     },
     "disclaimer": "Indicatif : médiane des prix de vente rapportés à la surface bâtie. Ce n'est pas une estimation de bien.",
     "windowWide": "Période élargie à {{months}} mois faute de ventes",
-    "trendRange": "{{fromYear}} : {{from}} → {{toYear}} : {{to}} ({{change}})"
+    "trendRange": "{{fromYear}} : {{from}} → {{toYear}} : {{to}} ({{change}})",
+    "indicators": "Services les plus proches (à vol d'oiseau)",
+    "seismic": "Zone sismique : {{zone}} ({{name}})",
+    "distance": "{{theme}} : {{value}} km",
+    "distanceNote": "Distances à vol d'oiseau depuis un point de la commune, pas des temps de trajet.",
+    "noIndicators": "Aucun autre indicateur pour ce niveau."
   },
   "sources": {
     "short": "Sources",
@@ -73,12 +93,69 @@
     "creditsDvf": "Valeurs foncières : DGFiP / Etalab, Licence Ouverte v2.0",
     "creditsIgn": "Contours administratifs : IGN, Licence Ouverte v2.0",
     "creditsOsm": "Fond de carte : © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap",
-    "privacy": "Aucun compte, aucun cookie, aucun suivi. Les tuiles de carte sont chargées depuis OpenFreeMap et Cloudflare."
+    "privacy": "Aucun compte, aucun cookie, aucun suivi. Les tuiles de carte sont chargées depuis OpenFreeMap et Cloudflare.",
+    "methodExtra": "Zone sismique : zonage réglementaire par commune (Géorisques). Distances : plus courte distance à vol d'oiseau entre un point de la commune et l'équipement le plus proche de la base permanente des équipements de l'Insee ; ce ne sont pas des temps de trajet et un point unique représente toute la commune.",
+    "creditsInsee": "Équipements : Insee, base permanente des équipements, Licence Ouverte v2.0",
+    "creditsGeorisques": "Zonage sismique : Géorisques (BRGM, ministère de la Transition écologique), Licence Ouverte",
+    "pages": "Pages de documentation",
+    "methodPage": "Méthode détaillée",
+    "sourcesPage": "Sources et licences"
   },
   "status": {
     "loading": "Chargement de la carte…",
     "error": "La carte n'a pas pu se charger. Réessayez dans un instant.",
     "mapLabel": "Carte des prix de l'immobilier en France"
   },
-  "skip": "Aller au contenu"
+  "skip": "Aller au contenu",
+  "themes": {
+    "price": "Prix médian au m²",
+    "seismic": "Zone sismique",
+    "hospital": "Hôpital",
+    "gp": "Médecin généraliste",
+    "school": "École primaire",
+    "supermarket": "Supermarché",
+    "bakery": "Boulangerie",
+    "pool": "Piscine"
+  },
+  "filters": {
+    "intro": "Les communes grisées ne répondent pas aux critères.",
+    "reset": "Tout réinitialiser",
+    "any": "Sans limite",
+    "upTo": "jusqu'à {{value}}",
+    "unknown": "Une commune sans donnée ne correspond pas à un critère actif.",
+    "price": "Prix médian maximum (€/m²)",
+    "seismic": "Zone sismique maximale",
+    "hospital": "Hôpital à moins de",
+    "gp": "Médecin généraliste à moins de",
+    "school": "École primaire à moins de",
+    "supermarket": "Supermarché à moins de",
+    "bakery": "Boulangerie à moins de",
+    "pool": "Piscine à moins de",
+    "zoneUpTo": "zone {{value}} au plus"
+  },
+  "seismic": {
+    "1": "très faible",
+    "2": "faible",
+    "3": "modérée",
+    "4": "moyenne",
+    "5": "forte"
+  },
+  "pwa": {
+    "title": "Application",
+    "install": "Installer l'application",
+    "installed": "Application installée sur cet appareil.",
+    "iosHint": "Sur iPhone ou iPad : touchez Partager, puis « Sur l'écran d'accueil ».",
+    "offlineTitle": "Carte hors connexion",
+    "offlineSave": "Enregistrer la carte des prix pour l'utiliser hors connexion ({{size}})",
+    "offlineProgress": "Téléchargement : {{loaded}} sur {{total}}",
+    "offlineReady": "La carte des prix est enregistrée sur cet appareil.",
+    "offlineRemove": "Supprimer",
+    "offlineError": "Le téléchargement a échoué. Réessayez.",
+    "offlineUnsupported": "Ce navigateur ne permet pas l'enregistrement hors connexion.",
+    "offlineNote": "Le fond de carte et la recherche de commune restent en ligne ; seules les zones de fond de carte déjà consultées sont conservées.",
+    "offlineBadge": "Hors ligne",
+    "updateReady": "Une nouvelle version est disponible.",
+    "update": "Mettre à jour",
+    "later": "Plus tard"
+  }
 }

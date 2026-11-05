@@ -1,18 +1,8 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
+import { mapReady, openLayersOnPhone } from './helpers'
 
 // DVF reports Lyon by arrondissement; 69383 (Lyon 3e) is inside the department-69 dev slice.
 const LYON_3E = '#z=11&lat=45.76&lng=4.86&t=all&c=69383&l=fr'
-
-// On phones the legend details and the type selector sit in the "Couches" bottom sheet.
-async function openLayersOnPhone(page: Page) {
-  const toggle = page.getByRole('button', { name: /^(Couches|Layers)$/ })
-  if (await toggle.isVisible()) await toggle.click()
-}
-
-// The shareable URL is written by the map, so interactions wait until it is ready.
-async function mapReady(page: Page) {
-  await expect(page.locator('main')).toHaveAttribute('data-map-status', 'ready', { timeout: 20_000 })
-}
 
 test('opens on the national price map with legend and reliability key', async ({ page }) => {
   await page.goto('/#l=fr')
@@ -23,13 +13,13 @@ test('opens on the national price map with legend and reliability key', async ({
   await expect(page.getByText('Hors base DVF')).toBeVisible()
 })
 
-test('switches language and keeps it in the URL', async ({ page }) => {
-  await page.goto('/#l=fr')
+test('switches language through the English page URL', async ({ page }) => {
+  await page.goto('/')
   await mapReady(page)
-  await page.getByRole('button', { name: 'English' }).click()
-  await expect(page.getByRole('region', { name: 'Median price, €/m²' })).toBeVisible()
-  await expect(page).toHaveURL(/l=en/)
+  await page.getByRole('link', { name: 'English' }).click()
+  await expect(page).toHaveURL(/\/en\//)
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('region', { name: 'Median price, €/m²' })).toBeVisible()
 })
 
 test('restores a selected commune from a shared link', async ({ page }) => {

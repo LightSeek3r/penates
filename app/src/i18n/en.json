@@ -25,7 +25,13 @@
       "all": "All",
       "mai": "Houses",
       "app": "Flats"
-    }
+    },
+    "colourTab": "Colour",
+    "filtersTab": "Filters",
+    "colourBy": "Colour the map by",
+    "groupPrice": "Price",
+    "groupRisk": "Risks",
+    "groupAccess": "Proximity (straight line)"
   },
   "legend": {
     "title": "Median price, €/m²",
@@ -36,7 +42,16 @@
     "solid": "10 sales or more",
     "low": "Fewer than 10 sales: indicative",
     "none": "No sales kept",
-    "noCoverage": "Outside DVF"
+    "noCoverage": "Outside DVF",
+    "seismicTitle": "Seismic zone",
+    "distanceTitle": "Distance to the nearest: {{theme}}",
+    "noData": "No data",
+    "dimmed": "Outside the criteria",
+    "underKm": "under {{value}} km",
+    "overKm": "{{value}} km and more",
+    "rangeKm": "{{from}} to {{to}} km",
+    "zone": "Zone {{zone}}: {{name}}",
+    "priceOnlyNote": "Textures describe the reliability of the price."
   },
   "inspector": {
     "title": "Place details",
@@ -59,7 +74,12 @@
     },
     "disclaimer": "Indicative: median sale price divided by built surface. It is not a valuation of any property.",
     "windowWide": "Period widened to {{months}} months because of few sales",
-    "trendRange": "{{fromYear}}: {{from}} → {{toYear}}: {{to}} ({{change}})"
+    "trendRange": "{{fromYear}}: {{from}} → {{toYear}}: {{to}} ({{change}})",
+    "indicators": "Nearest services (straight line)",
+    "seismic": "Seismic zone: {{zone}} ({{name}})",
+    "distance": "{{theme}} : {{value}} km",
+    "distanceNote": "Straight-line distances from a point in the commune, not travel times.",
+    "noIndicators": "No other indicators at this level."
   },
   "sources": {
     "short": "Sources",
@@ -73,12 +93,69 @@
     "creditsDvf": "Property transactions: DGFiP / Etalab, Licence Ouverte v2.0",
     "creditsIgn": "Administrative boundaries: IGN, Licence Ouverte v2.0",
     "creditsOsm": "Basemap: © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap",
-    "privacy": "No account, no cookies, no tracking. Map tiles are loaded from OpenFreeMap and Cloudflare."
+    "privacy": "No account, no cookies, no tracking. Map tiles are loaded from OpenFreeMap and Cloudflare.",
+    "methodExtra": "Seismic zone: regulatory zoning by commune (Géorisques). Distances: shortest straight line from a point in the commune to the nearest facility in INSEE's permanent facilities base; they are not travel times and a single point stands for the whole commune.",
+    "creditsInsee": "Facilities: INSEE, permanent facilities base, Licence Ouverte v2.0",
+    "creditsGeorisques": "Seismic zoning: Géorisques (BRGM, ministry of ecological transition), Licence Ouverte",
+    "pages": "Documentation pages",
+    "methodPage": "Detailed method",
+    "sourcesPage": "Sources and licences"
   },
   "status": {
     "loading": "Loading the map…",
     "error": "The map could not load. Please try again shortly.",
     "mapLabel": "Map of property prices in France"
   },
-  "skip": "Skip to content"
+  "skip": "Skip to content",
+  "themes": {
+    "price": "Median price per m²",
+    "seismic": "Seismic zone",
+    "hospital": "Hospital",
+    "gp": "General practitioner",
+    "school": "Primary school",
+    "supermarket": "Supermarket",
+    "bakery": "Bakery",
+    "pool": "Swimming pool"
+  },
+  "filters": {
+    "intro": "Greyed-out communes do not meet the criteria.",
+    "reset": "Reset all",
+    "any": "No limit",
+    "upTo": "up to {{value}}",
+    "unknown": "A commune with no data does not match an active criterion.",
+    "price": "Maximum median price (€/m²)",
+    "seismic": "Maximum seismic zone",
+    "hospital": "Hospital within",
+    "gp": "GP within",
+    "school": "Primary school within",
+    "supermarket": "Supermarket within",
+    "bakery": "Bakery within",
+    "pool": "Swimming pool within",
+    "zoneUpTo": "zone {{value}} at most"
+  },
+  "seismic": {
+    "1": "very low",
+    "2": "low",
+    "3": "moderate",
+    "4": "medium",
+    "5": "strong"
+  },
+  "pwa": {
+    "title": "App",
+    "install": "Install the app",
+    "installed": "App installed on this device.",
+    "iosHint": "On iPhone or iPad: tap Share, then \"Add to Home Screen\".",
+    "offlineTitle": "Offline map",
+    "offlineSave": "Save the price map to use it offline ({{size}})",
+    "offlineProgress": "Downloading: {{loaded}} of {{total}}",
+    "offlineReady": "The price map is saved on this device.",
+    "offlineRemove": "Remove",
+    "offlineError": "The download failed. Please try again.",
+    "offlineUnsupported": "This browser does not support offline saving.",
+    "offlineNote": "The basemap and commune search stay online; only basemap areas you have already viewed are kept.",
+    "offlineBadge": "Offline",
+    "updateReady": "A new version is available.",
+    "update": "Update",
+    "later": "Later"
+  }
 }

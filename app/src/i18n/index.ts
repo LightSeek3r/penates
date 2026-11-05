@@ -16,6 +16,9 @@ export function initI18n(lang: Lang) {
   return i18next
 }
 
-export function detectLang(languages: readonly string[]): Lang {
-  return languages.some((tag) => tag.toLowerCase().startsWith('fr')) || languages.length === 0 ? 'fr' : 'en'
+/** `/en/...` is English, every other path is French. */
+export function langFromPath(pathname: string): Lang {
+  return pathname === '/en' || pathname.startsWith('/en/') ? 'en' : 'fr'
 }
+
+export const pathForLang = (lang: Lang) => (lang === 'en' ? '/en/' : '/')

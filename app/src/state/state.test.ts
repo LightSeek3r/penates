@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { dictionaries, detectLang } from '../i18n'
+import { dictionaries, langFromPath, pathForLang } from '../i18n'
 import { DEFAULT_VIEW, formatHash, parseHash } from './urlState'
 
 describe('url hash', () => {
   it('round-trips a state', () => {
-    const state = { lng: 4.8351, lat: 45.758, zoom: 9.5, type: 'app', selected: '69123', lang: 'en' } as const
-    expect(parseHash(formatHash(state), 'fr')).toEqual({ ...state, viewProvided: true })
+    const state = { lng: 4.8351, lat: 45.758, zoom: 9.5, type: 'app', selected: '69123', theme: 'hospital', filters: { gp: 5000, seismic: 3 } } as const
+    expect(parseHash(formatHash(state), 'en')).toEqual({ ...state, lang: 'en', viewProvided: true })
   })
 
   it('falls back to defaults on an empty or hostile hash', () => {
     const parsed = parseHash('#z=abc&lat=999&lng=-500&t=evil&c=<script>&l=xx', 'fr')
-    expect(parsed).toEqual({ ...DEFAULT_VIEW, type: 'all', selected: null, lang: 'fr', viewProvided: false })
+    expect(parsed).toEqual({ ...DEFAULT_VIEW, type: 'all', selected: null, lang: 'fr', theme: 'price', filters: {}, viewProvided: false })
   })
 
   it('only treats a link as carrying a view when position and zoom are all present', () => {
@@ -25,10 +25,21 @@ describe('url hash', () => {
 })
 
 describe('language', () => {
-  it('detects French first, English otherwise', () => {
-    expect(detectLang(['fr-FR', 'en'])).toBe('fr')
-    expect(detectLang(['de', 'en-GB'])).toBe('en')
-    expect(detectLang([])).toBe('fr')
+  it('takes the language from the path and ignores the hash', () => {
+    expect(langFromPath('/')).toBe('fr')
+    expect(langFromPath('/en/')).toBe('en')
+    expect(langFromPath('/en')).toBe('en')
+    expect(langFromPath('/environnement/')).toBe('fr')
+    expect(parseHash('#l=en', 'fr').lang).toBe('fr')
+  })
+
+  it('never writes the language into the hash', () => {
+    expect(formatHash({ lng: 2, lat: 46, zoom: 5, type: 'all', selected: null, theme: 'price', filters: {} })).not.toContain('l=')
+  })
+
+  it('maps a language to its page path', () => {
+    expect(pathForLang('fr')).toBe('/')
+    expect(pathForLang('en')).toBe('/en/')
   })
 
   it('keeps FR and EN dictionaries on exactly the same keys', () => {

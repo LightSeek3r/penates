@@ -8,7 +8,7 @@ describe('parseManifest', () => {
       tiles: { file: 'communes.pmtiles', bytes: 1 },
       sources: { transactions: { from: '2021-01-04', to: '2025-12-31' } },
     })
-    expect(parsed).toEqual({ version: '2026-11-04', tiles: { file: 'communes.pmtiles' }, dataThrough: '2025-12-31' })
+    expect(parsed).toEqual({ version: '2026-11-04', tiles: { file: 'communes.pmtiles', bytes: 1 }, dataThrough: '2025-12-31' })
   })
 
   it('rejects a manifest without a tile file', () => {

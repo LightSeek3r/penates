@@ -1,3 +1,5 @@
+import { DISTANCE_PROPERTY, DISTANCE_THEMES, SEISMIC_PROPERTY, type DistanceTheme } from './themes'
+
 export type PriceType = 'all' | 'mai' | 'app'
 export const PRICE_TYPES: readonly PriceType[] = ['all', 'mai', 'app']
 
@@ -42,4 +44,20 @@ export function readPlace(props: TileProps, type: PriceType, kind: Place['kind']
     windowMonths: num(props.w) ?? 36,
     period: typeof props.period === 'string' ? props.period : null,
   }
+}
+
+export interface Indicators {
+  seismicZone: number | null
+  /** Straight-line distance in metres to the nearest facility of each kind. */
+  distances: Partial<Record<DistanceTheme, number>>
+}
+
+export function readIndicators(props: Record<string, unknown>): Indicators {
+  const zone = num(props[SEISMIC_PROPERTY])
+  const distances: Indicators['distances'] = {}
+  for (const theme of DISTANCE_THEMES) {
+    const metres = num(props[DISTANCE_PROPERTY[theme]])
+    if (metres !== null) distances[theme] = metres
+  }
+  return { seismicZone: zone !== null && zone >= 1 && zone <= 5 ? zone : null, distances }
 }

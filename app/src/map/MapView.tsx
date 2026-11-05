@@ -5,14 +5,13 @@ import { Protocol } from 'pmtiles'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { tileUrl } from '../data/manifest'
-import type { PriceType } from '../domain/place'
-import { priceFillExpression } from '../domain/priceLadder'
 import { initialState, useAppStore } from '../state/appStore'
 import type { Manifest } from '../state/store'
 import { formatHash } from '../state/urlState'
 import { registerPatterns } from './patterns'
 import { SheetScale, attachSheetFrame } from './sheetFrame'
-import { LAYER_IDS, SELECTION_LAYERS, buildStyle, patternFilters } from './style'
+import { applyAppearance } from './appearance'
+import { LAYER_IDS, SELECTION_LAYERS, buildStyle } from './style'
 
 let protocolRegistered = false
 function registerProtocol() {
@@ -27,13 +26,6 @@ const COMMUNE_ZOOM = 6.5
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
 const WIDE_SCREEN = '(min-width: 720px)'
 const METROPOLITAN_FRANCE: [[number, number], [number, number]] = [[-5.6, 41.0], [10.0, 51.3]]
-
-function applyPriceType(map: MapLibreMap, type: PriceType) {
-  for (const id of [LAYER_IDS.departmentsFill, LAYER_IDS.communesFill]) {
-    map.setPaintProperty(id, 'fill-color', priceFillExpression(type))
-  }
-  for (const [id, filter] of Object.entries(patternFilters(type))) map.setFilter(id, filter)
-}
 
 type Picked = { kind: 'commune' | 'department'; feature: MapGeoJSONFeature }
 
@@ -107,7 +99,8 @@ export function MapView({ manifest }: { manifest: Manifest }) {
           zoom: map.getZoom(),
           type: state.priceType,
           selected: state.selection ? String(state.selection.props.code ?? '') || null : null,
-          lang: state.lang,
+          theme: state.theme,
+          filters: state.filters,
         }),
       )
     }
@@ -131,6 +124,7 @@ export function MapView({ manifest }: { manifest: Manifest }) {
     }
 
     map.on('load', () => {
+      applyAppearance(map, store.getState())
       // The compact attribution opens by default and covers the map on phones; users can still open it.
       const attribution = element.querySelector('.maplibregl-ctrl-attrib')
       attribution?.classList.remove('maplibregl-compact-show')
@@ -140,6 +134,7 @@ export function MapView({ manifest }: { manifest: Manifest }) {
       syncHash()
     })
     map.on('error', (event) => {
+      console.error('Map error:', event.error?.message ?? event)
       if (store.getState().mapStatus === 'loading' && (event as { sourceId?: string }).sourceId === 'data') {
         store.getState().setMapStatus('error')
       }
@@ -154,12 +149,10 @@ export function MapView({ manifest }: { manifest: Manifest }) {
     })
 
     const unsubscribe = store.subscribe((state, previous) => {
-      if (state.priceType !== previous.priceType && map.isStyleLoaded()) applyPriceType(map, state.priceType)
+      const appearanceChanged = state.priceType !== previous.priceType || state.theme !== previous.theme || state.filters !== previous.filters
+      if (appearanceChanged && map.isStyleLoaded()) applyAppearance(map, state)
       if (state.selection !== previous.selection) showSelection(state.selection)
-      if (state.lang !== previous.lang && map.getLayer('notes-label')) {
-        map.setLayoutProperty('notes-label', 'text-field', ['get', state.lang])
-      }
-      if (state.priceType !== previous.priceType || state.selection !== previous.selection || state.lang !== previous.lang) syncHash()
+      if (appearanceChanged || state.selection !== previous.selection) syncHash()
       const request = state.flyRequest
       if (request && request !== previous.flyRequest) {
         map.flyTo({ center: [request.lng, request.lat], zoom: request.zoom, essential: true, animate: !matchMedia(REDUCED_MOTION).matches })

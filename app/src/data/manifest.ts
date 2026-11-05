@@ -5,7 +5,7 @@ export const DATA_BASE: string = import.meta.env.VITE_DATA_BASE ?? 'http://local
 export function parseManifest(value: unknown): Manifest {
   const manifest = value as {
     version?: unknown
-    tiles?: { file?: unknown }
+    tiles?: { file?: unknown; bytes?: unknown }
     sources?: { transactions?: { to?: unknown } }
   } | null
   if (typeof manifest?.version !== 'string' || typeof manifest.tiles?.file !== 'string') {
@@ -14,7 +14,7 @@ export function parseManifest(value: unknown): Manifest {
   const through = manifest.sources?.transactions?.to
   return {
     version: manifest.version,
-    tiles: { file: manifest.tiles.file },
+    tiles: { file: manifest.tiles.file, bytes: typeof manifest.tiles.bytes === 'number' ? manifest.tiles.bytes : undefined },
     dataThrough: typeof through === 'string' ? through : undefined,
   }
 }

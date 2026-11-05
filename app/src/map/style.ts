@@ -12,10 +12,12 @@ const FONT = ['Noto Sans Regular']
 const FONT_BOLD = ['Noto Sans Bold']
 
 // Departments carry the picture up to the cross-fade; communes take over from here.
-const FADE_FROM = 6
+export const FADE_FROM = 6
 const FADE_TO = 7
+// Lowest zoom the commune layer is tiled at; used instead of the department picture when a theme or filter needs communes.
+export const COMMUNES_FROM_TILE_ZOOM = 4
 
-const fade = (opacity: number, rising: boolean): ExpressionSpecification => [
+export const fade = (opacity: number, rising: boolean): ExpressionSpecification => [
   'interpolate',
   ['linear'],
   ['zoom'],
@@ -115,6 +117,16 @@ function dataLayers(type: PriceType): LayerSpecification[] {
     patternLayer('communes-low-dark', 'communes', 'hatch-low-dark', true, FADE_FROM),
     patternLayer('communes-none', 'communes', 'dots', true, FADE_FROM),
     patternLayer('communes-nocoverage', 'communes', 'hatch-cross', true, FADE_FROM, ['interpolate', ['linear'], ['zoom'], 7, 0.75, 9, 0.35]),
+    {
+      id: 'communes-dim',
+      type: 'fill',
+      ...common,
+      'source-layer': 'communes',
+      minzoom: FADE_FROM,
+      filter: ['==', ['get', 'code'], ''],
+      layout: { visibility: 'none' },
+      paint: { 'fill-color': GROUND, 'fill-opacity': 0.84 },
+    },
     {
       id: 'communes-line',
       type: 'line',

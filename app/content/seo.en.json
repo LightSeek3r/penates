@@ -1,0 +1,43 @@
+{
+  "locale": "en_GB",
+  "title": "French property prices by commune · settling-map",
+  "description": "Free interactive map of French property prices: median sale price per m² by commune and how reliable each figure is, built from open DVF data.",
+  "h1": "French property prices, and how reliable they are",
+  "intro": [
+    "A free interactive map: for every commune in metropolitan France, the median sale price per m² of houses and flats, with the number of sales behind it, the period covered and a reliability indicator.",
+    "The figures come from the property transactions file (DVF) published by the French tax administration, aggregated by commune. Communes that rest on few sales are marked with a texture on the map, and Alsace-Moselle and Mayotte, which are not in the DVF database, are labelled as such rather than shown as cheap."
+  ],
+  "featuresTitle": "What you can do",
+  "features": [
+    "See the median price per m² of every commune, for all dwellings, houses or flats.",
+    "Read how solid the figure is: fewer than 10 sales, no sale kept, outside the DVF database.",
+    "Search for a commune, share a link to an exact view, use the map in French or English.",
+    "Use the app with no account and no tracking, and install it on your device."
+  ],
+  "openApp": "Open the map",
+  "navTitle": "Learn more",
+  "noscript": "This interactive map needs JavaScript. The median price per m² by commune is computed from DVF data; the method is described on the Method page.",
+  "home": "Map",
+  "footer": "Data: DGFiP/Etalab (DVF), IGN, OpenStreetMap. Licence Ouverte v2.0.",
+  "languageSwitch": "Version française",
+  "pages": {
+    "methodology": {
+      "slug": "methodology",
+      "label": "Method",
+      "title": "Method: how the price per m² is computed · settling-map",
+      "description": "How settling-map computes the median price per m² by commune from DVF data: sales kept, time window, reliability indicator and limits."
+    },
+    "sources": {
+      "slug": "sources",
+      "label": "Sources and licences",
+      "title": "Data sources and licences · settling-map",
+      "description": "The open datasets used by settling-map, their licences and the credits to display."
+    },
+    "legal": {
+      "slug": "legal",
+      "label": "Legal notice",
+      "title": "Legal notice and privacy · settling-map",
+      "description": "Publisher, host and privacy policy of settling-map."
+    }
+  }
+}

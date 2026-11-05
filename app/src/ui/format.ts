@@ -22,3 +22,9 @@ export function formatPeriod(period: string, lang: Lang): string | null {
 export function formatChange(from: number, to: number, lang: Lang): string {
   return new Intl.NumberFormat(locale(lang), { style: 'percent', maximumFractionDigits: 0, signDisplay: 'exceptZero' }).format((to - from) / from)
 }
+
+/** Megabytes with one decimal, e.g. "19.1 MB" or "19,1 Mo". */
+export function formatMegabytes(bytes: number, lang: Lang): string {
+  const value = new Intl.NumberFormat(locale(lang), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(bytes / 1_048_576)
+  return `${value} ${lang === 'fr' ? 'Mo' : 'MB'}`
+}

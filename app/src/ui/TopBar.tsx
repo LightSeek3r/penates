@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next'
+import { pathForLang } from '../i18n'
+import { usePwaStore } from '../pwa/pwaStore'
 import { useAppStore } from '../state/appStore'
 import { Search } from './Search'
 
 export function TopBar() {
   const { t } = useTranslation()
   const lang = useAppStore((state) => state.lang)
-  const setLang = useAppStore((state) => state.setLang)
   const layersOpen = useAppStore((state) => state.layersOpen)
+  const online = usePwaStore((state) => state.online)
   const setLayersOpen = useAppStore((state) => state.setLayersOpen)
   const setSourcesOpen = useAppStore((state) => state.setSourcesOpen)
 
@@ -20,6 +22,11 @@ export function TopBar() {
         </div>
       </div>
       <Search />
+      {!online && (
+        <p className="offline-pill" role="status">
+          {t('pwa.offlineBadge')}
+        </p>
+      )}
       <nav className="topbar__actions" aria-label="settling-map">
         <button type="button" className="button button--layers" aria-expanded={layersOpen} onClick={() => setLayersOpen(!layersOpen)}>
           {t('layers.title')}
@@ -33,11 +40,28 @@ export function TopBar() {
           </span>
         </button>
         <div className="lang" role="group" aria-label={t('lang.label')}>
-          {(['fr', 'en'] as const).map((code) => (
-            <button key={code} type="button" className="lang__option" lang={code} aria-label={t(`lang.${code}`)} aria-pressed={lang === code} onClick={() => setLang(code)}>
-              {code.toUpperCase()}
-            </button>
-          ))}
+          {(['fr', 'en'] as const).map((code) =>
+            code === lang ? (
+              <span key={code} className="lang__option" lang={code} aria-label={t(`lang.${code}`)} aria-current="true">
+                {code.toUpperCase()}
+              </span>
+            ) : (
+              <a
+                key={code}
+                className="lang__option"
+                href={pathForLang(code)}
+                hrefLang={code}
+                lang={code}
+                aria-label={t(`lang.${code}`)}
+                onClick={(event) => {
+                  event.preventDefault()
+                  window.location.assign(`${pathForLang(code)}${window.location.hash}`)
+                }}
+              >
+                {code.toUpperCase()}
+              </a>
+            ),
+          )}
         </div>
       </nav>
     </header>

@@ -1,0 +1,43 @@
+{
+  "locale": "fr_FR",
+  "title": "Prix de l'immobilier en France par commune · settling-map",
+  "description": "Carte interactive gratuite : prix de vente médian au m² par commune en France et fiabilité de chaque chiffre, à partir des données ouvertes DVF.",
+  "h1": "Prix de l'immobilier en France, et leur fiabilité",
+  "intro": [
+    "Carte interactive gratuite : pour chaque commune de France métropolitaine, le prix de vente médian au m² des maisons et des appartements, avec le nombre de ventes qui le fonde, la période couverte et un indice de fiabilité.",
+    "Les chiffres viennent des demandes de valeurs foncières (DVF) publiées par la DGFiP, agrégées par commune. Les communes qui reposent sur peu de ventes sont signalées par une texture sur la carte, et l'Alsace-Moselle et Mayotte, absentes de la base DVF, sont indiquées comme telles plutôt que présentées comme bon marché."
+  ],
+  "featuresTitle": "Ce que vous pouvez faire",
+  "features": [
+    "Voir le prix médian au m² de chaque commune, pour tous les biens, les maisons ou les appartements.",
+    "Lire la fiabilité du chiffre : moins de 10 ventes, aucune vente retenue, hors base DVF.",
+    "Chercher une commune, partager un lien vers une vue précise, utiliser la carte en français ou en anglais.",
+    "Utiliser l'application sans compte et sans suivi, et l'installer sur son appareil."
+  ],
+  "openApp": "Ouvrir la carte",
+  "navTitle": "En savoir plus",
+  "noscript": "Cette carte interactive nécessite JavaScript. Le prix médian au m² par commune est calculé à partir des données DVF ; la méthode est décrite sur la page Méthode.",
+  "home": "Carte",
+  "footer": "Données : DGFiP/Etalab (DVF), IGN, OpenStreetMap. Licence Ouverte v2.0.",
+  "languageSwitch": "English version",
+  "pages": {
+    "methodology": {
+      "slug": "methodologie",
+      "label": "Méthode",
+      "title": "Méthode : comment est calculé le prix au m² · settling-map",
+      "description": "Comment settling-map calcule le prix médian au m² par commune à partir des données DVF : ventes retenues, fenêtre de temps, indice de fiabilité et limites."
+    },
+    "sources": {
+      "slug": "sources",
+      "label": "Sources et licences",
+      "title": "Sources de données et licences · settling-map",
+      "description": "Les jeux de données ouverts utilisés par settling-map, leurs licences et les mentions de crédit à respecter."
+    },
+    "legal": {
+      "slug": "mentions-legales",
+      "label": "Mentions légales",
+      "title": "Mentions légales et confidentialité · settling-map",
+      "description": "Éditeur, hébergeur et politique de confidentialité de settling-map."
+    }
+  }
+}

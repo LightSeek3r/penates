@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { CONFIDENCE, TREND_YEARS, readPlace } from '../domain/place'
+import { CONFIDENCE, TREND_YEARS, readIndicators, readPlace } from '../domain/place'
+import { DISTANCE_THEMES } from '../domain/themes'
 import { useAppStore } from '../state/appStore'
 import { formatChange, formatNumber, formatPeriod } from './format'
 import { Sparkline } from './Sparkline'
@@ -25,6 +26,8 @@ export function Inspector() {
   const covered = place.confidence !== CONFIDENCE.noCoverage
   const period = place.period ? formatPeriod(place.period, lang) : null
   const known = place.trend.flatMap((value, index) => (value === null ? [] : [{ value, year: TREND_YEARS[index] }]))
+  const indicators = readIndicators(selection.props)
+  const distanceThemes = DISTANCE_THEMES.filter((theme) => indicators.distances[theme] !== undefined)
   const first = known[0]
   const last = known.at(-1)
 
@@ -94,6 +97,30 @@ export function Inspector() {
             </>
           ) : (
             <p className="trend__missing">{t('inspector.trendMissing')}</p>
+          )}
+        </div>
+      )}
+
+      {place.kind === 'commune' && (indicators.seismicZone !== null || distanceThemes.length > 0) && (
+        <div className="indicators">
+          {indicators.seismicZone !== null && (
+            <p className="indicators__seismic">{t('inspector.seismic', { zone: indicators.seismicZone, name: t(`seismic.${indicators.seismicZone}`) })}</p>
+          )}
+          {distanceThemes.length > 0 && (
+            <>
+              <p className="trend__label">{t('inspector.indicators')}</p>
+              <ul className="indicators__list">
+                {distanceThemes.map((theme) => (
+                  <li key={theme}>
+                    {t('inspector.distance', {
+                      theme: t(`themes.${theme}`),
+                      value: new Intl.NumberFormat(lang === 'fr' ? 'fr-FR' : 'en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format((indicators.distances[theme] ?? 0) / 1000),
+                    })}
+                  </li>
+                ))}
+              </ul>
+              <p className="trend__label">{t('inspector.distanceNote')}</p>
+            </>
           )}
         </div>
       )}

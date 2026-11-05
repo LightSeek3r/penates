@@ -1,5 +1,7 @@
 import { create } from 'zustand'
+import { type FilterKey, type Filters, withFilter } from '../domain/filters'
 import type { Place, PriceType } from '../domain/place'
+import type { ThemeId } from '../domain/themes'
 import type { Lang, UrlState } from './urlState'
 
 export interface Selection {
@@ -17,7 +19,7 @@ export interface FlyRequest {
 
 export interface Manifest {
   version: string
-  tiles: { file: string }
+  tiles: { file: string; bytes?: number }
   dataThrough?: string
 }
 
@@ -26,6 +28,8 @@ export type MapStatus = 'loading' | 'ready' | 'error'
 interface AppState {
   lang: Lang
   priceType: PriceType
+  theme: ThemeId
+  filters: Filters
   selection: Selection | null
   pendingCode: string | null
   flyRequest: FlyRequest | null
@@ -33,8 +37,10 @@ interface AppState {
   sourcesOpen: boolean
   mapStatus: MapStatus
   manifest: Manifest | null
-  setLang: (lang: Lang) => void
   setPriceType: (type: PriceType) => void
+  setTheme: (theme: ThemeId) => void
+  setFilter: (key: FilterKey, value: number) => void
+  resetFilters: () => void
   select: (selection: Selection | null) => void
   flyTo: (target: Omit<FlyRequest, 'nonce'>) => void
   setLayersOpen: (open: boolean) => void
@@ -47,6 +53,8 @@ export function createStore(initial: UrlState) {
   return create<AppState>((set) => ({
     lang: initial.lang,
     priceType: initial.type,
+    theme: initial.theme,
+    filters: initial.filters,
     selection: null,
     pendingCode: initial.selected,
     flyRequest: null,
@@ -54,8 +62,10 @@ export function createStore(initial: UrlState) {
     sourcesOpen: false,
     mapStatus: 'loading',
     manifest: null,
-    setLang: (lang) => set({ lang }),
     setPriceType: (priceType) => set({ priceType }),
+    setTheme: (theme) => set({ theme }),
+    setFilter: (key, value) => set((state) => ({ filters: withFilter(state.filters, key, value) })),
+    resetFilters: () => set({ filters: {} }),
     select: (selection) => set({ selection, pendingCode: null }),
     flyTo: (target) => set((state) => ({ flyRequest: { ...target, nonce: (state.flyRequest?.nonce ?? 0) + 1 }, pendingCode: target.code })),
     setLayersOpen: (layersOpen) => set({ layersOpen }),

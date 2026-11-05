@@ -1,12 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../state/appStore'
+import { PwaSection } from './PwaSection'
 
 export function SourcesDialog() {
   const { t } = useTranslation()
   const open = useAppStore((state) => state.sourcesOpen)
   const setOpen = useAppStore((state) => state.setSourcesOpen)
   const dataThrough = useAppStore((state) => state.manifest?.dataThrough)
+  const lang = useAppStore((state) => state.lang)
+  const docs = lang === 'fr' ? { method: '/methodologie/', sources: '/sources/' } : { method: '/en/methodology/', sources: '/en/sources/' }
   const dialog = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -27,15 +30,28 @@ export function SourcesDialog() {
         </button>
       </div>
       <p>{t('sources.method')}</p>
+      <p>{t('sources.methodExtra')}</p>
       <p>{t('sources.limits')}</p>
       {dataThrough && <p>{t('sources.dataAsOf', { date: dataThrough })}</p>}
       <h3 className="legend__subtitle">{t('sources.credits')}</h3>
       <ul className="credits">
         <li>{t('sources.creditsDvf')}</li>
         <li>{t('sources.creditsIgn')}</li>
+        <li>{t('sources.creditsInsee')}</li>
+        <li>{t('sources.creditsGeorisques')}</li>
         <li>{t('sources.creditsOsm')}</li>
       </ul>
       <p>{t('sources.privacy')}</p>
+      <h3 className="legend__subtitle">{t('sources.pages')}</h3>
+      <ul className="credits">
+        <li>
+          <a href={docs.method}>{t('sources.methodPage')}</a>
+        </li>
+        <li>
+          <a href={docs.sources}>{t('sources.sourcesPage')}</a>
+        </li>
+      </ul>
+      <PwaSection />
     </dialog>
   )
 }

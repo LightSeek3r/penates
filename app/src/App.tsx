@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { loadManifest } from './data/manifest'
+import { loadManifest, tileUrl } from './data/manifest'
+import { refreshOfflineStatus } from './pwa/register'
 import { MapView } from './map/MapView'
 import { useAppStore } from './state/appStore'
 import { Inspector } from './ui/Inspector'
 import { Legend } from './ui/Legend'
-import { LayerPanel } from './ui/LayerPanel'
+import { ControlPanel } from './ui/ControlPanel'
 import { SourcesDialog } from './ui/SourcesDialog'
 import { TopBar } from './ui/TopBar'
+import { UpdateNotice } from './ui/UpdateNotice'
 
 export default function App() {
   const { t, i18n } = useTranslation()
@@ -23,6 +25,10 @@ export default function App() {
     void i18n.changeLanguage(lang)
     document.documentElement.lang = lang
   }, [lang, i18n])
+
+  useEffect(() => {
+    if (manifest) void refreshOfflineStatus(tileUrl(manifest))
+  }, [manifest])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -45,7 +51,7 @@ export default function App() {
       <main id="map" className="stage" data-layers-open={layersOpen} data-map-status={mapStatus}>
         {manifest && <MapView manifest={manifest} />}
         <div className="stage__left">
-          <LayerPanel />
+          <ControlPanel />
           <Legend />
         </div>
         <div className="stage__right">
@@ -63,6 +69,7 @@ export default function App() {
         )}
       </main>
       <SourcesDialog />
+      <UpdateNotice />
     </div>
   )
 }
