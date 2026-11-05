@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { CONFIDENCE, TREND_YEARS, readIndicators, readPlace } from '../domain/place'
 import { DISTANCE_THEMES } from '../domain/themes'
 import { useAppStore } from '../state/appStore'
-import { formatChange, formatNumber, formatPeriod } from './format'
+import { formatChange, formatDecimal, formatNumber, formatPeriod } from './format'
 import { Sparkline } from './Sparkline'
 
 const PIPS = [CONFIDENCE.low, CONFIDENCE.medium, CONFIDENCE.high]
@@ -114,7 +114,7 @@ export function Inspector() {
                   <li key={theme}>
                     {t('inspector.distance', {
                       theme: t(`themes.${theme}`),
-                      value: new Intl.NumberFormat(lang === 'fr' ? 'fr-FR' : 'en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format((indicators.distances[theme] ?? 0) / 1000),
+                      value: formatDecimal((indicators.distances[theme] ?? 0) / 1000, lang),
                     })}
                   </li>
                 ))}
