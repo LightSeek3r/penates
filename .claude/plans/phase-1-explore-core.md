@@ -1,6 +1,6 @@
 # Phase 1: Explore core
 
-Status: DRAFT, awaiting user approval. Parent: `settling-map-v1.md`. Product truth: `PRODUCT.md`. Visual contract: `.impeccable/surfaces/explore.md` (IGN Top 25 sheet grammar in Midnight Transit palette). Tick items as done; every tick needs evidence (command + result).
+Status: DONE 2026-11-05 (live at https://settling.unit42.fr). Parent: `settling-map-v1.md`. Product truth: `PRODUCT.md`. Visual contract: `.impeccable/surfaces/explore.md` (IGN Top 25 sheet grammar in Midnight Transit palette). Tick items as done; every tick needs evidence (command + result).
 
 ## Goal
 
@@ -48,12 +48,12 @@ docs/       data-licences.md (exists), methodology.md (new)
 
 ## Milestones (each ends with verification)
 
-- [ ] M1 Scaffold: `app/` and `pipeline/`, CI (lint, typecheck, test, build) green on GitHub. Evidence: Actions run link.
-- [ ] M2 Vertical slice on one département (69): pipeline → local PMTiles → map renders prices with hatching. Evidence: Playwright screenshot + pytest.
-- [ ] M3 National build: row counts, unmatched-code report, tile size, spot checks (Paris arrondissements about 8k-12k EUR/m², Creuse communes under about 1.5k EUR/m², Alsace-Moselle = no_coverage). Evidence: build log.
-- [ ] M4 UI to the direction contract: top bar, search (geocoder), layer rail, legend, inspector with N/date/trend/limits, FR/EN, mobile sheets. Evidence: screenshots at 390 and 1440 wide, e2e pass.
-- [ ] M5 Deploy: R2 bucket + custom domain + CORS + cache rule; Pages via Actions + wrangler. Evidence: prod URL loads, Range requests return 206, tiles cached.
-- [ ] M6 Finish: `impeccable detect`, finish review, DESIGN.md, docs/methodology.md, licence registry matches shipped layers.
+- [x] M1 Scaffold: `app/` and `pipeline/`, CI green on GitHub (lint, typecheck, unit tests, build; pipeline pytest). Evidence: CI run on b14f5c3 succeeded for both jobs.
+- [x] M2 Vertical slice (Rhône) then national: map renders prices with hatching. Evidence: 33+ pytest, Playwright screenshots, 12 e2e tests on dev and production builds.
+- [x] M3 National build from the OFFICIAL DVF file in CI. Evidence: live tiles pass pipeline/check_tiles.py (34,790 communes, 33,016 priced, 96 departments, Paris arrondissements 8,081-14,258, Creuse median under 1,500, 57/67/68 no-coverage), data through 2026-06-30, 20 MB. The gate also blocks publishing in build-data.yml. (Local runs used a community re-upload because the proxy blocks .gz; never published.)
+- [x] M4 UI to the direction contract, plus sheet furniture (Lambert-93 grid, neatline ticks, alternating scale bar). Evidence: screenshots at 390 and 1440, 12/12 e2e on desktop and phone, independent design review (final disposition fix on two minor items: label clipping at the neatline, accepted; typeface approved by the user).
+- [x] M5 Deploy: R2 bucket + custom domain + CORS + cache rule; Pages via Actions + wrangler. Evidence: smoke workflow (manifest 200, range 206, CORS and preflight, PMTiles magic, cache HIT seen) and production e2e 12/12 on https://settling.unit42.fr.
+- [x] M6 Finish: detector clean, independent finish review (3 rounds), DESIGN.md + .impeccable/design.json, docs/methodology.md, licence registry matches shipped layers.
 
 ## Tests
 
@@ -78,3 +78,9 @@ docs/       data-licences.md (exists), methodology.md (new)
 ## Approval gate
 
 Nothing here is implemented until the user approves. Then M1 first.
+
+## Known limits carried forward
+- Place labels are cut by the neatline rather than culled (MapLibre has no viewport-aware culling); cosmetic.
+- Contour relief arrives with the altitude layer (phase 2).
+- Edge cache hits are not guaranteed on every request.
+- E2E is not in CI by design (needs tiles); the production e2e and smoke workflows run on demand.
