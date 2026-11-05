@@ -1,4 +1,4 @@
-import { Map as MapLibreMap, NavigationControl, ScaleControl, addProtocol, setWorkerUrl, type MapGeoJSONFeature, type PointLike } from 'maplibre-gl'
+import { Map as MapLibreMap, NavigationControl, addProtocol, setWorkerUrl, type MapGeoJSONFeature, type PointLike } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { Protocol } from 'pmtiles'
@@ -11,6 +11,7 @@ import { initialState, useAppStore } from '../state/appStore'
 import type { Manifest } from '../state/store'
 import { formatHash } from '../state/urlState'
 import { registerPatterns } from './patterns'
+import { SheetScale, attachSheetFrame } from './sheetFrame'
 import { LAYER_IDS, SELECTION_LAYERS, buildStyle, patternFilters } from './style'
 
 let protocolRegistered = false
@@ -89,7 +90,8 @@ export function MapView({ manifest }: { manifest: Manifest }) {
     map.touchZoomRotate.disableRotation()
     map.touchPitch.disable()
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
-    map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right')
+    map.addControl(new SheetScale(), 'bottom-right')
+    const detachFrame = element.parentElement ? attachSheetFrame(map, element.parentElement) : () => undefined
     registerPatterns(map)
     if (import.meta.env.DEV) (window as unknown as { __map: MapLibreMap }).__map = map
 
@@ -167,6 +169,7 @@ export function MapView({ manifest }: { manifest: Manifest }) {
 
     return () => {
       unsubscribe()
+      detachFrame()
       map.remove()
     }
   }, [manifest])

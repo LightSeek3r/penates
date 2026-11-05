@@ -8,9 +8,12 @@ export function Sparkline({ values }: { values: (number | null)[] }) {
   const known = values.flatMap((value, index) => (value === null ? [] : [{ value, index }]))
   if (known.length < 2) return null
 
-  const min = Math.min(...known.map((point) => point.value))
-  const max = Math.max(...known.map((point) => point.value))
-  const span = max - min || 1
+  // The y-range is at least +/-20 % around the mean, so a flat trend is drawn flat and the line
+  // never claims a bigger swing than the caption's values.
+  const mean = known.reduce((sum, point) => sum + point.value, 0) / known.length
+  const min = Math.min(mean * 0.8, ...known.map((point) => point.value))
+  const max = Math.max(mean * 1.2, ...known.map((point) => point.value))
+  const span = max - min
   const x = (index: number) => PAD + (index / (TREND_YEARS.length - 1)) * (WIDTH - PAD * 2)
   const y = (value: number) => HEIGHT - PAD - ((value - min) / span) * (HEIGHT - PAD * 2)
   const points = known.map((point) => `${x(point.index)},${y(point.value)}`).join(' ')

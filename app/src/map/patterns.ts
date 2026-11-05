@@ -33,11 +33,11 @@ const PATTERNS: Record<string, Painter> = {
   },
   // Outside the DVF database: neutral cross-hatch (amber is reserved for selection and risk).
   'hatch-cross': (ctx) => {
-    diagonal(ctx, 'rgba(244, 247, 251, 0.4)', 1.2)
+    diagonal(ctx, 'rgba(244, 247, 251, 0.3)', 1.2)
     ctx.save()
     ctx.translate(SIZE, 0)
     ctx.scale(-1, 1)
-    diagonal(ctx, 'rgba(244, 247, 251, 0.4)', 1.2)
+    diagonal(ctx, 'rgba(244, 247, 251, 0.3)', 1.2)
     ctx.restore()
   },
 }

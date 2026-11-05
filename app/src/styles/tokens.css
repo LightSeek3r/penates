@@ -41,6 +41,13 @@
   --radius: 6px;
   --target: 44px;
   --topbar: 64px;
+  --sheet-margin: 28px;
   --rail: 288px;
   --inspector: 320px;
+}
+
+@media (max-width: 719px) {
+  :root {
+    --sheet-margin: 12px;
+  }
 }

@@ -1,6 +1,7 @@
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSourceSpecification, LayerSpecification, StyleSpecification } from 'maplibre-gl'
 import type { PriceType } from '../domain/place'
 import { HATCH_LIGHT_BELOW, priceFillExpression } from '../domain/priceLadder'
+import kmGrid from './km-grid.json'
 import type { Lang } from '../state/urlState'
 
 export const GROUND = '#0B1B3A'
@@ -51,24 +52,13 @@ export const SELECTION_LAYERS = {
   department: ['departments-selected-tint', 'departments-selected-casing', 'departments-selected'],
 } as const
 
-function graticule(): GeoJSONSourceSpecification['data'] {
-  const line = (a: [number, number], b: [number, number]) => ({
-    type: 'Feature' as const,
-    properties: {},
-    geometry: { type: 'LineString' as const, coordinates: [a, b] },
-  })
-  const meridians = Array.from({ length: 17 }, (_, i) => line([-6 + i, 40], [-6 + i, 52]))
-  const parallels = Array.from({ length: 11 }, (_, i) => line([-7, 41 + i], [11, 41 + i]))
-  return { type: 'FeatureCollection', features: [...meridians, ...parallels] }
-}
-
 const NOTES: GeoJSONSourceSpecification['data'] = {
   type: 'FeatureCollection',
   features: [
     {
       type: 'Feature',
-      properties: { fr: 'Alsace-Moselle : hors base DVF', en: 'Alsace-Moselle: outside DVF' },
-      geometry: { type: 'Point', coordinates: [7.0, 48.62] },
+      properties: { fr: 'Alsace-Moselle\nhors base DVF', en: 'Alsace-Moselle\noutside DVF' },
+      geometry: { type: 'Point', coordinates: [7.3, 48.6] },
     },
   ],
 }
@@ -93,14 +83,14 @@ function dataLayers(type: PriceType): LayerSpecification[] {
   const fill = priceFillExpression(type)
   const filters = patternFilters(type)
   const common = { source: 'data' } as const
-  const patternLayer = (id: string, sourceLayer: string, pattern: string, rising: boolean, minzoom?: number): LayerSpecification => ({
+  const patternLayer = (id: string, sourceLayer: string, pattern: string, rising: boolean, minzoom?: number, opacity?: ExpressionSpecification): LayerSpecification => ({
     id,
     type: 'fill',
     ...common,
     'source-layer': sourceLayer,
     ...(minzoom === undefined ? {} : { minzoom }),
     filter: filters[id],
-    paint: { 'fill-pattern': pattern, 'fill-opacity': fade(0.94, rising) },
+    paint: { 'fill-pattern': pattern, 'fill-opacity': opacity ?? fade(0.94, rising) },
   })
 
   return [
@@ -124,14 +114,18 @@ function dataLayers(type: PriceType): LayerSpecification[] {
     patternLayer('communes-low-light', 'communes', 'hatch-low-light', true, FADE_FROM),
     patternLayer('communes-low-dark', 'communes', 'hatch-low-dark', true, FADE_FROM),
     patternLayer('communes-none', 'communes', 'dots', true, FADE_FROM),
-    patternLayer('communes-nocoverage', 'communes', 'hatch-cross', true, FADE_FROM),
+    patternLayer('communes-nocoverage', 'communes', 'hatch-cross', true, FADE_FROM, ['interpolate', ['linear'], ['zoom'], 7, 0.75, 9, 0.35]),
     {
       id: 'communes-line',
       type: 'line',
       ...common,
       'source-layer': 'communes',
       minzoom: 7.5,
-      paint: { 'line-color': PORCELAIN, 'line-opacity': 0.22, 'line-width': ['interpolate', ['linear'], ['zoom'], 7.5, 0.3, 12, 0.9] },
+      paint: {
+        'line-color': PORCELAIN,
+        'line-opacity': ['case', ['==', ['get', 'c_all'], 4], 0.05, 0.22],
+        'line-width': ['interpolate', ['linear'], ['zoom'], 7.5, 0.3, 12, 0.9],
+      },
     },
     {
       id: 'departments-line',
@@ -161,7 +155,7 @@ export function buildStyle(tileUrl: string, type: PriceType, lang: Lang): StyleS
         url: `pmtiles://${tileUrl}`,
         attribution: '© IGN · DGFiP/Etalab · Licence Ouverte v2.0',
       },
-      graticule: { type: 'geojson', data: graticule() },
+      kmgrid: { type: 'geojson', data: kmGrid as GeoJSONSourceSpecification['data'] },
       notes: { type: 'geojson', data: NOTES },
     },
     layers: [
@@ -184,7 +178,22 @@ export function buildStyle(tileUrl: string, type: PriceType, lang: Lang): StyleS
         paint: { 'line-color': COBALT, 'line-opacity': 0.55, 'line-width': 0.7 },
       },
       ...dataLayers(type),
-      { id: 'graticule', type: 'line', source: 'graticule', paint: { 'line-color': PORCELAIN, 'line-opacity': 0.13, 'line-width': 0.6 } },
+      {
+        id: 'km-grid-100',
+        type: 'line',
+        source: 'kmgrid',
+        minzoom: 3.5,
+        filter: ['==', ['get', 'level'], 100],
+        paint: { 'line-color': PORCELAIN, 'line-opacity': 0.2, 'line-width': 0.6 },
+      },
+      {
+        id: 'km-grid-10',
+        type: 'line',
+        source: 'kmgrid',
+        minzoom: 8,
+        filter: ['==', ['get', 'level'], 10],
+        paint: { 'line-color': PORCELAIN, 'line-opacity': 0.1, 'line-width': 0.5 },
+      },
       {
         id: 'roads-major',
         type: 'line',
@@ -215,26 +224,53 @@ export function noteLabel(lang: Lang): LayerSpecification {
     source: 'notes',
     minzoom: 5,
     maxzoom: 9.5,
-    layout: { 'text-field': ['get', lang], 'text-font': FONT, 'text-size': 12, 'text-max-width': 8, 'text-allow-overlap': true },
+    layout: { 'text-field': ['get', lang], 'text-font': FONT, 'text-size': 12, 'text-max-width': 14, 'text-allow-overlap': true },
     paint: { 'text-color': PORCELAIN, 'text-halo-color': GROUND, 'text-halo-width': 1.6 },
   }
 }
 
+// Coarse outline of metropolitan France (a little outside the coast) used to tell French place names
+// from foreign ones, which are drawn smaller and dimmer so they do not compete with the data.
+const FRANCE_OUTLINE = {
+  type: 'MultiPolygon' as const,
+  coordinates: [
+    [
+      [
+        [2.3, 51.35], [3.3, 51.0], [3.2, 50.7], [4.25, 50.3], [4.95, 50.2], [5.8, 49.55], [6.45, 49.55], [8.3, 49.15], [8.4, 48.9],
+        [7.7, 47.9], [7.65, 47.55], [7.05, 47.45], [6.95, 47.2], [6.05, 46.35], [6.05, 46.15], [6.9, 46.0], [7.15, 45.7], [7.15, 45.1],
+        [6.75, 44.2], [7.65, 43.85], [7.5, 43.5], [6.5, 43.0], [4.5, 43.2], [3.3, 42.95], [3.2, 42.35], [1.75, 42.35], [0.7, 42.7],
+        [-0.8, 42.85], [-1.8, 43.35], [-1.55, 44.6], [-1.3, 46.0], [-2.4, 47.1], [-4.9, 47.9], [-5.1, 48.5], [-3.8, 48.9], [-1.9, 48.8],
+        [-1.9, 49.7], [-1.0, 49.8], [0.2, 49.8], [1.6, 50.3], [2.3, 51.35],
+      ],
+    ],
+    [[[8.35, 41.3], [9.7, 41.3], [9.7, 43.15], [8.9, 43.15], [8.35, 42.6], [8.35, 41.3]]],
+  ],
+}
+
+const inFrance: ExpressionSpecification = ['within', FRANCE_OUTLINE as never]
+
 // Fixed sizes per place rank (rank is carried by size and weight, not by zoom).
 function placeLabels(): LayerSpecification[] {
-  const label = (id: string, classes: string[], minzoom: number, size: number, font: string[]): LayerSpecification => ({
+  const label = (id: string, classes: string[], minzoom: number, size: number, font: string[], french: boolean): LayerSpecification => ({
     id,
     type: 'symbol',
     source: 'basemap',
     'source-layer': 'place',
     minzoom,
-    filter: ['in', ['get', 'class'], ['literal', classes]],
+    filter: ['all', ['in', ['get', 'class'], ['literal', classes]], french ? inFrance : ['!', inFrance]],
     layout: { 'text-field': ['get', 'name'], 'text-font': font, 'text-size': size, 'text-max-width': 8 },
-    paint: { 'text-color': PORCELAIN, 'text-halo-color': GROUND, 'text-halo-width': 1.4 },
+    paint: {
+      'text-color': PORCELAIN,
+      'text-opacity': french ? 1 : 0.6,
+      'text-halo-color': GROUND,
+      'text-halo-width': 1.4,
+    },
   })
   return [
-    label('place-city', ['city'], 4.5, 15, FONT_BOLD),
-    label('place-town', ['town'], 8, 13, FONT),
-    label('place-village', ['village'], 10.5, 12, FONT),
+    label('place-city', ['city'], 4.5, 15, FONT_BOLD, true),
+    label('place-town', ['town'], 8, 13, FONT, true),
+    label('place-village', ['village'], 10.5, 12, FONT, true),
+    label('place-city-foreign', ['city'], 4.5, 11, FONT, false),
+    label('place-town-foreign', ['town'], 8, 11, FONT, false),
   ]
 }

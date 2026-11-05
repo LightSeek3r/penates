@@ -12,14 +12,13 @@ export function LayerPanel() {
   return (
     <section className="panel layers" data-open={open} aria-label={t('layers.open')}>
       <div className="panel__head">
-        <h2 className="panel__title">{t('layers.title')}</h2>
+        <div>
+          <h2 className="layer-row__name">{t('layers.price')}</h2>
+          <p className="layer-row__hint">{t('layers.priceHint')}</p>
+        </div>
         <button type="button" className="button button--quiet layers__close" onClick={() => setOpen(false)}>
           {t('layers.close')}
         </button>
-      </div>
-      <div className="layer-row">
-        <p className="layer-row__name">{t('layers.price')}</p>
-        <p className="layer-row__hint">{t('layers.priceHint')}</p>
       </div>
       <fieldset className="segmented">
         <legend>{t('layers.typeLabel')}</legend>

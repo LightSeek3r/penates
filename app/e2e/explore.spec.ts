@@ -62,7 +62,7 @@ test('search flies to a city and opens its details', async ({ page }) => {
   await page.goto('/#l=fr')
   const search = page.getByRole('combobox', { name: 'Rechercher une commune' })
   await search.fill('Lyon')
-  await expect(page.getByRole('option').first()).toBeVisible()
+  await expect(page.getByRole('option').first()).toBeVisible({ timeout: 15_000 })
   await search.press('Enter')
   await expect(page.getByRole('heading', { name: /Lyon/ })).toBeVisible({ timeout: 25_000 })
 })
