@@ -9,7 +9,7 @@ export function SourcesDialog() {
   const setOpen = useAppStore((state) => state.setSourcesOpen)
   const dataThrough = useAppStore((state) => state.manifest?.dataThrough)
   const lang = useAppStore((state) => state.lang)
-  const docs = lang === 'fr' ? { method: '/methodologie/', sources: '/sources/' } : { method: '/en/methodology/', sources: '/en/sources/' }
+  const docs = lang === 'fr' ? { method: '/methodologie/', sources: '/sources/', legal: '/mentions-legales/' } : { method: '/en/methodology/', sources: '/en/sources/', legal: '/en/legal/' }
   const dialog = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -49,6 +49,9 @@ export function SourcesDialog() {
         </li>
         <li>
           <a href={docs.sources}>{t('sources.sourcesPage')}</a>
+        </li>
+        <li>
+          <a href={docs.legal}>{t('sources.legalPage')}</a>
         </li>
       </ul>
       <PwaSection />

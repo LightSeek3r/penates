@@ -29,7 +29,11 @@ DGFiP's DVF terms of use forbid reuse that makes the data search-indexable or th
 - Playwright against the production build: manifest valid and linked, service worker controlling the page, offline reload shows the app, no installability errors (CDP), per-route SEO tags, robots/sitemap contents, no CSP violations in the console.
 - Lighthouse (SEO, accessibility, best practices) on the live site from GitHub Actions; thresholds enforced for SEO and accessibility.
 
-## Needs from the user
+## Decisions
 
-- Publisher details for the French legal notice (name or pseudonym, contact email); hosting is Cloudflare.
-- Confirm whether aggregate per-commune public pages may be considered later (legal reading of the DVF terms).
+- Legal notice and privacy page: built from the publisher identity already published on unit42.fr (individual publisher, contact address, Cloudflare as host), with privacy text written from what this app actually does. Page lives in `docs/legal*.md` and is generated in both languages.
+- Per-commune public pages: dropped by the user ("seems excessive"). The DVF terms also argue against making the data indexable. Not planned.
+
+## Open point
+
+- The zone unit42.fr may have Cloudflare Web Analytics switched on for the whole zone. This app's CSP blocks third-party scripts, so no analytics would run on settling.unit42.fr, which matches the "no tracking" promise; a console warning would show if the beacon were injected. Excluding the hostname in Cloudflare Web Analytics would silence it.

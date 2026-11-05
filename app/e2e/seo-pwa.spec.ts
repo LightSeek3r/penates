@@ -52,12 +52,19 @@ test.describe('search engines see real, per-language pages', () => {
     }
   })
 
-  test('the legal notice is only listed when it exists', async ({ page }) => {
+  test('the legal notice exists in both languages and names the publisher and host', async ({ page }) => {
     const sitemap = await rawHtml(page, '/sitemap.xml')
-    const listed = sitemap.includes('mentions-legales')
-    const html = await (await page.request.get('/mentions-legales/')).text()
-    // The preview server answers unknown paths with the app, so presence is judged by the page itself.
-    expect(html.includes('Mentions légales et confidentialité')).toBe(listed)
+    for (const [path, publisher, host] of [
+      ['/mentions-legales/', 'Éditeur', 'Hébergeur'],
+      ['/en/legal/', 'Publisher', 'Host'],
+    ] as const) {
+      expect(sitemap).toContain(`${SITE}${path}`)
+      const html = await rawHtml(page, path)
+      expect(html).toContain(publisher)
+      expect(html).toContain(host)
+      expect(html).toContain('Cloudflare')
+      expect(html).toContain('mailto:')
+    }
   })
 })
 

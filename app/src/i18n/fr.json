@@ -99,7 +99,8 @@
     "creditsGeorisques": "Zonage sismique : Géorisques (BRGM, ministère de la Transition écologique), Licence Ouverte",
     "pages": "Pages de documentation",
     "methodPage": "Méthode détaillée",
-    "sourcesPage": "Sources et licences"
+    "sourcesPage": "Sources et licences",
+    "legalPage": "Mentions légales et confidentialité"
   },
   "status": {
     "loading": "Chargement de la carte…",

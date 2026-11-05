@@ -99,7 +99,8 @@
     "creditsGeorisques": "Seismic zoning: Géorisques (BRGM, ministry of ecological transition), Licence Ouverte",
     "pages": "Documentation pages",
     "methodPage": "Detailed method",
-    "sourcesPage": "Sources and licences"
+    "sourcesPage": "Sources and licences",
+    "legalPage": "Legal notice and privacy"
   },
   "status": {
     "loading": "Loading the map…",
