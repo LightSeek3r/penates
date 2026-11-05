@@ -68,3 +68,20 @@ def _department_summary(results: list[Result]) -> dict:
         if medians else None,
         "largest_n": [_summary(r) for r in by_n[:5]],
     }
+
+
+SPOT_COMMUNES = {
+    "31555": "Toulouse", "69383": "Lyon 3e", "75106": "Paris 6e", "67482": "Strasbourg",
+    "06088": "Nice", "48095": "Mende",
+}
+REMOTE_N = 10
+
+
+def indicator_spot_checks(communes: list[Result], indicators: dict[str, dict[str, int]]) -> dict:
+    """Seismic zone and distances of a few known communes, plus the communes farthest from a hospital."""
+    names = {r.area.code: r.area.name for r in communes}
+    farthest = sorted(indicators, key=lambda code: -indicators[code].get("d_hos", -1))[:REMOTE_N]
+    return {
+        "known": [{"code": c, "name": names[c]} | indicators[c] for c in SPOT_COMMUNES if c in indicators],
+        "farthest_from_hospital": [{"code": c, "name": names[c]} | indicators[c] for c in farthest],
+    }

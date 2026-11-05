@@ -6,7 +6,8 @@ import gzip
 import math
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import mapbox_vector_tile
@@ -15,7 +16,7 @@ import shapely
 from mapbox_vector_tile.encoder import on_invalid_geometry_make_valid
 from pmtiles.tile import Compression, TileType, tileid_to_zxy, zxy_to_tileid
 from pmtiles.writer import Writer
-from shapely.geometry import MultiPolygon, Polygon
+from shapely.geometry import MultiPolygon, Polygon, box
 from shapely.geometry.base import BaseGeometry
 
 EXTENT = 4096
@@ -43,6 +44,8 @@ class TileLayer:
     minzoom: int
     maxzoom: int
     features: list[TileFeature]
+    # zoom -> Douglas-Peucker tolerance in tile units, for zooms that need coarser shapes than SIMPLIFY_UNITS
+    simplify_units: Mapping[int, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -93,11 +96,12 @@ def encode_tile(task: TileTask) -> tuple[int, bytes | None]:
     for name, features in task.layers.items():
         geometries = np.asarray([g for _, _, g in features], dtype=object)
         clipped = shapely.clip_by_rect(geometries, minx - pad, miny - pad, maxx + pad, maxy + pad)
-        local = shapely.set_precision(shapely.transform(clipped, to_tile_units), 1.0)
+        local = shapely.transform(clipped, to_tile_units)
+        snapped = shapely.set_precision(local, 1.0)
         encoded = [
             {"id": fid, "properties": props, "geometry": polygon}
-            for (fid, props, _), geometry in zip(features, local)
-            if (polygon := _polygonal(geometry)) is not None
+            for (fid, props, _), unsnapped, geometry in zip(features, local, snapped)
+            if (polygon := _polygonal(geometry) or _unit_square(unsnapped)) is not None
         ]
         if encoded:
             encoded_layers.append({"name": name, "features": encoded})
@@ -145,14 +149,15 @@ def write_pmtiles(
 
 def _zoom_tasks(layers: list[TileLayer], z: int) -> list[TileTask]:
     span = WORLD / (1 << z)
-    tolerance = SIMPLIFY_UNITS * span / EXTENT
     pad = BUFFER_UNITS * span / EXTENT
     per_tile: dict[tuple[int, int], dict[str, list]] = defaultdict(lambda: defaultdict(list))
     for layer in layers:
         if not layer.minzoom <= z <= layer.maxzoom:
             continue
         geometries = np.asarray([f.geometry for f in layer.features], dtype=object)
+        tolerance = layer.simplify_units.get(z, SIMPLIFY_UNITS) * span / EXTENT
         simplified = shapely.simplify(geometries, tolerance, preserve_topology=True)
+        simplified = np.where(shapely.is_empty(simplified), geometries, simplified)
         for feature, geometry, (gx0, gy0, gx1, gy1) in zip(layer.features, simplified, shapely.bounds(simplified)):
             if shapely.is_empty(geometry):
                 continue
@@ -179,6 +184,20 @@ def _polygonal(geometry: BaseGeometry) -> Polygon | MultiPolygon | None:
     polygons = [p for part in getattr(geometry, "geoms", []) if (p := _polygonal(part)) is not None]
     flat = [g for p in polygons for g in (p.geoms if isinstance(p, MultiPolygon) else [p])]
     return MultiPolygon(flat) if flat else None
+
+
+def _unit_square(geometry: BaseGeometry) -> Polygon | None:
+    """A 1-unit square for a polygon that snapping to the grid erased, so no area vanishes at low zoom.
+
+    Only the tile whose own extent holds the polygon's inner point gets it, so buffers do not duplicate it.
+    """
+    if geometry is None or geometry.is_empty:
+        return None
+    point = shapely.point_on_surface(geometry)
+    x, y = math.floor(point.x), math.floor(point.y)
+    if not (0 <= x < EXTENT and 0 <= y < EXTENT):
+        return None
+    return box(x, y, x + 1, y + 1)
 
 
 def _e7(degrees: float) -> int:

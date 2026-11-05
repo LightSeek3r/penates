@@ -1,4 +1,5 @@
-"""Resolve and download the two upstream sources (geo-DVF, IGN ADMIN EXPRESS COG-CARTO-PE).
+"""Resolve and download the upstream sources: geo-DVF, IGN ADMIN EXPRESS COG-CARTO-PE, INSEE BPE and
+the Géorisques seismic zoning.
 
 Downloads are untrusted data: they are only ever read as CSV/Parquet, never executed.
 """
@@ -6,11 +7,16 @@ Downloads are untrusted data: they are only ever read as CSV/Parquet, never exec
 from __future__ import annotations
 
 import hashlib
+import html
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import requests
+
+from settling.seismic import parse_zone, read_zone_csv, write_zone_csv
 
 DATAGOUV_DATASET_API = "https://www.data.gouv.fr/api/1/datasets/demandes-de-valeurs-foncieres-geolocalisees/"
 DVF_TITLE_MARKER = "fichier unique"
@@ -20,6 +26,19 @@ GEOPF_RESOURCE = "https://data.geopf.fr/telechargement/resource/ADMIN-EXPRESS-CO
 # one GeoParquet file per layer, WGS84, whole France (metropole + overseas).
 ADMIN_EXPRESS_EDITION_MARKER = "__GEOPARQUET_WGS84G_FRA_"
 ADMIN_EXPRESS_LAYERS = ("commune", "arrondissement_municipal", "departement", "commune_associee_ou_deleguee")
+
+# The BPE 2025 page links the detail file under a stable, untimestamped path. INSEE refreshes the file
+# monthly under the same URL (the page's "Paru le" date moves), so the manifest records its sha256 and
+# that date. A new BPE edition gets a new page id: moving to it is a deliberate code change.
+BPE_EDITION = "BPE 2025, geography at 2025-01-01"
+BPE_PAGE = "https://www.insee.fr/fr/statistiques/8217525"
+BPE_URL = "https://www.insee.fr/fr/statistiques/fichier/8217525/BPE25.parquet"
+BPE_RELEASE_PATTERN = re.compile(r"Paru le\D{0,20}?(\d{2})/(\d{2})/(\d{4})")
+PARQUET_MAGIC = b"PAR1"
+
+GEORISQUES_SEISMIC_API = "https://www.georisques.gouv.fr/api/v1/zonage_sismique"
+# The API rejects more codes per request ("ne doit pas dépasser 20"), verified 2026-11-05.
+SEISMIC_CODES_PER_REQUEST = 20
 
 ATOM = "{http://www.w3.org/2005/Atom}"
 GPF_DL = "{https://data.geopf.fr/annexes/ressources/xsd/gpf_dl.xsd}"
@@ -113,8 +132,68 @@ def fetch_admin_express(session: requests.Session, raw_dir: Path) -> tuple[Admin
     return edition, paths
 
 
+@dataclass(frozen=True)
+class SeismicSource:
+    api: str
+    queried_on: str
+    codes_queried: int
+    zones_returned: int
+
+
+def fetch_bpe(session: requests.Session, raw_dir: Path) -> Path:
+    dest = raw_dir / "bpe" / BPE_URL.rsplit("/", 1)[-1]
+    download(session, BPE_URL, dest, expected_size=None, override_flag="--bpe-file")
+    with dest.open("rb") as f:
+        if f.read(4) != PARQUET_MAGIC:
+            raise SourceError(f"{dest} is not a Parquet file; delete it and retry, or pass --bpe-file")
+    return dest
+
+
+def resolve_bpe_release(session: requests.Session) -> str | None:
+    """ISO date of the current BPE file release, scraped from the page; None if the page changed."""
+    response = session.get(BPE_PAGE, timeout=TIMEOUT_S)
+    response.raise_for_status()
+    text = re.sub(r"<[^>]+>", " ", html.unescape(response.text))
+    match = BPE_RELEASE_PATTERN.search(text)
+    return f"{match[3]}-{match[2]}-{match[1]}" if match else None
+
+
+def fetch_seismic_zones(session: requests.Session, raw_dir: Path, codes: list[str]) -> tuple[SeismicSource, Path]:
+    """Zones for `codes` from the Géorisques API, cached per day and code set as a two-column CSV."""
+    day = datetime.now(UTC).date().isoformat()
+    tag = hashlib.sha1(",".join(codes).encode()).hexdigest()[:12]
+    dest = raw_dir / "seismic" / f"georisques-zonage-sismique-{day}-{tag}.csv"
+    if not dest.exists():
+        write_zone_csv(dest, _query_seismic_api(session, codes))
+    return SeismicSource(GEORISQUES_SEISMIC_API, day, len(codes), len(read_zone_csv(dest))), dest
+
+
+def _query_seismic_api(session: requests.Session, codes: list[str]) -> dict[str, int]:
+    zones: dict[str, int] = {}
+    for start in range(0, len(codes), SEISMIC_CODES_PER_REQUEST):
+        batch = codes[start:start + SEISMIC_CODES_PER_REQUEST]
+        params = {"code_insee": ",".join(batch), "page_size": SEISMIC_CODES_PER_REQUEST}
+        response = session.get(GEORISQUES_SEISMIC_API, params=params, timeout=TIMEOUT_S)
+        _raise_for_blocked(response, GEORISQUES_SEISMIC_API, "--seismic-file")
+        payload = response.json()
+        if payload.get("total_pages", 1) > 1:
+            raise SourceError(f"{GEORISQUES_SEISMIC_API}: unexpected paging for {batch[0]}..: {payload['total_pages']}")
+        # Rows without code_insee occur (seen for 75056) and cannot be attributed; they are ignored.
+        zones |= {
+            row["code_insee"]: zone
+            for row in payload.get("data", [])
+            if row.get("code_insee") and (zone := parse_zone(row.get("code_zone"))) is not None
+        }
+    return zones
+
+
 def download(
-    session: requests.Session, url: str, dest: Path, expected_size: int | None, expected_sha1: str | None = None
+    session: requests.Session,
+    url: str,
+    dest: Path,
+    expected_size: int | None,
+    expected_sha1: str | None = None,
+    override_flag: str = "--dvf-file",
 ) -> None:
     """Download to `dest` once; a cached file is trusted if its size matches."""
     if dest.exists() and (expected_size is None or dest.stat().st_size == expected_size):
@@ -123,7 +202,7 @@ def download(
     partial = dest.with_name(dest.name + ".part")
     sha1 = hashlib.sha1()
     with session.get(url, stream=True, timeout=TIMEOUT_S) as response:
-        _raise_for_blocked(response, url)
+        _raise_for_blocked(response, url, override_flag)
         with partial.open("wb") as out:
             for chunk in response.iter_content(CHUNK_BYTES):
                 out.write(chunk)
@@ -136,13 +215,13 @@ def download(
     partial.replace(dest)
 
 
-def _raise_for_blocked(response: requests.Response, url: str) -> None:
+def _raise_for_blocked(response: requests.Response, url: str, override_flag: str) -> None:
     # A filtering proxy (seen here: Zscaler blocks *.gz "file types") answers 403 with an HTML page.
     content_type = response.headers.get("Content-Type", "")
     if response.status_code == 403 or content_type.startswith("text/html"):
         raise SourceError(
             f"{url}: HTTP {response.status_code} ({content_type}). A proxy may be blocking this file type; "
-            "download it by other means and pass it with --dvf-file."
+            f"download it by other means and pass it with {override_flag}."
         )
     response.raise_for_status()
 

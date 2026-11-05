@@ -39,7 +39,8 @@ def load_boundaries(paths: dict[str, Path], departments: list[str] | None) -> Bo
     deps = read_areas(paths["departement"], dep_column="code_insee")
     keep = _scope(departments)
     return Boundaries(
-        communes=[a for a in assemble_communes(communes, arrondissements) if keep(a.dep)],
+        # Scoped by code, not by the department column: Saint-Pierre-et-Miquelon (975xx) has department "NR".
+        communes=[a for a in assemble_communes(communes, arrondissements) if keep(department_of(a.code))],
         departments=[d for d in deps if keep(d.dep)],
         merged_codes=read_merged_codes(paths["commune_associee_ou_deleguee"]),
     )

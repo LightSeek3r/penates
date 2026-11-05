@@ -3,7 +3,7 @@ from pathlib import Path
 
 import mapbox_vector_tile
 from pmtiles.reader import MmapSource, Reader
-from pmtiles.tile import Compression, TileType
+from pmtiles.tile import Compression, TileType, tileid_to_zxy
 from shapely.geometry import box
 
 from settling.build import feature_id
@@ -55,3 +55,34 @@ def test_round_trip_through_pmtiles(tmp_path: Path) -> None:
     scale = EXTENT / (maxx - minx)
     assert abs(min(xs) - (expected[0] - minx) * scale) <= 1
     assert abs(max(ys) - (maxy - expected[1]) * scale) <= 1
+
+
+def test_indicator_properties_round_trip(tmp_path: Path) -> None:
+    indicators = {"sz": 4, "d_hos": 1200, "d_gp": 300, "d_sch": 100, "d_sup": 2500, "d_bak": 0, "d_pool": 30000}
+    (geometry,) = to_web_mercator([box(7.20, 43.65, 7.30, 43.75)])  # Nice
+    feature = TileFeature(feature_id("06088"), {"code": "06088", "p_all": 5000} | indicators, geometry)
+    tiles = build_tiles([TileLayer("communes", 8, 8, [feature])], workers=1)
+    path = tmp_path / "nice.pmtiles"
+    write_pmtiles(path, tiles, {"name": "test"}, (7.2, 43.65, 7.3, 43.75), (7.25, 43.7, 8))
+    with path.open("rb") as f:
+        reader = Reader(MmapSource(f))
+        (tile_id,) = tiles
+        decoded = mapbox_vector_tile.decode(gzip.decompress(reader.get(*tileid_to_zxy(tile_id))))
+    assert decoded["communes"]["features"][0]["properties"] == {"code": "06088", "p_all": 5000} | indicators
+
+
+def test_commune_smaller_than_a_tile_unit_is_kept_at_low_zoom() -> None:
+    # About 300 m wide: under one tile unit at z4 (about 610 m), so grid snapping would erase it.
+    tiny = box(2.3500, 48.8500, 2.3540, 48.8530)
+    large = box(2.0, 48.5, 2.3, 48.8)
+    features = [
+        TileFeature(i, {"code": code}, geometry)
+        for i, (code, geometry) in enumerate(zip(("tiny", "large"), to_web_mercator([tiny, large])))
+    ]
+    tiles = build_tiles([TileLayer("communes", 4, 4, features, simplify_units={4: 4.0})], workers=1)
+    codes = [
+        f["properties"]["code"]
+        for data in tiles.values()
+        for f in mapbox_vector_tile.decode(gzip.decompress(data))["communes"]["features"]
+    ]
+    assert sorted(codes) == ["large", "tiny"]

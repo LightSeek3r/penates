@@ -29,10 +29,24 @@ Price per m² = sale value ÷ real built surface. For houses the sale value incl
 
 ## What is not covered
 
-- **Alsace-Moselle (départements 57, 67, 68) and Mayotte**: these sales are not in DVF (they use a different land register). They are drawn with an amber cross-hatch and labelled "Hors base DVF". Missing data is never shown as a low price.
+- **Alsace-Moselle (départements 57, 67, 68) and Mayotte**: these sales are not in DVF (they use a different land register). They are drawn with a neutral cross-hatch and labelled "Hors base DVF". Missing data is never shown as a low price.
 - **Overseas départements** other than Mayotte are in DVF but are not on the v1 map.
 - **Paris, Lyon, Marseille** appear as their arrondissements, because that is how DVF reports them. Searching the city selects the arrondissement under the map centre.
 - **Merged communes**: DVF still uses some pre-merger codes. They are mapped to the current commune through IGN's table of former communes; a build fails if unmatched sales exceed 0.5 %.
+
+## Seismic zone
+
+The regulatory seismic zone of each commune (1 very low to 5 strong, décret 2010-1255) from the Géorisques API. Paris, Lyon and Marseille arrondissements take their city's zone. The few communes unknown to the API take the highest zone of their neighbours. In metropolitan France only zones 1 to 4 occur. This is regulatory zoning for building rules, not a forecast, and it is indicative: it does not replace the legal *état des risques* (ERRIAL) of a property.
+
+## Distances to services
+
+For each commune, the straight-line distance in metres, rounded to 100 m, from one point inside the commune (not its centre) to the nearest facility of each kind in metropolitan France, from the INSEE permanent facilities base (BPE 2025): short-stay hospitals (D101), general practitioners (D265), primary schools (C108 and C109), supermarkets and hypermarkets (B105, B104), bakeries (B207) and swimming pools (F101).
+
+Facilities whose position is approximate (typically within about 500 m) are kept; only facilities without coordinates are left out. These are not travel times, they ignore facilities abroad, one point stands for the whole commune, and the figures hide differences inside large communes.
+
+## Filters
+
+A filter keeps the communes whose value is at or below the limit you set (for example, a hospital within 15 km). Communes that do not meet every active filter are greyed out. A commune with no value for an active criterion does not match it: an unknown is never counted as a pass.
 
 ## Known limits
 

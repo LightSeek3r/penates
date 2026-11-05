@@ -1,4 +1,4 @@
-"""CLI: fetch -> clean/aggregate -> boundaries -> tiles -> manifest.
+"""CLI: fetch -> clean/aggregate -> boundaries -> seismic zones and distances -> tiles -> manifest.
 
     python -m settling.build --dep 69 --out data/build/slice
     python -m settling.build --out data/build/national
@@ -24,20 +24,37 @@ import requests
 import shapely
 import truststore
 
+import numpy as np
+
 from settling import aggregate as agg
+from settling import proximity, seismic
 from settling.aggregate import AreaResult
 from settling.boundaries import Area, Boundaries, load_boundaries
 from settling.clean import CleanResult, clean_sales
 from settling.join import JoinReport, check_unmatched, reconcile_codes
-from settling.reporting import area_rows, spot_checks, tile_stats
-from settling.sources import fetch_admin_express, fetch_dvf
+from settling.reporting import area_rows, indicator_spot_checks, spot_checks, tile_stats
+from settling.seismic import SeismicReport
+from settling.sources import (
+    BPE_EDITION,
+    BPE_URL,
+    fetch_admin_express,
+    fetch_bpe,
+    fetch_dvf,
+    fetch_seismic_zones,
+    resolve_bpe_release,
+)
 from settling.tiles import TileFeature, TileLayer, build_tiles, to_web_mercator, write_pmtiles
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TILE_FILE = "communes.pmtiles"
-ATTRIBUTION = "© IGN, DGFiP/Etalab (Licence Ouverte v2.0)"
+ATTRIBUTION = "© IGN, DGFiP/Etalab, INSEE, Géorisques (Licence Ouverte v2.0)"
 DEPARTMENTS_ZOOMS = (0, 7)
-COMMUNES_ZOOMS = (6, 10)
+# The app frames metropolitan France at about z4.8 on a phone: communes must exist from z4 for filters.
+COMMUNES_ZOOMS = (4, 10)
+# zoom -> simplification in tile units for the national-view zooms; every commune is still kept there.
+# Measured on the national build: properties, not shapes, dominate these tiles. 4 units (0.5 px) trims
+# about 10% and stays invisible; 8 units saves 2% more and lets neighbours drift apart by 1 px.
+COMMUNES_SIMPLIFY_UNITS = {4: 4.0, 5: 4.0}
 CENTER_ZOOM = 5
 USER_AGENT = "settling-map-pipeline"
 
@@ -66,6 +83,15 @@ def main(argv: list[str] | None = None) -> None:
         join = reconcile_codes(con, boundaries)
         log.info("unmatched sales after crosswalk: %d (%.3f%%)", join.unmatched_sales_after, 100 * join.unmatched_share_after)
         check_unmatched(join)
+    with _timed("seismic_and_distances", timings):
+        commune_codes = [a.code for a in boundaries.communes]
+        seismic_source, zones, seismic_report = _seismic_zones(session, args, boundaries.communes, boundaries.merged_codes)
+        bpe_path, bpe_source = _bpe_source(session, args.raw, args.bpe_file)
+        equipments = proximity.read_equipments(bpe_path)
+        origins = proximity.representative_points_l93([a.geometry for a in boundaries.communes])
+        distances = proximity.nearest_distances(origins, equipments)
+        indicators = _indicators(commune_codes, zones, distances)
+        log.info("seismic zones: %s", seismic_report.by_method)
     with _timed("aggregate", timings):
         window_by_months = agg.windows(con, cleaned.newest_date)
         communes = _area_results(con, boundaries.communes, "code_commune", window_by_months, with_trend=True)
@@ -73,14 +99,23 @@ def main(argv: list[str] | None = None) -> None:
     con.close()
     with _timed("tiles", timings):
         tile_path = args.out / TILE_FILE
-        tiles = _write_tiles(tile_path, boundaries, communes, departments, window_by_months, args.workers)
+        tiles = _write_tiles(tile_path, boundaries, communes, departments, indicators, window_by_months, args.workers)
     timings["total"] = round(time.perf_counter() - started, 1)
 
-    sources = {"dvf": dvf_source, "boundaries": {"edition_id": edition.edition_id, "edition_date": edition.edition_date}}
-    _write_json(args.out / "manifest.json", _manifest(tile_path, sources, cleaned, join, communes, departments))
+    sources = {
+        "dvf": dvf_source,
+        "boundaries": {"edition_id": edition.edition_id, "edition_date": edition.edition_date},
+        "bpe": bpe_source,
+        "seismic": seismic_source,
+    }
+    indicator_report = _indicator_report(seismic_report, equipments, distances, communes, indicators)
+    _write_json(
+        args.out / "manifest.json", _manifest(tile_path, sources, cleaned, join, communes, departments, indicators)
+    )
     _write_json(
         args.out / "build-report.json",
-        _report(args, sources, cleaned, join, window_by_months, communes, departments, tiles, timings),
+        _report(args, sources, cleaned, join, window_by_months, communes, departments, tiles, timings)
+        | {"indicators": indicator_report},
     )
     log.info("wrote %s (%d bytes, %d tiles) in %.1fs", tile_path, tile_path.stat().st_size, len(tiles), timings["total"])
 
@@ -100,12 +135,13 @@ def _write_tiles(
     boundaries: Boundaries,
     communes: list[AreaResult],
     departments: list[AreaResult],
+    indicators: dict[str, dict[str, int]],
     window_by_months: dict[int, agg.Window],
     workers: int,
 ) -> dict[int, bytes]:
     layers = [
-        _tile_layer("departments", DEPARTMENTS_ZOOMS, departments, with_dep=False),
-        _tile_layer("communes", COMMUNES_ZOOMS, communes, with_dep=True),
+        _tile_layer("departments", DEPARTMENTS_ZOOMS, departments, indicators=None),
+        _tile_layer("communes", COMMUNES_ZOOMS, communes, indicators, COMMUNES_SIMPLIFY_UNITS),
     ]
     tiles = build_tiles(layers, workers=workers)
     bounds = _bounds(boundaries)
@@ -126,6 +162,14 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         type=Path,
         help="use this local geo-DVF file (csv, csv.gz or parquet) instead of downloading the API-resolved one",
     )
+    parser.add_argument(
+        "--bpe-file", type=Path, help="use this local INSEE BPE 2025 Parquet file (BPE25.parquet) instead of downloading"
+    )
+    parser.add_argument(
+        "--seismic-file",
+        type=Path,
+        help="use this CSV (columns code_insee,code_zone) instead of querying the Géorisques API",
+    )
     parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     return parser.parse_args(argv)
 
@@ -135,6 +179,43 @@ def _dvf_source(session: requests.Session, raw: Path, override: Path | None) -> 
         return override, {"local_file": override.name, "bytes": override.stat().st_size, "sha256": _sha256(override)}
     resource, path = fetch_dvf(session, raw)
     return path, asdict(resource)
+
+
+def _bpe_source(session: requests.Session, raw: Path, override: Path | None) -> tuple[Path, dict]:
+    path = override if override is not None else fetch_bpe(session, raw)
+    try:
+        release = resolve_bpe_release(session)
+    except requests.RequestException as error:
+        log.warning("BPE release date unavailable: %s", error)
+        release = None
+    if release is None:
+        log.warning("BPE release date not found on the INSEE page; the manifest records only the file hash")
+    source = {"edition": BPE_EDITION, "url": BPE_URL, "page_release_date": release,
+              "bytes": path.stat().st_size, "sha256": _sha256(path)}
+    return path, source | ({"local_file": path.name} if override is not None else {})
+
+
+def _seismic_zones(
+    session: requests.Session, args: argparse.Namespace, communes: list[Area], merged_codes: dict[str, str]
+) -> tuple[dict, dict[str, int], SeismicReport]:
+    commune_codes = [a.code for a in communes]
+    if args.seismic_file is not None:
+        path = args.seismic_file
+        source = {"local_file": path.name}
+    else:
+        resource, path = fetch_seismic_zones(session, args.raw, seismic.codes_to_query(commune_codes, merged_codes))
+        source = asdict(resource)
+    zones, report = seismic.assign_zones(commune_codes, seismic.read_zone_csv(path), merged_codes)
+    zones, report = seismic.fill_from_neighbours(zones, report, communes)
+    return source | {"sha256": _sha256(path)}, zones, report
+
+
+def _indicators(
+    commune_codes: list[str], zones: dict[str, int], distances: dict[str, np.ndarray]
+) -> dict[str, dict[str, int]]:
+    """Code -> seismic zone and distance properties, omitting unknown values."""
+    by_code = proximity.distance_properties(commune_codes, distances)
+    return {code: ({"sz": zones[code]} if code in zones else {}) | by_code[code] for code in commune_codes}
 
 
 def _area_results(
@@ -158,15 +239,24 @@ def feature_id(code: str) -> int:
     return int(code.replace("2A", "201").replace("2B", "202"))
 
 
-def _tile_layer(name: str, zooms: tuple[int, int], results: list[AreaResult], with_dep: bool) -> TileLayer:
+def _tile_layer(
+    name: str,
+    zooms: tuple[int, int],
+    results: list[AreaResult],
+    indicators: dict[str, dict[str, int]] | None,
+    simplify_units: dict[int, float] | None = None,
+) -> TileLayer:
+    """Commune layers get `indicators` (by code) and `dep`; department layers pass None."""
     geometries = to_web_mercator([r.area.geometry for r in results])
     features = []
     for result, geometry in zip(results, geometries):
         identity: dict[str, int | str] = {"code": result.area.code, "name": result.area.name}
-        if with_dep:
+        extra: dict[str, int] = {}
+        if indicators is not None:
             identity["dep"] = result.area.dep
-        features.append(TileFeature(feature_id(result.area.code), identity | result.properties, geometry))
-    return TileLayer(name, zooms[0], zooms[1], features)
+            extra = indicators.get(result.area.code, {})
+        features.append(TileFeature(feature_id(result.area.code), identity | result.properties | extra, geometry))
+    return TileLayer(name, zooms[0], zooms[1], features, simplify_units or {})
 
 
 def _bounds(boundaries: Boundaries) -> tuple[float, float, float, float]:
@@ -183,6 +273,19 @@ PRICE_FIELDS = {
     "w": "Number: window in months, 36 or 60 (60 = fallback for areas with fewer than 10 sales in 36 months)",
     "period": "String: window as YYYY-MM/YYYY-MM",
 }
+AMENITY_LABELS = {
+    "d_hos": "hospital (short-stay health establishment, BPE D101)",
+    "d_gp": "general practitioner (BPE D265)",
+    "d_sch": "primary school with elementary classes (BPE C108, C109)",
+    "d_sup": "supermarket or hypermarket (BPE B105, B104)",
+    "d_bak": "bakery (BPE B207)",
+    "d_pool": "public swimming pool (BPE F101)",
+}
+INDICATOR_FIELDS = {
+    "sz": "Number: seismic zone 1 (very low) to 5 (strong), Géorisques; absent if unknown",
+    **{prop: f"Number: straight-line metres, rounded to 100, from a point inside the commune to the nearest {label}"
+       for prop, label in AMENITY_LABELS.items()},
+}
 IDENTITY_FIELDS = {
     "code": "String: INSEE code (use as promoteId; feature id is the numeric form, 2A/2B -> 201/202)",
     "name": "String: official name",
@@ -195,7 +298,8 @@ def _tile_metadata(window_by_months: dict[int, agg.Window]) -> dict:
     primary = window_by_months[agg.PRIMARY_WINDOW_MONTHS]
     return {
         "name": "settling-map communes",
-        "description": f"Median property price per m2 (DVF), window {primary.period}",
+        "description": f"Median property price per m2 (DVF), window {primary.period}; seismic zone (Géorisques); "
+        "straight-line distances to amenities (INSEE BPE 2025)",
         "attribution": ATTRIBUTION,
         "type": "overlay",
         "version": datetime.now(UTC).date().isoformat(),
@@ -203,7 +307,8 @@ def _tile_metadata(window_by_months: dict[int, agg.Window]) -> dict:
             {"id": "departments", "minzoom": DEPARTMENTS_ZOOMS[0], "maxzoom": DEPARTMENTS_ZOOMS[1],
              "fields": IDENTITY_FIELDS | PRICE_FIELDS},
             {"id": "communes", "minzoom": COMMUNES_ZOOMS[0], "maxzoom": COMMUNES_ZOOMS[1],
-             "fields": IDENTITY_FIELDS | {"dep": "String: department code"} | PRICE_FIELDS | trend},
+             "fields": IDENTITY_FIELDS | {"dep": "String: department code"} | PRICE_FIELDS | trend
+             | INDICATOR_FIELDS},
         ],
     }
 
@@ -215,6 +320,7 @@ def _manifest(
     join: JoinReport,
     communes: list[AreaResult],
     departments: list[AreaResult],
+    indicators: dict[str, dict[str, int]],
 ) -> dict:
     return {
         "version": datetime.now(UTC).date().isoformat(),
@@ -227,11 +333,29 @@ def _manifest(
             "communes_with_price": sum("p_all" in r.properties for r in communes),
             "communes_on_60_month_fallback": sum(r.properties.get("w") == 60 for r in communes),
             "departments": len(departments),
+            "communes_with_sz": sum("sz" in v for v in indicators.values()),
+            **{f"communes_with_{prop}": sum(prop in v for v in indicators.values()) for prop in proximity.AMENITIES},
         },
         "confidence_histogram": {
             "communes": _confidence_histogram(communes),
             "departments": _confidence_histogram(departments),
         },
+    }
+
+
+def _indicator_report(
+    seismic_report: SeismicReport,
+    equipments: proximity.Equipments,
+    distances: dict[str, np.ndarray],
+    communes: list[AreaResult],
+    indicators: dict[str, dict[str, int]],
+) -> dict:
+    return {
+        "seismic": asdict(seismic_report),
+        "equipment_types": {prop: list(codes) for prop, codes in proximity.AMENITIES.items()},
+        "equipments": {prop: asdict(counts) for prop, counts in equipments.counts.items()},
+        "distance_quantiles_m": proximity.distance_quantiles(distances),
+        "spot_checks": indicator_spot_checks(communes, indicators),
     }
 
 

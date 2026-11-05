@@ -1,7 +1,8 @@
 # settling-map pipeline
 
-Builds `communes.pmtiles`: median property price per m² (DVF) by commune and by department, for
-metropolitan France and Corsica. Pure Python: DuckDB for tabular work, shapely + mapbox-vector-tile +
+Builds `communes.pmtiles`: median property price per m² (DVF) by commune and by department, plus, per
+commune, the seismic zone (Géorisques) and straight-line distances to six kinds of amenities (INSEE BPE),
+for metropolitan France and Corsica. Pure Python: DuckDB for tabular work, shapely + mapbox-vector-tile +
 pmtiles for tiles. No tippecanoe, no DuckDB extensions, no GDAL.
 
 ## Run
@@ -19,19 +20,24 @@ pipeline/.venv/Scripts/python -m pytest pipeline/tests -q                       
 
 Options: `--dep 69 01` (several departments), `--raw DIR` (download cache, default `data/raw/`),
 `--dvf-file PATH` (use a local geo-DVF file, `.csv`, `.csv.gz` or `.parquet`, instead of downloading),
-`--workers N` (tile encoding processes).
+`--bpe-file PATH` (use a local `BPE25.parquet` instead of downloading it),
+`--seismic-file PATH` (use a CSV with columns `code_insee,code_zone` instead of querying Géorisques; the
+build's own cache file in `data/raw/seismic/` has that format), `--workers N` (tile encoding processes).
 
 The build is idempotent: downloads are cached in `data/raw/` and re-used when their size matches; the
 tile archive is byte-identical between runs on the same day (gzip mtime 0, sorted tiles).
 
 Outputs in `--out`:
 
-- `communes.pmtiles`: layers `departments` (z0-7) and `communes` (z6-10).
-- `manifest.json`: version (UTC date), source dates, tile file name/bytes/sha256, counts, confidence histogram.
+- `communes.pmtiles`: layers `departments` (z0-7) and `communes` (z4-10).
+- `manifest.json`: version (UTC date), source dates and hashes (DVF, ADMIN EXPRESS, BPE, seismic), tile
+  file name/bytes/sha256, counts (including communes with each indicator), confidence histogram.
 - `build-report.json`: row counts at each cleaning step, code reconciliation, per-department values,
-  spot checks, tile sizes per zoom, step timings, and per-area aggregates (n, p25, median, p75, window).
+  spot checks, tile sizes per zoom, step timings, per-area aggregates (n, p25, median, p75, window), and
+  `indicators`: seismic join methods and zone histogram, BPE equipments kept/skipped per type, distance
+  quantiles per type, indicator spot checks.
 
-No output or log contains per-sale data. The cleaned sales exist only inside the in-memory DuckDB
+No output or log contains per-sale or per-equipment data. The cleaned sales exist only inside the in-memory DuckDB
 connection (spill files, if any, go to `data/raw/duckdb-tmp/`).
 
 ## Sources
@@ -41,7 +47,10 @@ connection (spill files, if any, go to `data/raw/duckdb-tmp/`).
 | geo-DVF, 5-year single file (DGFiP / Etalab) | data.gouv.fr API, dataset `demandes-de-valeurs-foncieres-geolocalisees`, the one `csv.gz` resource whose title contains "fichier unique". Size and published sha1 are verified. The timestamped static URL is never hardcoded; `files.data.gouv.fr/geo-dvf/latest` is not used. |
 | IGN ADMIN EXPRESS COG-CARTO-PE | Géoplateforme download API, `https://data.geopf.fr/telechargement/resource/ADMIN-EXPRESS-COG-CARTO-PE`. The newest edition matching `*__GEOPARQUET_WGS84G_FRA_<date>` is picked (verified: `ADMIN-EXPRESS-COG-CARTO-PE_4-0__GEOPARQUET_WGS84G_FRA_2026-01-01`). Layers used: `commune.parquet`, `arrondissement_municipal.parquet`, `departement.parquet`, `commune_associee_ou_deleguee.parquet` (GeoParquet 1.1, WKB column `geometrie`, EPSG:4326). |
 
-Attribution in the tiles: `© IGN, DGFiP/Etalab (Licence Ouverte v2.0)`.
+| INSEE Base permanente des équipements 2025, geolocated detail file | Stable URL `https://www.insee.fr/fr/statistiques/fichier/8217525/BPE25.parquet`, linked from `https://www.insee.fr/fr/statistiques/8217525`. INSEE refreshes the file monthly under the same URL; the page's "Paru le" date is scraped into the manifest (`page_release_date`, `null` if the page layout changes) with the file sha256. A new BPE edition has a new page id, so moving to it is a code change. |
+| Géorisques seismic zoning (décret 2010-1255) | API v1 `https://www.georisques.gouv.fr/api/v1/zonage_sismique?code_insee=...`, 20 codes per request (the API maximum), about 1,840 requests nationally (~2 min). Cached per day and code set in `data/raw/seismic/`. No bulk file exists: data.gouv.fr only has per-department or third-party copies, the GASPAR bulk zip has no zone, and the Géorisques WFS layer `ms:risq_zonage_sismique` has zone polygons without commune codes. |
+
+Attribution in the tiles: `© IGN, DGFiP/Etalab, INSEE, Géorisques (Licence Ouverte v2.0)`.
 
 ### Network notes
 
@@ -93,12 +102,47 @@ communes `976*` → 4 (no_coverage), with no price or count at all.
   déléguées). The report lists every mapping. The build fails if the remaining unmatched sales exceed 0.5%
   of retained sales.
 
+## Seismic zone (`settling/seismic.py`)
+
+`sz` is the regulatory zone 1 (very low) to 5 (strong); metropolitan France has zones 1-4. A tile commune
+gets, in order: the API zone of its own code (34,751 nationally); for a municipal arrondissement, its
+parent's (Lyon 69123 and Marseille 13055; the API answers Paris by arrondissement, not 75056) (25); for a
+merged commune absent from the API, the highest zone among its communes déléguées (0 in 2026); otherwise
+the highest zone of the communes it touches, or the nearest commune for an island (12: eleven communes
+the API does not know, which have no déléguée entry, and Ouessant 29155). The report lists every
+fallback with the neighbours' zones.
+
+## Distances (`settling/proximity.py`)
+
+`d_*` is the straight-line distance in metres, rounded half up to 100 m, from a point inside the commune
+polygon (shapely `point_on_surface`, `# deliberate:` not the town centre) to the nearest equipment of the
+type anywhere in metropolitan France and Corsica (Lambert-93, scipy `cKDTree`). Border communes do not
+see equipments abroad. BPE `TYPEQU` codes, verified in `TYPEQU_2025.csv`:
+
+| Property | Codes |
+|---|---|
+| `d_hos` | D101 établissement de soins de courte durée (excludes autonomous maternity units D107 and emergency services D106) |
+| `d_gp` | D265 médecin généraliste |
+| `d_sch` | C108 école primaire, C109 école élémentaire (every school with an elementary class; C107 maternelle-only excluded) |
+| `d_sup` | B105 supermarché et magasin multi-commerce (400-2500 m²), B104 hypermarché et grand magasin (≥ 2500 m²) |
+| `d_bak` | B207 boulangerie-pâtisserie |
+| `d_pool` | F101 bassin de natation |
+
+Rows are used when `EPSG = 2154` and `LAMBERT_X/Y` are present and inside metropolitan France.
+`QUALITE_XY = M` (mauvaise: probable street, or a random point ≥ 500 m off) is kept and counted
+(`kept_approximate`): the point is still in the right commune, while skipping these rows removed whole
+hospitals (CH Calvi, CH Dax, CH Blois) and lengthened 185 communes' hospital distance by more than 5 km.
+Only rows without usable coordinates are skipped.
+`QUALITE_XY = _U` (undetermined) is kept: all bassins de natation come from Data ES, not from address
+geocoding, so INSEE gives them no quality flag.
+
 ## Tiles (`settling/tiles.py`)
 
 Contract (the app depends on it):
 
 - `departments` z0-7: `code`, `name`, `p_*`, `n_*`, `c_*`, `w`, `period`.
-- `communes` z6-10 (overzoomed above): `code`, `name`, `dep`, `p_*`, `n_*`, `c_*`, `t2021..t2025`, `w`, `period`.
+- `communes` z4-10 (overzoomed above): `code`, `name`, `dep`, `p_*`, `n_*`, `c_*`, `t2021..t2025`, `w`, `period`,
+  `sz`, `d_hos`, `d_gp`, `d_sch`, `d_sup`, `d_bak`, `d_pool`.
 - `*` is `all`, `mai` or `app`. Integers only, except `code`, `name`, `dep`, `period` (`YYYY-MM/YYYY-MM`).
   Missing values are omitted.
 - The MVT feature id is the numeric INSEE code, with 2A/2B → 201/202 (MVT ids must be unsigned integers).
@@ -109,6 +153,9 @@ Method: Web Mercator. Each zoom gets one Douglas-Peucker pass (`preserve_topolog
 snap to the integer grid (`set_precision`), MVT encode, gzip. Empty tiles are not written. Tiles are
 encoded in a process pool. Neighbouring polygons are simplified independently, so shared borders can
 differ by up to 1 unit. `# deliberate:` this is invisible at that size and avoids a topology library.
+Communes use 4 units (0.5 px) at z4 and z5. A polygon that snapping erases (smaller than one unit) is
+replaced by a 1-unit square at its inner point, in the one tile that contains that point, so every
+commune exists at every zoom (the plausibility gate checks z4 against z8).
 
 ## Known limits and shortcuts
 
@@ -118,6 +165,10 @@ differ by up to 1 unit. `# deliberate:` this is invisible at that size and avoid
   verification: 222 sales in 16 codes, 0.005%). They still count in their department.
 - Yearly trend points need at least 5 sales in the year (`# deliberate:` below that, the yearly median is
   noise).
-- Low-zoom commune tiles are heavy. All ~35k communes are kept at z6 by contract (dropping them would
-  punch holes in the choropleth), so the densest z6 tile (Paris basin) is about 0.85 MB gzipped.
-- Overseas departments (97x) are excluded from v1 tiles. Mayotte is excluded entirely.
+- Low-zoom commune tiles are heavy. All ~35k communes are kept from z4 by contract (filters must work at
+  the national view), so the larger of the two z4 tiles is about 1.85 MB gzipped, z5 1.53 MB, z6 1.01 MB.
+  Properties, not shapes, dominate: with only `code` the z4 tile would be 0.53 MB.
+- Overseas departments (97x, and Saint-Pierre-et-Miquelon 975, whose department column is "NR") are
+  excluded. Mayotte is excluded entirely.
+- Distances are straight lines from one point of the commune, not travel times, and hide the variation
+  inside large communes.
