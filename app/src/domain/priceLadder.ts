@@ -25,3 +25,12 @@ export function priceFillExpression(type: PriceType): ExpressionSpecification {
     NO_PRICE_COLOR,
   ] as ExpressionSpecification
 }
+
+export const HATCH_INK_LIGHT = '#F4F7FB'
+export const HATCH_INK_DARK = '#0B1B3A'
+// Classes below this price are dark enough for porcelain ink (>= 4:1); the rest take ground ink (>= 5.7:1).
+export const HATCH_LIGHT_BELOW = PRICE_BREAKS[2]
+
+export function hatchInkFor(price: number): string {
+  return price < HATCH_LIGHT_BELOW ? HATCH_INK_LIGHT : HATCH_INK_DARK
+}

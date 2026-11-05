@@ -5,12 +5,13 @@ import { Protocol } from 'pmtiles'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { tileUrl } from '../data/manifest'
-import type { Manifest } from '../state/store'
+import type { PriceType } from '../domain/place'
+import { priceFillExpression } from '../domain/priceLadder'
 import { initialState, useAppStore } from '../state/appStore'
+import type { Manifest } from '../state/store'
 import { formatHash } from '../state/urlState'
 import { registerPatterns } from './patterns'
-import { LAYER_IDS, buildStyle, confidenceFilter } from './style'
-import { priceFillExpression } from '../domain/priceLadder'
+import { LAYER_IDS, SELECTION_LAYERS, buildStyle, patternFilters } from './style'
 
 let protocolRegistered = false
 function registerProtocol() {
@@ -23,34 +24,44 @@ function registerProtocol() {
 
 const COMMUNE_ZOOM = 6.5
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
-const PATTERN_LAYERS: ReadonlyArray<readonly [string, number]> = [
-  ['communes-low', 1],
-  ['communes-none', 0],
-  ['communes-nocoverage', 4],
-  ['departments-nocoverage', 4],
-]
+const WIDE_SCREEN = '(min-width: 720px)'
+const METROPOLITAN_FRANCE: [[number, number], [number, number]] = [[-5.6, 41.0], [10.0, 51.3]]
 
-function applyPriceType(map: MapLibreMap, type: Parameters<typeof priceFillExpression>[0]) {
+function applyPriceType(map: MapLibreMap, type: PriceType) {
   for (const id of [LAYER_IDS.departmentsFill, LAYER_IDS.communesFill]) {
     map.setPaintProperty(id, 'fill-color', priceFillExpression(type))
   }
-  for (const [id, value] of PATTERN_LAYERS) map.setFilter(id, confidenceFilter(type, value))
+  for (const [id, filter] of Object.entries(patternFilters(type))) map.setFilter(id, filter)
 }
 
 type Picked = { kind: 'commune' | 'department'; feature: MapGeoJSONFeature }
 
 function pickFeature(map: MapLibreMap, point: PointLike): Picked | null {
   const features = map.queryRenderedFeatures(point, { layers: [LAYER_IDS.communesFill, LAYER_IDS.departmentsFill] })
-  const inLayer = (id: string) => features.find((feature) => feature.layer.id === id)
-  const commune: Picked | undefined = (f => f && { kind: 'commune' as const, feature: f })(inLayer(LAYER_IDS.communesFill))
-  const department: Picked | undefined = (f => f && { kind: 'department' as const, feature: f })(inLayer(LAYER_IDS.departmentsFill))
-  const ordered = map.getZoom() >= COMMUNE_ZOOM ? [commune, department] : [department, commune]
-  return ordered.find((candidate) => candidate !== undefined) ?? null
+  const pick = (kind: Picked['kind'], layerId: string): Picked | null => {
+    const feature = features.find((candidate) => candidate.layer.id === layerId)
+    return feature ? { kind, feature } : null
+  }
+  const commune = pick('commune', LAYER_IDS.communesFill)
+  const department = pick('department', LAYER_IDS.departmentsFill)
+  return map.getZoom() >= COMMUNE_ZOOM ? (commune ?? department) : (department ?? commune)
 }
 
 function resolveCommune(map: MapLibreMap, code: string): Record<string, unknown> | null {
   const [feature] = map.querySourceFeatures('data', { sourceLayer: 'communes', filter: ['==', ['get', 'code'], code] })
   return feature ? { ...feature.properties } : null
+}
+
+// With no view in the URL, show all of metropolitan France (Corsica included) whatever the screen shape,
+// keeping clear of the side panels on wide screens and of the legend strip on phones.
+function nationalView() {
+  const wide = matchMedia(WIDE_SCREEN).matches
+  return {
+    bounds: METROPOLITAN_FRANCE,
+    fitBoundsOptions: wide
+      ? { padding: { top: 16, bottom: 16, left: 320, right: 340 } }
+      : { padding: { top: 8, bottom: 96, left: 8, right: 8 } },
+  }
 }
 
 export function MapView({ manifest }: { manifest: Manifest }) {
@@ -62,12 +73,12 @@ export function MapView({ manifest }: { manifest: Manifest }) {
     if (!element) return
     registerProtocol()
     const store = useAppStore
+    const initial = store.getState()
 
     const map = new MapLibreMap({
       container: element,
-      style: buildStyle(tileUrl(manifest), store.getState().priceType),
-      center: [initialState.lng, initialState.lat],
-      zoom: initialState.zoom,
+      style: buildStyle(tileUrl(manifest), initial.priceType, initial.lang),
+      ...(initialState.viewProvided ? { center: [initialState.lng, initialState.lat], zoom: initialState.zoom } : nationalView()),
       minZoom: 3.5,
       maxZoom: 15,
       dragRotate: false,
@@ -100,10 +111,10 @@ export function MapView({ manifest }: { manifest: Manifest }) {
     }
 
     const showSelection = (selection: ReturnType<typeof store.getState>['selection']) => {
-      if (!map.getLayer(LAYER_IDS.communesSelected)) return
       const code = selection ? String(selection.props.code ?? '') : ''
-      map.setFilter(LAYER_IDS.communesSelected, ['==', ['get', 'code'], selection?.kind === 'commune' ? code : ''])
-      map.setFilter(LAYER_IDS.departmentsSelected, ['==', ['get', 'code'], selection?.kind === 'department' ? code : ''])
+      for (const [kind, layers] of Object.entries(SELECTION_LAYERS)) {
+        for (const id of layers) map.setFilter(id, ['==', ['get', 'code'], selection?.kind === kind ? code : ''])
+      }
     }
 
     // Paris, Lyon and Marseille exist only as arrondissements in the tiles, so a search
@@ -118,8 +129,13 @@ export function MapView({ manifest }: { manifest: Manifest }) {
     }
 
     map.on('load', () => {
+      // The compact attribution opens by default and covers the map on phones; users can still open it.
+      const attribution = element.querySelector('.maplibregl-ctrl-attrib')
+      attribution?.classList.remove('maplibregl-compact-show')
+      attribution?.removeAttribute('open')
       store.getState().setMapStatus('ready')
       map.once('idle', () => resolvePending(false))
+      syncHash()
     })
     map.on('error', (event) => {
       if (store.getState().mapStatus === 'loading' && (event as { sourceId?: string }).sourceId === 'data') {
@@ -138,6 +154,9 @@ export function MapView({ manifest }: { manifest: Manifest }) {
     const unsubscribe = store.subscribe((state, previous) => {
       if (state.priceType !== previous.priceType && map.isStyleLoaded()) applyPriceType(map, state.priceType)
       if (state.selection !== previous.selection) showSelection(state.selection)
+      if (state.lang !== previous.lang && map.getLayer('notes-label')) {
+        map.setLayoutProperty('notes-label', 'text-field', ['get', state.lang])
+      }
       if (state.priceType !== previous.priceType || state.selection !== previous.selection || state.lang !== previous.lang) syncHash()
       const request = state.flyRequest
       if (request && request !== previous.flyRequest) {

@@ -1,43 +1,44 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
 
+import { HATCH_INK_DARK, HATCH_INK_LIGHT } from '../domain/priceLadder'
+
 const SIZE = 16
 const SCALE = 2
 
 type Painter = (ctx: CanvasRenderingContext2D) => void
 
+function diagonal(ctx: CanvasRenderingContext2D, ink: string, width: number) {
+  ctx.strokeStyle = ink
+  ctx.lineWidth = width
+  for (const offset of [-SIZE, 0, SIZE]) {
+    ctx.beginPath()
+    ctx.moveTo(offset, SIZE)
+    ctx.lineTo(offset + SIZE, 0)
+    ctx.stroke()
+  }
+}
+
 const PATTERNS: Record<string, Painter> = {
-  // Fewer than 10 sales: diagonal hatch over the price colour.
-  'hatch-low': (ctx) => {
-    ctx.strokeStyle = 'rgba(11, 27, 58, 0.8)'
-    ctx.lineWidth = 1.6
-    for (const offset of [-SIZE, 0, SIZE]) {
-      ctx.beginPath()
-      ctx.moveTo(offset, SIZE)
-      ctx.lineTo(offset + SIZE, 0)
-      ctx.stroke()
-    }
-  },
-  // No sale kept in the window: sparse dots on the neutral ground.
+  // Fewer than 10 sales: opaque diagonal hatch; the ink flips with the price class to stay >= 3:1.
+  'hatch-low-light': (ctx) => diagonal(ctx, HATCH_INK_LIGHT, 1.6),
+  'hatch-low-dark': (ctx) => diagonal(ctx, HATCH_INK_DARK, 1.6),
+  // No sale kept in the window: dense porcelain dots, a texture no price class has.
   dots: (ctx) => {
-    ctx.fillStyle = 'rgba(180, 194, 220, 0.45)'
+    ctx.fillStyle = 'rgba(244, 247, 251, 0.8)'
     for (const [x, y] of [[4, 4], [12, 12]]) {
       ctx.beginPath()
-      ctx.arc(x, y, 1.1, 0, Math.PI * 2)
+      ctx.arc(x, y, 1.6, 0, Math.PI * 2)
       ctx.fill()
     }
   },
-  // Outside the DVF database: amber cross-hatch, never mistaken for "cheap".
+  // Outside the DVF database: neutral cross-hatch (amber is reserved for selection and risk).
   'hatch-cross': (ctx) => {
-    ctx.strokeStyle = 'rgba(242, 168, 29, 0.5)'
-    ctx.lineWidth = 1.2
-    for (const offset of [-SIZE, 0, SIZE]) {
-      ctx.beginPath()
-      ctx.moveTo(offset, SIZE)
-      ctx.lineTo(offset + SIZE, 0)
-      ctx.moveTo(offset, 0)
-      ctx.lineTo(offset + SIZE, SIZE)
-      ctx.stroke()
-    }
+    diagonal(ctx, 'rgba(244, 247, 251, 0.4)', 1.2)
+    ctx.save()
+    ctx.translate(SIZE, 0)
+    ctx.scale(-1, 1)
+    diagonal(ctx, 'rgba(244, 247, 251, 0.4)', 1.2)
+    ctx.restore()
   },
 }
 

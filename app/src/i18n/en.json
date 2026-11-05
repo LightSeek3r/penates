@@ -9,7 +9,11 @@
     "none": "No commune found",
     "error": "Search is unavailable"
   },
-  "lang": { "switch": "Français" },
+  "lang": {
+    "label": "Language",
+    "fr": "Français",
+    "en": "English"
+  },
   "layers": {
     "title": "Layers",
     "open": "Layers and legend",
@@ -17,7 +21,11 @@
     "price": "Median price per m²",
     "priceHint": "Houses and flats sold (DVF)",
     "typeLabel": "Property type",
-    "type": { "all": "All", "mai": "Houses", "app": "Flats" }
+    "type": {
+      "all": "All",
+      "mai": "Houses",
+      "app": "Flats"
+    }
   },
   "legend": {
     "title": "Median price, €/m²",
@@ -32,16 +40,15 @@
   },
   "inspector": {
     "title": "Place details",
-    "empty": "Tap a commune to see its median price and how solid the figure is.",
+    "empty": "Select a commune to see its median price and how solid the figure is.",
     "close": "Close details",
     "department": "Département",
     "median": "Median price",
     "unit": "€/m²",
     "noPrice": "No price shown",
-    "sales": "Sales kept: {{count}}",
-    "window": "Over {{months}} months",
+    "sales": "Sales kept: {{value}}",
     "period": "Period: {{period}}",
-    "trend": "Yearly median, 2021 to 2025",
+    "trend": "Yearly median",
     "trendMissing": "Trend unavailable",
     "confidence": {
       "0": "No sales kept in the period. A lack of data does not mean a low price.",
@@ -50,7 +57,9 @@
       "3": "A high number of sales: a solid figure.",
       "4": "Alsace-Moselle and Mayotte: these sales are not in the DVF database. A lack of data does not mean a low price."
     },
-    "disclaimer": "Indicative: median sale price divided by built surface. It is not a valuation of any property."
+    "disclaimer": "Indicative: median sale price divided by built surface. It is not a valuation of any property.",
+    "windowWide": "Period widened to {{months}} months because of few sales",
+    "trendRange": "{{fromYear}}: {{from}} → {{toYear}}: {{to}} ({{change}})"
   },
   "sources": {
     "short": "Sources",

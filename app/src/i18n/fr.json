@@ -9,7 +9,11 @@
     "none": "Aucune commune trouvée",
     "error": "La recherche est indisponible"
   },
-  "lang": { "switch": "English" },
+  "lang": {
+    "label": "Langue",
+    "fr": "Français",
+    "en": "English"
+  },
   "layers": {
     "title": "Couches",
     "open": "Couches et légende",
@@ -17,7 +21,11 @@
     "price": "Prix médian au m²",
     "priceHint": "Ventes de maisons et d'appartements (DVF)",
     "typeLabel": "Type de bien",
-    "type": { "all": "Tous", "mai": "Maisons", "app": "Appartements" }
+    "type": {
+      "all": "Tous",
+      "mai": "Maisons",
+      "app": "Appartements"
+    }
   },
   "legend": {
     "title": "Prix médian, €/m²",
@@ -32,16 +40,15 @@
   },
   "inspector": {
     "title": "Fiche du lieu",
-    "empty": "Touchez une commune pour voir son prix médian et la solidité du chiffre.",
+    "empty": "Sélectionnez une commune pour voir son prix médian et la solidité du chiffre.",
     "close": "Fermer la fiche",
     "department": "Département",
     "median": "Prix médian",
     "unit": "€/m²",
     "noPrice": "Pas de prix affiché",
-    "sales": "Ventes retenues : {{count}}",
-    "window": "Sur {{months}} mois",
+    "sales": "Ventes retenues : {{value}}",
     "period": "Période : {{period}}",
-    "trend": "Médiane annuelle, 2021 à 2025",
+    "trend": "Médiane annuelle",
     "trendMissing": "Évolution indisponible",
     "confidence": {
       "0": "Aucune vente retenue sur la période. Absence de donnée ne veut pas dire prix bas.",
@@ -50,7 +57,9 @@
       "3": "Nombre de ventes élevé : chiffre solide.",
       "4": "Alsace-Moselle et Mayotte : ces ventes ne figurent pas dans la base DVF. Absence de donnée ne veut pas dire prix bas."
     },
-    "disclaimer": "Indicatif : médiane des prix de vente rapportés à la surface bâtie. Ce n'est pas une estimation de bien."
+    "disclaimer": "Indicatif : médiane des prix de vente rapportés à la surface bâtie. Ce n'est pas une estimation de bien.",
+    "windowWide": "Période élargie à {{months}} mois faute de ventes",
+    "trendRange": "{{fromYear}} : {{from}} → {{toYear}} : {{to}} ({{change}})"
   },
   "sources": {
     "short": "Sources",

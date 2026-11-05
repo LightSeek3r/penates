@@ -32,9 +32,13 @@ export function TopBar() {
             {t('sources.short')}
           </span>
         </button>
-        <button type="button" className="button" lang={lang === 'fr' ? 'en' : 'fr'} onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')}>
-          {t('lang.switch')}
-        </button>
+        <div className="lang" role="group" aria-label={t('lang.label')}>
+          {(['fr', 'en'] as const).map((code) => (
+            <button key={code} type="button" className="lang__option" lang={code} aria-label={t(`lang.${code}`)} aria-pressed={lang === code} onClick={() => setLang(code)}>
+              {code.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </nav>
     </header>
   )

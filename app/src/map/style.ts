@@ -1,12 +1,14 @@
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSourceSpecification, LayerSpecification, StyleSpecification } from 'maplibre-gl'
 import type { PriceType } from '../domain/place'
-import { priceFillExpression } from '../domain/priceLadder'
+import { HATCH_LIGHT_BELOW, priceFillExpression } from '../domain/priceLadder'
+import type { Lang } from '../state/urlState'
 
 export const GROUND = '#0B1B3A'
 const PORCELAIN = '#F4F7FB'
 const COBALT = '#2F6FDB'
 const AMBER = '#F2A81D'
 const FONT = ['Noto Sans Regular']
+const FONT_BOLD = ['Noto Sans Bold']
 
 // Departments carry the picture up to the cross-fade; communes take over from here.
 const FADE_FROM = 6
@@ -22,13 +24,31 @@ const fade = (opacity: number, rising: boolean): ExpressionSpecification => [
   rising ? opacity : 0,
 ]
 
-export const confidenceFilter = (type: PriceType, value: number): FilterSpecification => ['==', ['get', `c_${type}`], value]
+const confidence = (type: PriceType, value: number): ExpressionSpecification => ['==', ['get', `c_${type}`], value]
+
+/** Filters of the pattern layers, which depend on the selected price type. */
+export function patternFilters(type: PriceType): Record<string, FilterSpecification> {
+  const price: ExpressionSpecification = ['coalesce', ['get', `p_${type}`], 0]
+  const low = confidence(type, 1)
+  return {
+    // Hatch ink flips with the price class so it stays at least 3:1 against the fill.
+    'communes-low-light': ['all', low, ['<', price, HATCH_LIGHT_BELOW]],
+    'communes-low-dark': ['all', low, ['>=', price, HATCH_LIGHT_BELOW]],
+    'communes-none': confidence(type, 0),
+    'communes-nocoverage': confidence(type, 4),
+    'departments-nocoverage': confidence(type, 4),
+  }
+}
 
 export const LAYER_IDS = {
   departmentsFill: 'departments-fill',
   communesFill: 'communes-fill',
-  departmentsSelected: 'departments-selected',
-  communesSelected: 'communes-selected',
+} as const
+
+/** Layers that outline the selected place, per kind: tint, casing, then the amber line on top. */
+export const SELECTION_LAYERS = {
+  commune: ['communes-selected-tint', 'communes-selected-casing', 'communes-selected'],
+  department: ['departments-selected-tint', 'departments-selected-casing', 'departments-selected'],
 } as const
 
 function graticule(): GeoJSONSourceSpecification['data'] {
@@ -42,17 +62,45 @@ function graticule(): GeoJSONSourceSpecification['data'] {
   return { type: 'FeatureCollection', features: [...meridians, ...parallels] }
 }
 
+const NOTES: GeoJSONSourceSpecification['data'] = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      properties: { fr: 'Alsace-Moselle : hors base DVF', en: 'Alsace-Moselle: outside DVF' },
+      geometry: { type: 'Point', coordinates: [7.0, 48.62] },
+    },
+  ],
+}
+
+function outlineLayers(sourceLayer: string, kind: keyof typeof SELECTION_LAYERS, zoom: { min?: number; max?: number }): LayerSpecification[] {
+  const [tint, casing, line] = SELECTION_LAYERS[kind]
+  const common = {
+    source: 'data',
+    'source-layer': sourceLayer,
+    filter: ['==', ['get', 'code'], ''] as FilterSpecification,
+    ...(zoom.min === undefined ? {} : { minzoom: zoom.min }),
+    ...(zoom.max === undefined ? {} : { maxzoom: zoom.max }),
+  } as const
+  return [
+    { id: tint, type: 'fill', ...common, paint: { 'fill-color': PORCELAIN, 'fill-opacity': 0.16 } },
+    { id: casing, type: 'line', ...common, paint: { 'line-color': GROUND, 'line-width': 6 } },
+    { id: line, type: 'line', ...common, paint: { 'line-color': AMBER, 'line-width': 2.6 } },
+  ]
+}
+
 function dataLayers(type: PriceType): LayerSpecification[] {
   const fill = priceFillExpression(type)
+  const filters = patternFilters(type)
   const common = { source: 'data' } as const
-  const patternLayer = (id: string, sourceLayer: string, value: number, pattern: string, rising: boolean, minzoom?: number): LayerSpecification => ({
+  const patternLayer = (id: string, sourceLayer: string, pattern: string, rising: boolean, minzoom?: number): LayerSpecification => ({
     id,
     type: 'fill',
     ...common,
     'source-layer': sourceLayer,
     ...(minzoom === undefined ? {} : { minzoom }),
-    filter: confidenceFilter(type, value),
-    paint: { 'fill-pattern': pattern, 'fill-opacity': fade(0.9, rising) },
+    filter: filters[id],
+    paint: { 'fill-pattern': pattern, 'fill-opacity': fade(0.94, rising) },
   })
 
   return [
@@ -64,7 +112,7 @@ function dataLayers(type: PriceType): LayerSpecification[] {
       maxzoom: FADE_TO,
       paint: { 'fill-color': fill, 'fill-opacity': fade(0.94, false) },
     },
-    patternLayer('departments-nocoverage', 'departments', 4, 'hatch-cross', false),
+    patternLayer('departments-nocoverage', 'departments', 'hatch-cross', false),
     {
       id: LAYER_IDS.communesFill,
       type: 'fill',
@@ -73,9 +121,10 @@ function dataLayers(type: PriceType): LayerSpecification[] {
       minzoom: FADE_FROM,
       paint: { 'fill-color': fill, 'fill-opacity': fade(0.94, true) },
     },
-    patternLayer('communes-low', 'communes', 1, 'hatch-low', true, FADE_FROM),
-    patternLayer('communes-none', 'communes', 0, 'dots', true, FADE_FROM),
-    patternLayer('communes-nocoverage', 'communes', 4, 'hatch-cross', true, FADE_FROM),
+    patternLayer('communes-low-light', 'communes', 'hatch-low-light', true, FADE_FROM),
+    patternLayer('communes-low-dark', 'communes', 'hatch-low-dark', true, FADE_FROM),
+    patternLayer('communes-none', 'communes', 'dots', true, FADE_FROM),
+    patternLayer('communes-nocoverage', 'communes', 'hatch-cross', true, FADE_FROM),
     {
       id: 'communes-line',
       type: 'line',
@@ -92,28 +141,12 @@ function dataLayers(type: PriceType): LayerSpecification[] {
       maxzoom: 9,
       paint: { 'line-color': PORCELAIN, 'line-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0.45, 9, 0.15], 'line-width': 0.7 },
     },
-    {
-      id: LAYER_IDS.departmentsSelected,
-      type: 'line',
-      ...common,
-      'source-layer': 'departments',
-      maxzoom: FADE_TO,
-      filter: ['==', ['get', 'code'], ''],
-      paint: { 'line-color': AMBER, 'line-width': 2.5 },
-    },
-    {
-      id: LAYER_IDS.communesSelected,
-      type: 'line',
-      ...common,
-      'source-layer': 'communes',
-      minzoom: FADE_FROM,
-      filter: ['==', ['get', 'code'], ''],
-      paint: { 'line-color': AMBER, 'line-width': 2.5 },
-    },
+    ...outlineLayers('departments', 'department', { max: FADE_TO }),
+    ...outlineLayers('communes', 'commune', { min: FADE_FROM }),
   ]
 }
 
-export function buildStyle(tileUrl: string, type: PriceType): StyleSpecification {
+export function buildStyle(tileUrl: string, type: PriceType, lang: Lang): StyleSpecification {
   return {
     version: 8,
     glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
@@ -129,6 +162,7 @@ export function buildStyle(tileUrl: string, type: PriceType): StyleSpecification
         attribution: '© IGN · DGFiP/Etalab · Licence Ouverte v2.0',
       },
       graticule: { type: 'geojson', data: graticule() },
+      notes: { type: 'geojson', data: NOTES },
     },
     layers: [
       { id: 'background', type: 'background', paint: { 'background-color': GROUND } },
@@ -149,8 +183,8 @@ export function buildStyle(tileUrl: string, type: PriceType): StyleSpecification
         minzoom: 8,
         paint: { 'line-color': COBALT, 'line-opacity': 0.55, 'line-width': 0.7 },
       },
-      { id: 'graticule', type: 'line', source: 'graticule', paint: { 'line-color': COBALT, 'line-opacity': 0.22, 'line-width': 0.5 } },
       ...dataLayers(type),
+      { id: 'graticule', type: 'line', source: 'graticule', paint: { 'line-color': PORCELAIN, 'line-opacity': 0.13, 'line-width': 0.6 } },
       {
         id: 'roads-major',
         type: 'line',
@@ -169,25 +203,38 @@ export function buildStyle(tileUrl: string, type: PriceType): StyleSpecification
         paint: { 'line-color': PORCELAIN, 'line-opacity': 0.5, 'line-width': 1, 'line-dasharray': [4, 2] },
       },
       ...placeLabels(),
+      noteLabel(lang),
     ],
   }
 }
 
+export function noteLabel(lang: Lang): LayerSpecification {
+  return {
+    id: 'notes-label',
+    type: 'symbol',
+    source: 'notes',
+    minzoom: 5,
+    maxzoom: 9.5,
+    layout: { 'text-field': ['get', lang], 'text-font': FONT, 'text-size': 12, 'text-max-width': 8, 'text-allow-overlap': true },
+    paint: { 'text-color': PORCELAIN, 'text-halo-color': GROUND, 'text-halo-width': 1.6 },
+  }
+}
+
+// Fixed sizes per place rank (rank is carried by size and weight, not by zoom).
 function placeLabels(): LayerSpecification[] {
-  const label = (id: string, classes: string[], minzoom: number, size: [number, number]): LayerSpecification => ({
+  const label = (id: string, classes: string[], minzoom: number, size: number, font: string[]): LayerSpecification => ({
     id,
     type: 'symbol',
     source: 'basemap',
     'source-layer': 'place',
     minzoom,
     filter: ['in', ['get', 'class'], ['literal', classes]],
-    layout: {
-      'text-field': ['get', 'name'],
-      'text-font': FONT,
-      'text-size': ['interpolate', ['linear'], ['zoom'], minzoom, size[0], 14, size[1]],
-      'text-max-width': 8,
-    },
+    layout: { 'text-field': ['get', 'name'], 'text-font': font, 'text-size': size, 'text-max-width': 8 },
     paint: { 'text-color': PORCELAIN, 'text-halo-color': GROUND, 'text-halo-width': 1.4 },
   })
-  return [label('place-city', ['city'], 4.5, [11, 17]), label('place-town', ['town'], 8, [11, 15]), label('place-village', ['village'], 10.5, [10, 13])]
+  return [
+    label('place-city', ['city'], 4.5, 15, FONT_BOLD),
+    label('place-town', ['town'], 8, 13, FONT),
+    label('place-village', ['village'], 10.5, 12, FONT),
+  ]
 }

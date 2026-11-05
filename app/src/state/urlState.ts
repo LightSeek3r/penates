@@ -9,6 +9,8 @@ export interface UrlState {
   type: PriceType
   selected: string | null
   lang: Lang
+  /** False when the link carries no map position, so the app frames the whole country. */
+  viewProvided: boolean
 }
 
 export const DEFAULT_VIEW = { lng: 2.4, lat: 46.6, zoom: 5 } as const
@@ -26,17 +28,21 @@ export function parseHash(hash: string, fallbackLang: Lang): UrlState {
   const type = params.get('t')
   const selected = params.get('c')
   const lang = params.get('l')
+  const lng = finite(params.get('lng'), -180, 180)
+  const lat = finite(params.get('lat'), -90, 90)
+  const zoom = finite(params.get('z'), 0, 22)
   return {
-    lng: finite(params.get('lng'), -180, 180) ?? DEFAULT_VIEW.lng,
-    lat: finite(params.get('lat'), -90, 90) ?? DEFAULT_VIEW.lat,
-    zoom: finite(params.get('z'), 0, 22) ?? DEFAULT_VIEW.zoom,
+    lng: lng ?? DEFAULT_VIEW.lng,
+    lat: lat ?? DEFAULT_VIEW.lat,
+    zoom: zoom ?? DEFAULT_VIEW.zoom,
+    viewProvided: lng !== null && lat !== null && zoom !== null,
     type: PRICE_TYPES.find((candidate) => candidate === type) ?? 'all',
     selected: selected !== null && COMMUNE_CODE.test(selected) ? selected : null,
     lang: lang === 'fr' || lang === 'en' ? lang : fallbackLang,
   }
 }
 
-export function formatHash(state: UrlState): string {
+export function formatHash(state: Omit<UrlState, 'viewProvided'>): string {
   const params = new URLSearchParams()
   params.set('z', state.zoom.toFixed(2))
   params.set('lat', state.lat.toFixed(4))
