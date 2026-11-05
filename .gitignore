@@ -31,3 +31,6 @@ test-results/
 
 # python packaging
 *.egg-info/
+
+# agent worktrees (temporary copies of the repo)
+.claude/worktrees/
