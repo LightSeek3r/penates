@@ -19,7 +19,7 @@ Audience: general curious public choosing where to live or buy in France. Task: 
 
 THESIS: One national sheet in the grammar of an IGN Top 25 map, printed in midnight enamel. It refuses the listing-site arrangement and the generic dashboard: price, risk and amenities read as map furniture, and uncertainty is drawn into the map.
 
-OWN-WORLD: Midnight enamel ground #0B1B3A for shell and map, porcelain white (#F4F7FB) labels and ticks, IGN orange contour lines as low-opacity relief, a thin cobalt kilometre grid with sheet-edge scale bar, price as a luminous ladder from deep cobalt to porcelain, muted emerald forests and cobalt water, amber for risk and selection, scarlet only for errors, Noto Sans, a humanist sans, as the single family for both interface and map lettering (the free glyph host serves only the Noto Sans family, and one voice beats two), at fixed sizes per place rank.
+OWN-WORLD: Midnight enamel ground #0B1B3A for shell and map, porcelain white (#F4F7FB) labels and ticks, IGN orange contour lines as low-opacity relief, a thin cobalt kilometre grid with sheet-edge scale bar, price as a luminous ladder from deep cobalt to porcelain, muted emerald forests and cobalt water, amber for risk and selection, scarlet only for errors, Noto Sans, a humanist sans, as the single family for both interface and map lettering (the free glyph host serves only the Noto Sans family, and one voice beats two), at fixed sizes per place rank. Approved by the user on 2026-11-05 ("Keep Noto Sans"), after an independent review flagged it against the original "humanist transit sans".
 
 STORY: The visitor sees all of France priced at once, understands how reliable each area's number is, adds layers, and narrows by their own constraints.
 

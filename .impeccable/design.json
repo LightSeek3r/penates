@@ -1,0 +1,385 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-05T11:27:32+00:00",
+  "title": "Design System: settling-map",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Midnight Enamel",
+        "canonical": "#0B1B3A",
+        "oklch": "oklch(23% 0.064 262)",
+        "tonalRamp": [
+          "#0b121d",
+          "#212b3d",
+          "#3a4861",
+          "#556687",
+          "#7287ac",
+          "#96a8c9",
+          "#bccbe7",
+          "#e3efff"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Deep Panel",
+        "canonical": "#10264A",
+        "oklch": "oklch(27% 0.073 260)",
+        "tonalRamp": [
+          "#0a121f",
+          "#1f2c40",
+          "#374864",
+          "#51678b",
+          "#6d87b1",
+          "#92a9ce",
+          "#b8cceb",
+          "#e0f0ff"
+        ]
+      },
+      "panel-raised": {
+        "role": "neutral",
+        "displayName": "Raised Panel",
+        "canonical": "#17335F",
+        "oklch": "oklch(33% 0.085 259)",
+        "tonalRamp": [
+          "#081221",
+          "#1c2c43",
+          "#334869",
+          "#4c6791",
+          "#6887b8",
+          "#8ea9d4",
+          "#b5ccf0",
+          "#ddf0ff"
+        ]
+      },
+      "porcelain": {
+        "role": "neutral",
+        "displayName": "Porcelain",
+        "canonical": "#F4F7FB",
+        "oklch": "oklch(98% 0.006 255)",
+        "tonalRamp": [
+          "#111213",
+          "#2a2b2d",
+          "#46484a",
+          "#646669",
+          "#84868a",
+          "#a6a8ab",
+          "#c9cbcd",
+          "#edeef1"
+        ]
+      },
+      "text-dim": {
+        "role": "neutral",
+        "displayName": "Dim Porcelain",
+        "canonical": "#B4C2DC",
+        "oklch": "oklch(81% 0.040 263)",
+        "tonalRamp": [
+          "#0e1219",
+          "#252b37",
+          "#404858",
+          "#5c667b",
+          "#7a879e",
+          "#9da8bd",
+          "#c1cbdc",
+          "#e7effd"
+        ]
+      },
+      "cobalt": {
+        "role": "tertiary",
+        "displayName": "Cobalt Line",
+        "canonical": "#2F6FDB",
+        "oklch": "oklch(56% 0.178 260)",
+        "tonalRamp": [
+          "#000e31",
+          "#09285c",
+          "#19448b",
+          "#2b62bd",
+          "#4382ed",
+          "#70a7ff",
+          "#9dcbff",
+          "#ccf0ff"
+        ]
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Selection Amber",
+        "canonical": "#F2A81D",
+        "oklch": "oklch(78% 0.159 76)",
+        "tonalRamp": [
+          "#210b00",
+          "#442200",
+          "#6a3c00",
+          "#925700",
+          "#ba7500",
+          "#d69b3b",
+          "#f2c17a",
+          "#ffe8b2"
+        ]
+      },
+      "scarlet": {
+        "role": "tertiary",
+        "displayName": "Error Scarlet",
+        "canonical": "#E03A2F",
+        "oklch": "oklch(60% 0.204 29)",
+        "tonalRamp": [
+          "#2d0000",
+          "#570302",
+          "#851510",
+          "#b62921",
+          "#e54539",
+          "#ff7969",
+          "#ffa797",
+          "#ffd4c7"
+        ]
+      },
+      "emerald": {
+        "role": "tertiary",
+        "displayName": "Forest Emerald",
+        "canonical": "#2FA36B",
+        "oklch": "oklch(64% 0.133 158)",
+        "tonalRamp": [
+          "#001808",
+          "#00361c",
+          "#005733",
+          "#0e794b",
+          "#2d9d67",
+          "#68bc8d",
+          "#99dcb4",
+          "#cafddd"
+        ]
+      },
+      "contour-orange": {
+        "role": "tertiary",
+        "displayName": "Road Orange",
+        "canonical": "#C8642B",
+        "oklch": "oklch(61% 0.145 47)",
+        "tonalRamp": [
+          "#250600",
+          "#4a1b00",
+          "#733208",
+          "#9e4b19",
+          "#c96731",
+          "#e48f65",
+          "#ffb894",
+          "#ffe0c5"
+        ]
+      },
+      "price-0": {
+        "role": "primary",
+        "displayName": "Ladder 1 (under 1,000)",
+        "canonical": "#1D3F85",
+        "oklch": "oklch(39% 0.124 263)",
+        "tonalRamp": [
+          "#051028",
+          "#182a4e",
+          "#2d4678",
+          "#4464a4",
+          "#5e85cf",
+          "#85a8e8",
+          "#aecbff",
+          "#d8efff"
+        ]
+      },
+      "price-3": {
+        "role": "primary",
+        "displayName": "Ladder 4 (2,000 to 2,500)",
+        "canonical": "#5E97EA",
+        "oklch": "oklch(67% 0.138 258)",
+        "tonalRamp": [
+          "#02112a",
+          "#102b51",
+          "#22477c",
+          "#3766aa",
+          "#5086d5",
+          "#7aa9ee",
+          "#a5cdff",
+          "#d2f1ff"
+        ]
+      },
+      "price-6": {
+        "role": "primary",
+        "displayName": "Ladder 7 (5,000+)",
+        "canonical": "#F4F7FB",
+        "oklch": "oklch(98% 0.006 255)",
+        "tonalRamp": [
+          "#111213",
+          "#2a2b2d",
+          "#46484a",
+          "#646669",
+          "#84868a",
+          "#a6a8ab",
+          "#c9cbcd",
+          "#edeef1"
+        ]
+      },
+      "no-price": {
+        "role": "neutral",
+        "displayName": "No-price Ground",
+        "canonical": "#14264A",
+        "oklch": "oklch(27% 0.071 263)",
+        "tonalRamp": [
+          "#0b111f",
+          "#212b3f",
+          "#394864",
+          "#53668a",
+          "#7086b0",
+          "#94a8cd",
+          "#bacbea",
+          "#e2efff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The median price figure in the details panel."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The selected place name."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel headings such as the layer name."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Descriptions, facts, buttons and legend."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Captions, hints, trend range and tick labels."
+      }
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": [
+      {
+        "name": "sheets",
+        "value": "720px"
+      },
+      {
+        "name": "short-phone",
+        "value": "700px (height)"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "The default action button: outlined, porcelain on the deep panel.",
+      "html": "<button class=\"ds-btn\">Sources et limites</button>",
+      "css": ":host{--ground:#0B1B3A;--panel:#10264A;--raised:#17335F;--text:#F4F7FB;--dim:#B4C2DC;--amber:#F2A81D;}.ds-btn{min-height:40px;padding:0 12px;border:1px solid rgb(244 247 251 / 32%);border-radius:6px;background:transparent;color:var(--text);font:400 14px 'Noto Sans Variable',system-ui,sans-serif;cursor:pointer}.ds-btn:hover{background:var(--raised)}.ds-btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}"
+    },
+    {
+      "name": "Language Toggle",
+      "kind": "chip",
+      "refersTo": "segmented-option-selected",
+      "description": "Joined FR | EN pair; the pressed language is filled porcelain.",
+      "html": "<div class=\"ds-lang\"><button aria-pressed=\"true\">FR</button><button aria-pressed=\"false\">EN</button></div>",
+      "css": ":host{--ground:#0B1B3A;--panel:#10264A;--raised:#17335F;--text:#F4F7FB;--dim:#B4C2DC;--amber:#F2A81D;}.ds-lang{display:inline-flex;border:1px solid rgb(244 247 251 / 32%);border-radius:6px;overflow:hidden}.ds-lang button{min-width:44px;min-height:40px;padding:0 8px;border:0;background:transparent;color:var(--text);font:400 14px 'Noto Sans Variable',system-ui,sans-serif;cursor:pointer}.ds-lang button[aria-pressed=true]{background:var(--text);color:var(--ground);font-weight:700}.ds-lang button:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}"
+    },
+    {
+      "name": "Property Type Control",
+      "kind": "custom",
+      "refersTo": "segmented-option-selected",
+      "description": "Equal-width radio options; the selected one is filled porcelain.",
+      "html": "<div class=\"ds-seg\"><span class=\"on\">Tous</span><span>Maisons</span><span>Appartements</span></div>",
+      "css": ":host{--ground:#0B1B3A;--panel:#10264A;--raised:#17335F;--text:#F4F7FB;--dim:#B4C2DC;--amber:#F2A81D;}.ds-seg{display:flex;gap:4px;font:400 14px 'Noto Sans Variable',system-ui,sans-serif;color:var(--text)}.ds-seg span{flex:1;display:grid;place-items:center;min-height:40px;padding:0 8px;border:1px solid rgb(244 247 251 / 32%);border-radius:6px}.ds-seg .on{background:var(--text);color:var(--ground);border-color:var(--text);font-weight:600}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-input",
+      "description": "Commune search: deep-panel field with a 40px height and amber focus.",
+      "html": "<input class=\"ds-search\" placeholder=\"Commune\" />",
+      "css": ":host{--ground:#0B1B3A;--panel:#10264A;--raised:#17335F;--text:#F4F7FB;--dim:#B4C2DC;--amber:#F2A81D;}.ds-search{width:260px;min-height:40px;padding:0 12px;border:1px solid rgb(244 247 251 / 32%);border-radius:6px;background:var(--panel);color:var(--text);font:400 16px 'Noto Sans Variable',system-ui,sans-serif}.ds-search::placeholder{color:var(--dim)}.ds-search:focus-visible{outline:2px solid var(--amber);outline-offset:2px}"
+    },
+    {
+      "name": "Price Ladder Legend",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "The seven price classes as swatches with exact class limits.",
+      "html": "<div class=\"ds-legend\"><b>Prix médian, €/m²</b><ol><li><i style=\"background:#1D3F85\"></i>moins de 1 000</li><li><i style=\"background:#2457B5\"></i>1 000 à 1 500</li><li><i style=\"background:#2F73D9\"></i>1 500 à 2 000</li><li><i style=\"background:#5E97EA\"></i>2 000 à 2 500</li><li><i style=\"background:#93BAF3\"></i>2 500 à 3 500</li><li><i style=\"background:#C9DBF8\"></i>3 500 à 5 000</li><li><i style=\"background:#F4F7FB\"></i>5 000 et plus</li></ol></div>",
+      "css": ":host{--ground:#0B1B3A;--panel:#10264A;--raised:#17335F;--text:#F4F7FB;--dim:#B4C2DC;--amber:#F2A81D;}.ds-legend{width:240px;padding:16px;border:1px solid rgb(244 247 251 / 14%);border-radius:6px;background:var(--panel);color:var(--text);font:400 14px 'Noto Sans Variable',system-ui,sans-serif}.ds-legend b{font-weight:700}.ds-legend ol{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:2px}.ds-legend li{display:flex;align-items:center;gap:8px}.ds-legend i{display:block;width:32px;height:12px;border:1px solid rgb(244 247 251 / 14%)}"
+    },
+    {
+      "name": "Reliability Key",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "The four uncertainty textures: plain, hatch, dots, cross-hatch.",
+      "html": "<ul class=\"ds-key\"><li><i class=\"plain\"></i>10 ventes ou plus</li><li><i class=\"low\"></i>Moins de 10 ventes : indicatif</li><li><i class=\"none\"></i>Aucune vente retenue</li><li><i class=\"out\"></i>Hors base DVF</li></ul>",
+      "css": ":host{--ground:#0B1B3A;--panel:#10264A;--raised:#17335F;--text:#F4F7FB;--dim:#B4C2DC;--amber:#F2A81D;}.ds-key{margin:0;padding:16px;list-style:none;display:grid;gap:4px;width:260px;border:1px solid rgb(244 247 251 / 14%);border-radius:6px;background:var(--panel);color:var(--text);font:400 14px 'Noto Sans Variable',system-ui,sans-serif}.ds-key li{display:flex;align-items:center;gap:8px}.ds-key i{width:32px;height:12px;border:1px solid rgb(244 247 251 / 14%);background:#5E97EA}.ds-key .low{background-image:repeating-linear-gradient(135deg,transparent 0 4px,#0B1B3A 4px 5.5px)}.ds-key .none{background-color:#14264A;background-image:radial-gradient(circle,rgb(244 247 251 / 80%) 1.4px,transparent 1.6px);background-size:8px 8px}.ds-key .out{background-color:#14264A;background-image:repeating-linear-gradient(45deg,transparent 0 4px,rgb(244 247 251 / 30%) 4px 5px),repeating-linear-gradient(135deg,transparent 0 4px,rgb(244 247 251 / 30%) 4px 5px)}"
+    },
+    {
+      "name": "Details Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Selected-place details: price, reliability meter, facts, trend and disclaimer.",
+      "html": "<section class=\"ds-card\"><h3>Toulouse</h3><p class=\"m\">31</p><p class=\"v\">3 321 <span>€/m²</span></p><div class=\"meter\"><i></i><i></i><i></i></div><p>Nombre de ventes élevé : chiffre solide.</p><p class=\"f\">Ventes retenues : 21 749</p><p class=\"f\">Période : janv. 2023 – déc. 2025</p><p class=\"d\">Indicatif : médiane des prix de vente rapportés à la surface bâtie.</p></section>",
+      "css": ":host{--ground:#0B1B3A;--panel:#10264A;--raised:#17335F;--text:#F4F7FB;--dim:#B4C2DC;--amber:#F2A81D;}.ds-card{width:300px;padding:16px;border:1px solid rgb(244 247 251 / 14%);border-radius:6px;background:var(--panel);color:var(--text);font:400 14px/1.4 'Noto Sans Variable',system-ui,sans-serif}.ds-card h3{margin:0;font-size:20px;line-height:1.2}.ds-card p{margin:0}.ds-card .m,.ds-card .f,.ds-card .d{color:var(--dim)}.ds-card .v{margin:8px 0;font-size:36px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}.ds-card .v span{font-size:14px;font-weight:400;color:var(--dim)}.ds-card .meter{display:flex;gap:4px;height:8px;margin-bottom:8px}.ds-card .meter i{flex:1;border-radius:2px;background:var(--text)}.ds-card .d{margin-top:12px;font-size:12px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Midnight Sheet",
+    "overview": "**Creative North Star: \"The Midnight Sheet\"**\n\nsettling-map is one national map sheet in the manner of an IGN Top 25 map, printed in midnight-blue enamel. Everything the visitor reads sits on a single cold ground (#0B1B3A): the map, the panels, the margin that carries the coordinates. Price is the one thing allowed to glow, so the whole country reads as a ladder of blue from deep cobalt to porcelain white. The interface is a working tool first (Operate mode): standard controls, tight hierarchy, nothing decorative that does not carry data.\n\nThe system's second idea is honesty drawn as material. A figure that rests on few sales, a commune with no sale at all, and a region the source does not cover each get their own texture instead of a colour, so uncertainty is never mistaken for a low price. The sheet furniture (neatline, Lambert-93 kilometre ticks, alternating scale bar) is there to make the map read as a real, measured document and to anchor the data to the ground.\n\nIt refuses the listing-site look (banners, orange calls to action, agent cards), the dated government GIS look (dense grey toolbars), the flashy dataviz demo (neon on black, showy motion) and alarmist styling (red warnings on risks).",
+    "keyCharacteristics": [
+      "One cold midnight ground; price is the only luminous element.",
+      "Luminance-ordered single-hue ladder, safe without colour vision.",
+      "Uncertainty is texture: hatch, dots, cross-hatch; never a price colour.",
+      "Printed-sheet frame: neatline, Lambert-93 ticks, kilometre grid, alternating scale bar.",
+      "Flat tonal panels with hairline borders; no shadows.",
+      "Orange appears only as IGN-style road ink; amber is reserved for selection."
+    ],
+    "rules": [
+      {
+        "name": "The One Ladder Rule",
+        "body": "The blue ladder belongs to price alone. No other element, chart or state may borrow its colours.",
+        "section": "colors"
+      },
+      {
+        "name": "The Amber Is Selection Rule",
+        "body": "Amber marks what the visitor has chosen and what has keyboard focus. It is never a warning or a risk colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Texture Carries Doubt Rule",
+        "body": "Uncertainty is drawn as texture and each texture keeps at least 3:1 contrast against its fill: porcelain hatch on the three darkest classes, midnight hatch on the rest, dense porcelain dots for \"no sale kept\", a quiet porcelain cross-hatch for \"outside the source\".",
+        "section": "colors"
+      },
+      {
+        "name": "The One Voice Rule",
+        "body": "Interface and map lettering share one family. A second face needs a user decision.",
+        "section": "typography"
+      },
+      {
+        "name": "The Sentence Case Rule",
+        "body": "No uppercase transforms. Units stay exact: \"€/m²\" is never rendered \"€/M²\".",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Sheet Rule",
+        "body": "Nothing casts a shadow. A surface is distinguished by value and a hairline, as on a printed sheet.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep price on the blue ladder and nowhere else.",
+      "**Do** show every uncertainty as texture, with at least 3:1 contrast against its fill.",
+      "**Do** label the outside-source area on the map and in the legend.",
+      "**Do** give every figure its sample size, period and a plain-language reliability sentence.",
+      "**Do** keep the interface and map lettering in one family, in sentence case.",
+      "**Do** keep amber for selection and focus only."
+    ],
+    "donts": [
+      "**Don't** show missing or thin data as a low-price colour.",
+      "**Don't** use red or scarlet for risk, crime or any non-error state; risk layers stay calm.",
+      "**Don't** add drop shadows, gradients or glows to panels.",
+      "**Don't** let panels cover the neatline or two bottom sheets overlap on phones.",
+      "**Don't** style the page like a listing site: no banners, no orange calls to action, no agent-style cards.",
+      "**Don't** render foreign place names at French rank."
+    ]
+  }
+}
