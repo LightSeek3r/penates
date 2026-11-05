@@ -626,7 +626,7 @@ ol {
   border-radius: var(--radius);
   background: rgb(11 27 58 / 82%);
   color: var(--text);
-  font-size: 10px;
+  font-size: var(--text-xs);
   line-height: 1.2;
 }
 

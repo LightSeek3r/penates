@@ -39,7 +39,7 @@ export function attachSheetFrame(map: MapLibreMap, stage: HTMLElement): () => vo
     ctx.lineWidth = 1
     ctx.strokeRect(margin - 0.5, margin - 0.5, mapWidth + 1, mapHeight + 1)
 
-    ctx.font = '10px "Noto Sans Variable", system-ui, sans-serif'
+    ctx.font = '11px "Noto Sans Variable", system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
 

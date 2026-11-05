@@ -249,6 +249,13 @@ const FRANCE_OUTLINE = {
 
 const inFrance: ExpressionSpecification = ['within', FRANCE_OUTLINE as never]
 
+// Neighbouring cities (London, Brussels, Geneva, Turin, Barcelona...) give context; farther ones only crop at the frame.
+const NEIGHBOURHOOD = {
+  type: 'Polygon' as const,
+  coordinates: [[[-4.2, 41.2], [11.0, 41.2], [11.0, 52.0], [-4.2, 52.0], [-4.2, 41.2]]],
+}
+const nearFrance: ExpressionSpecification = ['within', NEIGHBOURHOOD as never]
+
 // Fixed sizes per place rank (rank is carried by size and weight, not by zoom).
 function placeLabels(): LayerSpecification[] {
   const label = (id: string, classes: string[], minzoom: number, size: number, font: string[], french: boolean): LayerSpecification => ({
@@ -257,7 +264,7 @@ function placeLabels(): LayerSpecification[] {
     source: 'basemap',
     'source-layer': 'place',
     minzoom,
-    filter: ['all', ['in', ['get', 'class'], ['literal', classes]], french ? inFrance : ['!', inFrance]],
+    filter: ['all', ['in', ['get', 'class'], ['literal', classes]], french ? inFrance : ['all', nearFrance, ['!', inFrance]]],
     layout: { 'text-field': ['get', 'name'], 'text-font': font, 'text-size': size, 'text-max-width': 8 },
     paint: {
       'text-color': PORCELAIN,
