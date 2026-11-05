@@ -63,7 +63,8 @@ test.describe('search engines see real, per-language pages', () => {
       expect(html).toContain(publisher)
       expect(html).toContain(host)
       expect(html).toContain('Cloudflare')
-      expect(html).toContain('mailto:')
+      // Cloudflare's email obfuscation may rewrite the mailto link on the deployed site.
+      expect(html).toMatch(/mailto:|email-protection/)
     }
   })
 })
@@ -132,7 +133,9 @@ test.describe('security headers', () => {
   test('the page ships a CSP and the map still loads under it', async ({ page }) => {
     const violations: string[] = []
     page.on('console', (message) => {
-      if (/Content Security Policy|Refused to/.test(message.text())) violations.push(message.text())
+      const text = message.text()
+      // The zone's Cloudflare Web Analytics beacon is injected by the host and is meant to be blocked: this site runs no analytics.
+      if (/Content Security Policy|Refused to/.test(text) && !text.includes('static.cloudflareinsights.com')) violations.push(text)
     })
     const response = await page.goto('/')
     expect(response?.headers()['content-security-policy']).toContain("default-src 'self'")

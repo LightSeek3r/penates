@@ -1,0 +1,52 @@
+name: Lighthouse
+
+# Audits the live pages from GitHub's network. Scores for performance are reported, not enforced:
+# a WebGL map spends its first seconds loading tiles, so the enforced categories are the ones we control.
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Site to audit
+        default: https://settling.unit42.fr
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        page: ['/', '/en/', '/methodologie/']
+        preset: [mobile, desktop]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run Lighthouse
+        run: |
+          set -euo pipefail
+          preset_flag=""
+          if [ "${{ matrix.preset }}" = "desktop" ]; then preset_flag="--preset=desktop"; fi
+          npx --yes lighthouse@12 "${{ inputs.site }}${{ matrix.page }}" $preset_flag \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --chrome-flags="--headless=new --no-sandbox" \
+            --output=json --output-path=report.json --quiet
+      - name: Scores
+        run: |
+          node -e '
+            const r = require("./report.json");
+            const s = Object.fromEntries(Object.entries(r.categories).map(([k, v]) => [k, Math.round(v.score * 100)]));
+            console.log("${{ matrix.page }} ${{ matrix.preset }}", JSON.stringify(s));
+            const failing = Object.values(r.audits).filter((a) => a.score === 0 && a.scoreDisplayMode === "binary").map((a) => a.id);
+            if (failing.length) console.log("failing audits:", failing.join(", "));
+            const floor = { accessibility: 90, "best-practices": 85, seo: 95 };
+            const bad = Object.entries(floor).filter(([k, min]) => s[k] < min);
+            if (bad.length) { console.error("below floor:", JSON.stringify(bad)); process.exit(1); }
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-${{ strategy.job-index }}
+          path: report.json
