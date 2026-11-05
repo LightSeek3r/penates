@@ -37,6 +37,8 @@ jobs:
       - run: python -m pytest pipeline/tests -q
       - name: Build national tiles from the official DVF file
         run: python -m settling.build --out data/build/national
+      - name: Plausibility gate (blocks publishing bad data)
+        run: python pipeline/check_tiles.py data/build/national/communes.pmtiles
       - name: Publish to R2 (versioned tiles first, manifest last)
         run: |
           set -euo pipefail

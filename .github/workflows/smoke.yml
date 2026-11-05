@@ -20,6 +20,7 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Manifest
         run: |
           set -euo pipefail
@@ -46,6 +47,13 @@ jobs:
           echo "full   #1:"; curl -sS -D - -o /dev/null "$TILES/$file" | show
           echo "full   #2:"; curl -sS -D - -o /dev/null "$TILES/$file" | show
           echo "range #2 (after full GETs):"; curl -sS -D - -o /dev/null -H "Range: bytes=0-16383" "$TILES/$file" | show
+      - name: Live tiles pass the plausibility gate
+        run: |
+          set -euo pipefail
+          file=$(python3 -c "import json; print(json.load(open('manifest.json'))['tiles']['file'])")
+          curl -sS -o live.pmtiles "$TILES/$file"
+          pip install -q -r pipeline/requirements.txt
+          python pipeline/check_tiles.py live.pmtiles
       - name: CORS preflight
         run: |
           file=$(python3 -c "import json; print(json.load(open('manifest.json'))['tiles']['file'])")
