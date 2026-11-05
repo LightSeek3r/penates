@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { track } from './analytics/track'
 import { loadManifest, tileUrl } from './data/manifest'
 import { refreshOfflineStatus } from './pwa/register'
 import { MapView } from './map/MapView'
@@ -38,6 +39,7 @@ export default function App() {
         if ((error as Error).name === 'AbortError') return
         setFailed(true)
         setMapStatus('error')
+        track('map_error')
       })
     return () => controller.abort()
   }, [setManifest, setMapStatus])

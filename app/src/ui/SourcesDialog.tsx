@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../state/appStore'
+import { PrivacySwitch } from './PrivacySwitch'
 import { PwaSection } from './PwaSection'
 
 export function SourcesDialog() {
@@ -55,6 +56,7 @@ export function SourcesDialog() {
         </li>
       </ul>
       <PwaSection />
+      <PrivacySwitch />
     </dialog>
   )
 }

@@ -93,7 +93,7 @@
     "creditsDvf": "Valeurs foncières : DGFiP / Etalab, Licence Ouverte v2.0",
     "creditsIgn": "Contours administratifs : IGN, Licence Ouverte v2.0",
     "creditsOsm": "Fond de carte : © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap",
-    "privacy": "Aucun compte, aucun cookie, aucun suivi. Les tuiles de carte sont chargées depuis OpenFreeMap et Cloudflare.",
+    "privacy": "Aucun compte, aucun cookie. Seuls des totaux anonymes d'utilisation sont comptés (voir ci-dessous). Les tuiles de carte sont chargées depuis OpenFreeMap et Cloudflare.",
     "methodExtra": "Zone sismique : zonage réglementaire par commune (Géorisques). Distances : plus courte distance à vol d'oiseau entre un point de la commune et l'équipement le plus proche de la base permanente des équipements de l'Insee ; ce ne sont pas des temps de trajet et un point unique représente toute la commune.",
     "creditsInsee": "Équipements : Insee, base permanente des équipements, Licence Ouverte v2.0",
     "creditsGeorisques": "Zonage sismique : Géorisques (BRGM, ministère de la Transition écologique), Licence Ouverte",
@@ -158,5 +158,10 @@
     "updateReady": "Une nouvelle version est disponible.",
     "update": "Mettre à jour",
     "later": "Plus tard"
+  },
+  "privacy": {
+    "title": "Mesure d'usage anonyme",
+    "explain": "settling-map compte, sans vous identifier, combien de fois les pages et les fonctions sont utilisées : des totaux par jour, sans adresse IP, sans cookie et sans texte saisi. Le signal « Ne pas me suivre » est respecté.",
+    "optOut": "Ne pas compter mes visites"
   }
 }

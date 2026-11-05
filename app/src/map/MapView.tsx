@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { track } from '../analytics/track'
 import { tileUrl } from '../data/manifest'
 import { initialState, useAppStore } from '../state/appStore'
 import type { Manifest } from '../state/store'
@@ -137,6 +138,7 @@ export function MapView({ manifest }: { manifest: Manifest }) {
       console.error('Map error:', event.error?.message ?? event)
       if (store.getState().mapStatus === 'loading' && (event as { sourceId?: string }).sourceId === 'data') {
         store.getState().setMapStatus('error')
+        track('map_error')
       }
     })
     map.on('moveend', syncHash)

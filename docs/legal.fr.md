@@ -22,7 +22,15 @@ Le code de settling-map est publié sous licence MIT. Les données restent soumi
 
 ## Données personnelles
 
-settling-map n'a ni compte utilisateur, ni cookie, ni outil de mesure d'audience qui lui soit propre. Il ne collecte pas de données personnelles de sa propre initiative. En revanche, utiliser la carte fait transiter des données techniques vers les services suivants, comme pour tout site web :
+settling-map n'a ni compte utilisateur ni cookie. Il compte de façon anonyme l'utilisation du site, pour savoir ce qui sert et ce qui ne fonctionne pas :
+
+- **Ce qui est compté** : pages vues, langue, type d'appareil (téléphone ou ordinateur), site d'où vient la visite (nom de domaine seulement, jamais l'adresse complète), pays (déduit par Cloudflare, jamais l'adresse IP), nom du thème de couleur et du filtre utilisés (jamais les valeurs choisies), nombre de communes sélectionnées et de recherches (jamais le texte saisi), installations de l'application, cartes enregistrées hors ligne, erreurs de chargement de la carte, et la vitesse de chargement ressentie (bonne, moyenne ou mauvaise).
+- **Comment** : chaque événement ajoute un au total du jour dans une base Cloudflare D1. Il n'y a aucun identifiant, aucun cookie, aucune adresse IP enregistrée et aucune ligne par visiteur ; ces totaux ne permettent pas de reconnaître une personne.
+- **Qui y a accès** : seul l'éditeur, par une page d'administration protégée par Cloudflare Access. L'éditeur voit aussi les statistiques de requêtes de Cloudflare pour le site (robots compris).
+- **Base légale** : intérêt légitime à mesurer l'usage d'un site gratuit pour l'améliorer (RGPD, art. 6.1.f).
+- **Vous y opposer** : cochez « Ne pas compter mes visites » dans la fenêtre « Sources et limites » (le choix est mémorisé dans votre navigateur seulement), ou activez le signal « Ne pas me suivre » (ou Global Privacy Control) de votre navigateur : il est respecté.
+
+Par ailleurs, utiliser la carte fait transiter des données techniques vers les services suivants, comme pour tout site web :
 
 - **Cloudflare** (hébergement du site et des fichiers de la carte) reçoit votre adresse IP et des informations techniques de la requête (navigateur, page demandée, date), qu'il traite sous sa propre politique. Il fonctionne aux États-Unis et s'appuie sur le cadre de protection des données UE-États-Unis ou sur les clauses contractuelles types de la Commission européenne.
 - **OpenFreeMap** fournit le fond de carte (tuiles et polices) : il reçoit votre adresse IP et la zone de carte consultée.
@@ -36,7 +44,7 @@ La politique de confidentialité du domaine principal, qui couvre les autres pag
 
 ## Stockage dans votre navigateur
 
-Le site ne dépose aucun cookie. L'application installable utilise le stockage du navigateur (Cache Storage) pour fonctionner hors connexion : fichiers de l'application, zones du fond de carte déjà consultées et, si vous le demandez, la carte des prix. Ce stockage ne contient aucune donnée personnelle ; vous pouvez le vider depuis les réglages du navigateur, ou supprimer la carte des prix enregistrée depuis la fenêtre « Sources et limites ».
+Le site ne dépose aucun cookie. Le seul élément qu'il garde dans votre navigateur de lui-même est votre choix de ne pas être compté, si vous le faites. L'application installable utilise le stockage du navigateur (Cache Storage) pour fonctionner hors connexion : fichiers de l'application, zones du fond de carte déjà consultées et, si vous le demandez, la carte des prix. Ce stockage ne contient aucune donnée personnelle ; vous pouvez le vider depuis les réglages du navigateur, ou supprimer la carte des prix enregistrée depuis la fenêtre « Sources et limites ».
 
 ## Vos droits
 

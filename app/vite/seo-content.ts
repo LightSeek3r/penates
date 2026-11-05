@@ -198,5 +198,5 @@ export function sitemapXml(entries: ReadonlyArray<Record<Lang, string>>): string
 }
 
 export function robotsTxt(): string {
-  return `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`
+  return `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\n\nSitemap: ${SITE}/sitemap.xml\n`
 }

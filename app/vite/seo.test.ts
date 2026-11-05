@@ -96,6 +96,8 @@ describe('sitemap and robots', () => {
 
   it('allows crawling and points to the sitemap', () => {
     expect(robotsTxt()).toContain('Allow: /')
+    expect(robotsTxt()).toContain('Disallow: /admin/')
+    expect(robotsTxt()).toContain('Disallow: /api/')
     expect(robotsTxt()).toContain('Sitemap: https://settling.unit42.fr/sitemap.xml')
   })
 })

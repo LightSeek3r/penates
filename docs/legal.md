@@ -22,7 +22,15 @@ The settling-map code is published under the MIT licence. The data remains under
 
 ## Personal data
 
-settling-map has no user accounts, no cookies and no audience-measurement tool of its own. It does not collect personal data on its own initiative. Using the map does, however, send technical data to the following services, as with any website:
+settling-map has no user accounts and no cookies. It counts anonymously how the site is used, to learn what is used and what breaks:
+
+- **What is counted**: page views, language, device type (phone or computer), the site a visit came from (domain name only, never the full address), country (worked out by Cloudflare, never the IP address), the name of the colour theme and of the filter used (never the values chosen), the number of communes selected and of searches (never the text typed), app installs, maps saved offline, map loading errors, and perceived loading speed (good, average or poor).
+- **How**: each event adds one to the day's total in a Cloudflare D1 database. There is no identifier, no cookie, no IP address stored and no row per visitor; these totals cannot be used to recognise a person.
+- **Who can see it**: only the publisher, through an admin page protected by Cloudflare Access. The publisher also sees Cloudflare's request statistics for the site (bots included).
+- **Legal basis**: legitimate interest in measuring the use of a free site in order to improve it (GDPR art. 6(1)(f)).
+- **Objecting**: tick "Do not count my visits" in the "Sources and limits" window (the choice is remembered in your browser only), or turn on your browser's Do Not Track (or Global Privacy Control) signal: it is respected.
+
+Using the map also sends technical data to the following services, as with any website:
 
 - **Cloudflare** (hosting of the site and of the map files) receives your IP address and technical request details (browser, requested page, time), which it processes under its own policy. It operates in the United States and relies on the EU-US Data Privacy Framework or the European Commission's Standard Contractual Clauses.
 - **OpenFreeMap** provides the basemap (tiles and fonts): it receives your IP address and the map area you view.
@@ -36,7 +44,7 @@ The privacy policy of the main domain, which covers the other pages of unit42.fr
 
 ## Storage in your browser
 
-The site sets no cookies. The installable app uses browser storage (Cache Storage) to work offline: app files, basemap areas you have already viewed and, if you ask for it, the price map. This storage holds no personal data; you can clear it from your browser settings, or remove the saved price map from the "Sources and limits" window.
+The site sets no cookies. The only thing it keeps in your browser by itself is your choice not to be counted, if you make it. The installable app uses browser storage (Cache Storage) to work offline: app files, basemap areas you have already viewed and, if you ask for it, the price map. This storage holds no personal data; you can clear it from your browser settings, or remove the saved price map from the "Sources and limits" window.
 
 ## Your rights
 

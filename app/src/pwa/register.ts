@@ -1,4 +1,5 @@
 import { registerSW } from 'virtual:pwa-register'
+import { track } from '../analytics/track'
 import { TILES_CACHE } from './constants'
 import { type InstallPromptEvent, usePwaStore } from './pwaStore'
 
@@ -21,6 +22,7 @@ export async function saveMapOffline(tileUrl: string): Promise<void> {
 export async function removeMapOffline(): Promise<void> {
   await caches.delete(TILES_CACHE)
   set({ offlineMap: 'none', loaded: 0, total: 0 })
+  track('offline_map', 'removed')
 }
 
 export async function promptInstall(): Promise<void> {
@@ -29,6 +31,7 @@ export async function promptInstall(): Promise<void> {
   await installEvent.prompt()
   const { outcome } = await installEvent.userChoice
   set({ installEvent: null, installed: outcome === 'accepted' })
+  if (outcome === 'accepted') track('install', 'accepted')
 }
 
 /** Registers the service worker and wires install, update, connectivity and offline-download events into the store. */
@@ -46,7 +49,10 @@ export function startPwa(): void {
   navigator.serviceWorker.addEventListener('message', (event: MessageEvent<{ type?: string; loaded?: number; total?: number }>) => {
     const { type, loaded = 0, total = 0 } = event.data ?? {}
     if (type === 'TILES_PROGRESS') set({ offlineMap: 'downloading', loaded, total })
-    if (type === 'TILES_DONE') set({ offlineMap: 'ready' })
+    if (type === 'TILES_DONE') {
+      set({ offlineMap: 'ready' })
+      track('offline_map', 'saved')
+    }
     if (type === 'TILES_ERROR') set({ offlineMap: 'error' })
   })
 

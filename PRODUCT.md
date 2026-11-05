@@ -57,4 +57,4 @@ Open datasets verified 2026-11-04 (see .claude/plans/settling-map-v1.md). No use
 
 ## Accessibility & Inclusion
 
-Required, per the user: mobile-first usable (core flow works on a phone); WCAG AA (keyboard, screen reader, contrast, colour-blind-safe map palettes); no account and no tracking for core features (accounts only for optional saved shortlists; no cookies or analytics beyond what is strictly necessary); every string, legend and disclaimer in French and English.
+Required, per the user: mobile-first usable (core flow works on a phone); WCAG AA (keyboard, screen reader, contrast, colour-blind-safe map palettes); no account and no individual tracking for core features (accounts only for optional saved shortlists; no cookies; the only measurement is anonymous daily totals with no identifier, which the visitor can switch off, and Do Not Track is respected); every string, legend and disclaimer in French and English.

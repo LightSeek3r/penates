@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { track } from '../analytics/track'
 import { useAppStore } from '../state/appStore'
 
 interface Suggestion {
@@ -67,6 +68,7 @@ export function Search() {
   }, [trimmed])
 
   const choose = (item: Suggestion) => {
+    track('search')
     flyTo({ lng: item.lng, lat: item.lat, zoom: COMMUNE_ZOOM, code: item.code })
     setQuery(item.name)
     setItems([])

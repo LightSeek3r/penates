@@ -26,6 +26,8 @@ export function isFilterKey(value: string): value is FilterKey {
   return DEF_BY_KEY.has(value as FilterKey)
 }
 
+export const activeFilterKeys = (filters: Filters): FilterKey[] => FILTER_DEFS.map((def) => def.key).filter((key) => filters[key] !== undefined)
+
 export function activeFilterCount(filters: Filters): number {
   return Object.keys(filters).length
 }

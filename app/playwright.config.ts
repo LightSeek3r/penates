@@ -16,7 +16,8 @@ export default defineConfig({
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
   ],
-  // Locally the suite tests the production build (real CSP and service worker), served by `vite preview`.
+  // Locally the suite tests the production build behind the Pages runtime (`wrangler pages dev`): the real `_headers`
+  // (CSP), the service worker, and the Functions with an emulated D1 database. ADMIN_DEV_BYPASS exists only here.
   webServer: remote
     ? undefined
     : [
@@ -26,11 +27,11 @@ export default defineConfig({
           reuseExistingServer: !process.env.CI,
         },
         {
-          command: `pnpm build && pnpm exec vite preview --port ${APP_PORT} --strictPort`,
+          command: `pnpm build && pnpm exec wrangler pages dev dist --port ${APP_PORT} --d1=DB --binding ADMIN_DEV_BYPASS=1 --compatibility-date=2026-01-01`,
           url: `http://localhost:${APP_PORT}`,
-          env: { VITE_DATA_BASE: `http://localhost:${DATA_PORT}`, VITE_CONFIG_NATIVE_IGNORE_WARNING: 'true' },
+          env: { VITE_DATA_BASE: `http://localhost:${DATA_PORT}`, VITE_CONFIG_NATIVE_IGNORE_WARNING: 'true', CI: 'true', WRANGLER_SEND_METRICS: 'false' },
           reuseExistingServer: !process.env.CI,
-          timeout: 120_000,
+          timeout: 180_000,
         },
       ],
 })

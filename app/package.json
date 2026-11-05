@@ -21,6 +21,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-i18next": "^17.1.12",
+    "web-vitals": "^6.2.3",
     "workbox-cacheable-response": "^7.4.1",
     "workbox-core": "^7.4.1",
     "workbox-expiration": "^7.4.1",
@@ -32,6 +33,7 @@
     "zustand": "^5.0.16"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261104.1",
     "@playwright/test": "^1.64.1",
     "@types/markdown-it": "^14.2.0",
     "@types/node": "^24.19.2",
@@ -45,7 +47,8 @@
     "vite": "^8.3.5",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.1.0",
-    "workbox-build": "^7.4.1"
+    "workbox-build": "^7.4.1",
+    "wrangler": "^4.158.0"
   },
   "packageManager": "pnpm@10.34.7"
 }

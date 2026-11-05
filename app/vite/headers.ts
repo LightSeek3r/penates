@@ -33,6 +33,8 @@ export function headersFile(dataBase: string | undefined): string {
     block('/*', securityHeaders(dataBase)),
     block('/assets/*', { 'Cache-Control': 'public, max-age=31536000, immutable' }),
     block('/sw.js', { 'Cache-Control': 'no-cache' }),
+    block('/admin/*', { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' }),
+    block('/api/*', { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' }),
     block('/manifest.webmanifest', { 'Cache-Control': 'public, max-age=3600' }),
     block('/manifest.en.webmanifest', { 'Cache-Control': 'public, max-age=3600' }),
     block('/*.png', { 'Cache-Control': 'public, max-age=86400' }),

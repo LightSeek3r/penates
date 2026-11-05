@@ -93,7 +93,7 @@
     "creditsDvf": "Property transactions: DGFiP / Etalab, Licence Ouverte v2.0",
     "creditsIgn": "Administrative boundaries: IGN, Licence Ouverte v2.0",
     "creditsOsm": "Basemap: © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap",
-    "privacy": "No account, no cookies, no tracking. Map tiles are loaded from OpenFreeMap and Cloudflare.",
+    "privacy": "No account, no cookies. Only anonymous usage totals are counted (see below). Map tiles are loaded from OpenFreeMap and Cloudflare.",
     "methodExtra": "Seismic zone: regulatory zoning by commune (Géorisques). Distances: shortest straight line from a point in the commune to the nearest facility in INSEE's permanent facilities base; they are not travel times and a single point stands for the whole commune.",
     "creditsInsee": "Facilities: INSEE, permanent facilities base, Licence Ouverte v2.0",
     "creditsGeorisques": "Seismic zoning: Géorisques (BRGM, ministry of ecological transition), Licence Ouverte",
@@ -158,5 +158,10 @@
     "updateReady": "A new version is available.",
     "update": "Update",
     "later": "Later"
+  },
+  "privacy": {
+    "title": "Anonymous usage counts",
+    "explain": "settling-map counts, without identifying you, how often pages and features are used: totals per day, with no IP address, no cookie and no typed text. The Do Not Track signal is respected.",
+    "optOut": "Do not count my visits"
   }
 }

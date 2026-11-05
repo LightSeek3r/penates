@@ -15,7 +15,8 @@ const PROGRESS_INTERVAL_MS = 250
 // The app shell and the documentation pages are precached, so the application opens offline.
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')))
+// The private admin page and the API must always reach the network (where Cloudflare Access protects them).
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html'), { denylist: [/^\/admin(\/|$)/, /^\/api\//] }))
 
 // Basemap tiles, glyphs and TileJSON already seen: shown immediately, refreshed in the background.
 registerRoute(

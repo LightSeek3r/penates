@@ -24,6 +24,7 @@ export default defineConfig({
       manifest: webManifest('fr') as unknown as Partial<ManifestOptions>,
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,woff2,svg,ico}', 'pwa-*.png', 'maskable-icon-*.png', 'apple-touch-icon-*.png'],
+        globIgnores: ['admin/**', '**/admin-*'],
         maximumFileSizeToCacheInBytes: 3_000_000,
       },
       devOptions: { enabled: false },
@@ -35,9 +36,9 @@ export default defineConfig({
   build: {
     target: 'es2023',
     chunkSizeWarningLimit: 1100,
-    rollupOptions: { input: { main: resolve(here, 'index.html'), en: resolve(here, 'en/index.html') } },
+    rollupOptions: { input: { main: resolve(here, 'index.html'), en: resolve(here, 'en/index.html'), admin: resolve(here, 'admin/index.html') } },
   },
   // Same security headers as the deployed `_headers` file, so the production build is tested under its real CSP.
   preview: { headers: securityHeaders(dataBase) },
-  test: { environment: 'node', include: ['src/**/*.test.ts', 'vite/**/*.test.ts'] },
+  test: { environment: 'node', include: ['src/**/*.test.ts', 'vite/**/*.test.ts', 'functions/**/*.test.ts'] },
 })
