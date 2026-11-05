@@ -1,6 +1,6 @@
 # Phase 2: themes and filters (risks, altitude, climate, proximity)
 
-Status: IN PROGRESS. Parent: `settling-map-v1.md`. Decisions by the user (2026-11-05):
+Status: SLICE 1 DONE 2026-11-05 (live). Later slices pending. Parent: `settling-map-v1.md`. Decisions by the user (2026-11-05):
 - Layer model: ONE colour theme at a time + a Filters panel that dims communes failing the criteria (the search idea inside Explore).
 - Order: alternate in slices so each reaches the live site fast.
 
@@ -33,6 +33,13 @@ Because filters must work at the national view, the `communes` layer needs to st
 2. App: theme selector, Filters panel with sliders, dimming, per-theme legends, details list of indicators, URL state, FR/EN.
 3. Docs: methodology section per indicator, licence registry rows.
 4. Verify: pytest, vitest, local e2e on production build, CI data build + gate, live smoke + prod e2e.
+
+## Slice 1 result
+
+- Pipeline: seismic zone via Georisques API (1,840 calls) and six distances from INSEE BPE 2025 (approximate positions kept, only missing coordinates skipped); communes tiled from z4 (largest tile 1.85 MB gzip, archive 28.2 MB). CI data build and gate passed on the official DVF.
+- App: Colour and Filters tabs, per-theme legends, dimming, indicators in the details panel, theme and filters in the shareable link.
+- Verification: 66 pytest, 68 vitest, 42 Playwright (desktop and phone, production build with CSP), live smoke + 42 prod e2e, Lighthouse a11y 100 / best-practices 93 / SEO 92 (map pages performance 59-63, documentation pages 99-100).
+- Known: Blois hospital distance 3.8 km is large because the measurement point is one point per commune. Map-page performance is the next thing to improve (heavy WebGL start, 1.4 MB main chunk).
 
 ## Later slices
 
