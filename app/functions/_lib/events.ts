@@ -8,8 +8,15 @@ export interface CounterEvent {
   key: string
 }
 
-const THEMES = ['price', 'seismic', 'hospital', 'gp', 'school', 'supermarket', 'bakery', 'pool'] as const
-const FILTERS = ['price', 'seismic', 'hospital', 'gp', 'school', 'supermarket', 'bakery', 'pool'] as const
+// Mirrors the non-opt-in layers of app/src/domain/layers.ts (a unit test keeps them in step). Opt-in layers
+// (recorded crime) are deliberately absent: their use is never counted.
+const LAYER_IDS = [
+  'price', 'seismic', 'flood', 'clay', 'radon', 'cavities', 'altitude', 'relief', 'sunshine', 'heat', 'heat2050',
+  'hospital', 'gp', 'pharmacy', 'dentist', 'creche', 'school', 'college', 'lycee', 'supermarket', 'bakery', 'post',
+  'pool', 'station', 'fibre', 'rent', 'landtax',
+] as const
+export const THEMES: readonly string[] = LAYER_IDS
+export const FILTERS: readonly string[] = LAYER_IDS
 const RATINGS = /^(good|ni|poor)\.(phone|desktop)$/
 const HOST = /^[a-z0-9]([a-z0-9.-]{1,58})[a-z0-9]$/
 

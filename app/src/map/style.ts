@@ -44,6 +44,9 @@ export function patternFilters(type: PriceType): Record<string, FilterSpecificat
   }
 }
 
+/** Hatch layers for rough estimates on non-price themes: porcelain ink, then midnight ink. */
+export const DOUBT_LAYERS = ['communes-doubt-light', 'communes-doubt-dark'] as const
+
 export const LAYER_IDS = {
   departmentsFill: 'departments-fill',
   communesFill: 'communes-fill',
@@ -118,6 +121,19 @@ function dataLayers(type: PriceType): LayerSpecification[] {
     patternLayer('communes-low-dark', 'communes', 'hatch-low-dark', true, FADE_FROM),
     patternLayer('communes-none', 'communes', 'dots', true, FADE_FROM),
     patternLayer('communes-nocoverage', 'communes', 'hatch-cross', true, FADE_FROM, ['interpolate', ['linear'], ['zoom'], 7, 0.75, 9, 0.35]),
+    // Rough estimates on non-price themes (rents from few listings); hidden until such a theme is chosen.
+    ...DOUBT_LAYERS.map(
+      (id): LayerSpecification => ({
+        id,
+        type: 'fill',
+        ...common,
+        'source-layer': 'communes',
+        minzoom: COMMUNES_FROM_TILE_ZOOM,
+        filter: ['==', ['get', 'code'], ''],
+        layout: { visibility: 'none' },
+        paint: { 'fill-pattern': id === DOUBT_LAYERS[0] ? 'hatch-low-light' : 'hatch-low-dark', 'fill-opacity': 0.94 },
+      }),
+    ),
     {
       id: 'communes-dim',
       type: 'fill',

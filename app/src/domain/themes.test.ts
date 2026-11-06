@@ -1,42 +1,58 @@
 import { describe, expect, it } from 'vitest'
+import { luminance } from './colour'
 import { activeFilterCount, formatFilters, matchExpression, parseFilters, withFilter } from './filters'
-import { DISTANCE_BREAKS, DISTANCE_COLORS, SEISMIC_COLORS, distanceClass, themeFillExpression } from './themes'
+import { LADDERS, classIndex, layerById, layerColors, type LayerDef } from './layers'
 import { PRICE_COLORS } from './priceLadder'
+import { doubtFilters, themeFillExpression } from './themes'
 
-function luminance(hex: string): number {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+const def = (id: string): LayerDef => {
+  const found = layerById(id)
+  if (!found) throw new Error(id)
+  return found
 }
 
 describe('theme ladders', () => {
-  it.each([
-    ['distance', DISTANCE_COLORS],
-    ['seismic', SEISMIC_COLORS],
-  ])('%s ladder rises in luminance, so it reads without colour', (_name, colors) => {
+  it.each(Object.entries(LADDERS))('%s ladder rises in luminance, so it reads without colour', (_name, colors) => {
     const values = colors.map(luminance)
     expect(values).toEqual([...values].sort((a, b) => a - b))
   })
 
   it('never reuses a price colour', () => {
     const price = new Set(PRICE_COLORS.map((c) => c.toLowerCase()))
-    for (const colour of [...DISTANCE_COLORS, ...SEISMIC_COLORS]) expect(price.has(colour.toLowerCase())).toBe(false)
+    for (const [name, colours] of Object.entries(LADDERS)) {
+      if (name === 'price') continue
+      for (const colour of colours) expect(price.has(colour.toLowerCase()), `${name} ${colour}`).toBe(false)
+    }
   })
 
   it('has one distance colour more than breaks', () => {
-    expect(DISTANCE_COLORS).toHaveLength(DISTANCE_BREAKS.length + 1)
+    const hospital = def('hospital')
+    expect(hospital.scale.kind).toBe('steps')
+    if (hospital.scale.kind === 'steps') expect(layerColors(hospital)).toHaveLength(hospital.scale.breaks.length + 1)
   })
 
   it('classes a distance on the lower bound of the next class', () => {
-    expect(distanceClass(900)).toBe(0)
-    expect(distanceClass(1000)).toBe(1)
-    expect(distanceClass(19_999)).toBe(4)
-    expect(distanceClass(20_000)).toBe(5)
+    const hospital = def('hospital')
+    expect(classIndex(hospital, 900)).toBe(0)
+    expect(classIndex(hospital, 1000)).toBe(1)
+    expect(classIndex(hospital, 19_999)).toBe(4)
+    expect(classIndex(hospital, 20_000)).toBe(5)
   })
 
   it('colours by the right tile property', () => {
     expect(JSON.stringify(themeFillExpression('hospital', 'all'))).toContain('d_hos')
     expect(JSON.stringify(themeFillExpression('seismic', 'all'))).toContain('"sz"')
     expect(JSON.stringify(themeFillExpression('price', 'app'))).toContain('p_app')
+    expect(JSON.stringify(themeFillExpression('flood', 'all'))).toContain('"fl"')
+  })
+
+  it('hatches rough rent estimates only, with the ink flipping inside the ladder', () => {
+    expect(doubtFilters('price', 'all')).toBeNull()
+    expect(doubtFilters('hospital', 'all')).toBeNull()
+    const rent = doubtFilters('rent', 'all')
+    expect(JSON.stringify(rent?.light)).toContain('"rtq"')
+    // Neither filter uses an infinity, which JSON would turn into null.
+    expect(JSON.stringify(rent)).not.toContain('null')
   })
 })
 

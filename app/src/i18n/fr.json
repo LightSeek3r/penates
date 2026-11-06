@@ -28,10 +28,7 @@
     },
     "colourTab": "Couleur",
     "filtersTab": "Filtres",
-    "colourBy": "Colorier la carte selon",
-    "groupPrice": "Prix",
-    "groupRisk": "Risques",
-    "groupAccess": "Proximité (à vol d'oiseau)"
+    "colourBy": "Colorier la carte selon"
   },
   "legend": {
     "title": "Prix médian, €/m²",
@@ -43,15 +40,10 @@
     "low": "Moins de 10 ventes : indicatif",
     "none": "Aucune vente retenue",
     "noCoverage": "Hors base DVF",
-    "seismicTitle": "Zone sismique",
-    "distanceTitle": "Distance au plus proche : {{theme}}",
     "noData": "Pas de donnée",
     "dimmed": "Hors critères",
-    "underKm": "moins de {{value}} km",
-    "overKm": "{{value}} km et plus",
-    "rangeKm": "{{from}} à {{to}} km",
-    "zone": "Zone {{zone}} : {{name}}",
-    "priceOnlyNote": "Les textures décrivent la fiabilité du prix."
+    "priceOnlyNote": "Les textures décrivent la fiabilité du prix.",
+    "doubt": "Hachuré : estimation fragile (peu d'annonces)"
   },
   "inspector": {
     "title": "Fiche du lieu",
@@ -75,11 +67,9 @@
     "disclaimer": "Indicatif : médiane des prix de vente rapportés à la surface bâtie. Ce n'est pas une estimation de bien.",
     "windowWide": "Période élargie à {{months}} mois faute de ventes",
     "trendRange": "{{fromYear}} : {{from}} → {{toYear}} : {{to}} ({{change}})",
-    "indicators": "Services les plus proches (à vol d'oiseau)",
-    "seismic": "Zone sismique : {{zone}} ({{name}})",
-    "distance": "{{theme}} : {{value}} km",
-    "distanceNote": "Distances à vol d'oiseau depuis un point de la commune, pas des temps de trajet.",
-    "noIndicators": "Aucun autre indicateur pour ce niveau."
+    "noIndicators": "Aucun autre indicateur pour ce niveau.",
+    "doubt": "estimation fragile",
+    "row": "{{name}} : {{value}}"
   },
   "sources": {
     "short": "Sources",
@@ -108,38 +98,18 @@
     "mapLabel": "Carte des prix de l'immobilier en France"
   },
   "skip": "Aller au contenu",
-  "themes": {
-    "price": "Prix médian au m²",
-    "seismic": "Zone sismique",
-    "hospital": "Hôpital",
-    "gp": "Médecin généraliste",
-    "school": "École primaire",
-    "supermarket": "Supermarché",
-    "bakery": "Boulangerie",
-    "pool": "Piscine"
-  },
   "filters": {
     "intro": "Les communes grisées ne répondent pas aux critères.",
     "reset": "Tout réinitialiser",
     "any": "Sans limite",
     "upTo": "jusqu'à {{value}}",
     "unknown": "Une commune sans donnée ne correspond pas à un critère actif.",
-    "price": "Prix médian maximum (€/m²)",
-    "seismic": "Zone sismique maximale",
-    "hospital": "Hôpital à moins de",
-    "gp": "Médecin généraliste à moins de",
-    "school": "École primaire à moins de",
-    "supermarket": "Supermarché à moins de",
-    "bakery": "Boulangerie à moins de",
-    "pool": "Piscine à moins de",
-    "zoneUpTo": "zone {{value}} au plus"
-  },
-  "seismic": {
-    "1": "très faible",
-    "2": "faible",
-    "3": "modérée",
-    "4": "moyenne",
-    "5": "forte"
+    "atLeast": "au moins {{value}}",
+    "atMost": "{{value}} au plus",
+    "from": "à partir de {{value}}",
+    "between": "{{from}} à {{to}}",
+    "rangeFrom": "{{name}} : minimum",
+    "rangeTo": "{{name}} : maximum"
   },
   "pwa": {
     "title": "Application",
@@ -163,5 +133,263 @@
     "title": "Mesure d'usage anonyme",
     "explain": "settling-map compte, sans vous identifier, combien de fois les pages et les fonctions sont utilisées : des totaux par jour, sans adresse IP, sans cookie et sans texte saisi. Le signal « Ne pas me suivre » est respecté.",
     "optOut": "Ne pas compter mes visites"
+  },
+  "groups": {
+    "price": {
+      "title": "Prix"
+    },
+    "risk": {
+      "title": "Risques",
+      "note": "Classes indicatives tirées de cartes de repérage : elles ne décrivent pas votre parcelle et ne remplacent pas l'état des risques (ERRIAL)."
+    },
+    "relief": {
+      "title": "Altitude et relief",
+      "note": "Altitude d'un point de la commune ; dénivelé entre ses points le plus bas et le plus haut."
+    },
+    "climate": {
+      "title": "Climat",
+      "note": "Valeurs interpolées depuis les stations Météo-France, pas mesurées dans la commune.",
+      "station": "Station la plus proche : {{value}} km."
+    },
+    "services": {
+      "title": "Proximité (à vol d'oiseau)",
+      "note": "Distances à vol d'oiseau depuis un point de la commune, pas des temps de trajet."
+    },
+    "connectivity": {
+      "title": "Internet",
+      "note": "Éligibilité à la fibre, pas un abonnement ni un débit garanti."
+    },
+    "costs": {
+      "title": "Coût du logement",
+      "note": "Loyer d'annonce et taux voté : des repères, pas le coût d'un logement précis."
+    },
+    "safety": {
+      "title": "Délinquance enregistrée",
+      "note": "Infractions enregistrées, pas le risque d'être victime : les chiffres dépendent aussi des plaintes déposées et varient fortement d'une année à l'autre dans les petites communes."
+    }
+  },
+  "ind": {
+    "price": {
+      "name": "Prix médian au m²",
+      "legend": "Prix médian, €/m²",
+      "filter": "Prix médian maximum (€/m²)",
+      "about": "Médiane des prix de vente rapportés à la surface bâtie (DVF)."
+    },
+    "seismic": {
+      "name": "Zone sismique",
+      "legend": "Zone sismique",
+      "filter": "Zone sismique maximale",
+      "short": "zone {{value}}",
+      "classLabel": "Zone {{value}} : {{name}}",
+      "classes": {
+        "1": "très faible",
+        "2": "faible",
+        "3": "modérée",
+        "4": "moyenne",
+        "5": "forte"
+      },
+      "about": "Zonage sismique réglementaire de la commune, de 1 (très faible) à 5 (forte). Il fixe des règles de construction ; ce n'est pas une étude de votre terrain."
+    },
+    "flood": {
+      "name": "Inondation",
+      "legend": "Exposition aux inondations",
+      "filter": "Inondation : classe maximale",
+      "short": "classe {{value}}",
+      "classLabel": "Classe {{value}} : {{name}}",
+      "classes": {
+        "0": "aucune zone inondable recensée",
+        "1": "exposition faible",
+        "2": "exposition moyenne",
+        "3": "exposition forte"
+      },
+      "about": "Repérage indicatif à l'échelle de la commune, d'après les zones inondables connues (Géorisques). Il ne décrit pas votre parcelle et ne remplace pas l'état des risques (ERRIAL). « Aucune zone recensée » ne veut pas dire sans risque."
+    },
+    "clay": {
+      "name": "Argiles (retrait-gonflement)",
+      "legend": "Retrait-gonflement des argiles",
+      "filter": "Argiles : exposition maximale",
+      "short": "classe {{value}}",
+      "classLabel": "Classe {{value}} : {{name}}",
+      "classes": {
+        "0": "sol a priori non argileux",
+        "1": "exposition faible",
+        "2": "exposition moyenne",
+        "3": "exposition forte"
+      },
+      "about": "Carte d'exposition régionale du BRGM : elle signale où une étude de sol est utile avant de construire, pas l'état de votre terrain."
+    },
+    "radon": {
+      "name": "Radon",
+      "legend": "Potentiel radon des sols",
+      "filter": "Radon : catégorie maximale",
+      "short": "catégorie {{value}}",
+      "classLabel": "Catégorie {{value}} : {{name}}",
+      "classes": {
+        "1": "potentiel faible",
+        "2": "faible, facteurs géologiques aggravants",
+        "3": "potentiel significatif"
+      },
+      "about": "Potentiel radon des sols par commune (IRSN). Seule une mesure dans le logement donne l'exposition réelle."
+    },
+    "cavities": {
+      "name": "Cavités souterraines",
+      "legend": "Cavités souterraines recensées",
+      "filter": "Cavités recensées, au plus",
+      "about": "Nombre de cavités connues dans l'inventaire du BRGM (carrières, caves, ouvrages, cavités naturelles). 0 veut dire aucune connue, pas aucune."
+    },
+    "altitude": {
+      "name": "Altitude",
+      "legend": "Altitude",
+      "filter": "Altitude",
+      "about": "Altitude d'un point représentatif de la commune (IGN). Dans les grandes communes de montagne, elle varie beaucoup d'un lieu à l'autre."
+    },
+    "relief": {
+      "name": "Dénivelé",
+      "legend": "Dénivelé dans la commune",
+      "filter": "Dénivelé maximal",
+      "about": "Écart entre le point le plus bas et le plus haut de la commune : une idée du relief, pas la pente de votre terrain."
+    },
+    "sunshine": {
+      "name": "Ensoleillement",
+      "legend": "Ensoleillement, heures par an",
+      "filter": "Ensoleillement minimal",
+      "about": "Durée d'insolation moyenne 1991-2020, interpolée depuis les stations Météo-France voisines : une tendance régionale, pas l'ombre de votre rue."
+    },
+    "heat": {
+      "name": "Jours de chaleur",
+      "legend": "Jours à 30 °C ou plus par an",
+      "filter": "Jours à 30 °C ou plus, au plus",
+      "about": "Moyenne 1991-2020 du nombre de jours où la température maximale atteint 30 °C, interpolée depuis les stations voisines."
+    },
+    "heat2050": {
+      "name": "Jours de chaleur vers 2050",
+      "legend": "Jours à 30 °C ou plus vers 2050",
+      "filter": "Jours à 30 °C vers 2050, au plus",
+      "about": "Projection pour une France réchauffée de 2,7 °C (trajectoire de référence TRACC, vers 2050). Une projection climatique, pas une prévision."
+    },
+    "hospital": {
+      "name": "Hôpital",
+      "legend": "Distance au plus proche : hôpital",
+      "filter": "Hôpital à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "gp": {
+      "name": "Médecin généraliste",
+      "legend": "Distance au plus proche : médecin généraliste",
+      "filter": "Médecin généraliste à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "pharmacy": {
+      "name": "Pharmacie",
+      "legend": "Distance au plus proche : pharmacie",
+      "filter": "Pharmacie à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "dentist": {
+      "name": "Dentiste",
+      "legend": "Distance au plus proche : dentiste",
+      "filter": "Dentiste à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "creche": {
+      "name": "Crèche",
+      "legend": "Distance au plus proche : crèche",
+      "filter": "Crèche à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "school": {
+      "name": "École primaire",
+      "legend": "Distance au plus proche : école primaire",
+      "filter": "École primaire à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "college": {
+      "name": "Collège",
+      "legend": "Distance au plus proche : collège",
+      "filter": "Collège à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "lycee": {
+      "name": "Lycée",
+      "legend": "Distance au plus proche : lycée",
+      "filter": "Lycée à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "supermarket": {
+      "name": "Supermarché",
+      "legend": "Distance au plus proche : supermarché",
+      "filter": "Supermarché à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "bakery": {
+      "name": "Boulangerie",
+      "legend": "Distance au plus proche : boulangerie",
+      "filter": "Boulangerie à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "post": {
+      "name": "Bureau de poste",
+      "legend": "Distance au plus proche : bureau de poste",
+      "filter": "Bureau de poste à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "pool": {
+      "name": "Piscine",
+      "legend": "Distance au plus proche : piscine",
+      "filter": "Piscine à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "station": {
+      "name": "Gare",
+      "legend": "Distance au plus proche : gare",
+      "filter": "Gare à moins de",
+      "about": "Distance à vol d'oiseau depuis un point de la commune jusqu'à l'équipement le plus proche, toutes communes confondues : pas un temps de trajet."
+    },
+    "fibre": {
+      "name": "Fibre optique",
+      "legend": "Locaux éligibles à la fibre",
+      "filter": "Éligibilité à la fibre, au moins",
+      "about": "Part des logements et locaux professionnels éligibles à la fibre jusqu'à l'abonné (Arcep). Éligible ne veut dire ni abonné ni débit garanti."
+    },
+    "rent": {
+      "name": "Loyer indicatif",
+      "legend": "Loyer indicatif, par mois",
+      "filter": "Loyer indicatif",
+      "about": "Loyer d'annonce charges comprises pour un appartement type (carte des loyers). Une moyenne d'annonces, pas le loyer d'un logement précis."
+    },
+    "landtax": {
+      "name": "Taxe foncière",
+      "legend": "Taux de taxe foncière (bâti)",
+      "filter": "Taux de taxe foncière maximal",
+      "about": "Taux voté par la commune et l'intercommunalité sur le foncier bâti. Le montant à payer dépend aussi de la valeur locative du bien."
+    },
+    "violence": {
+      "name": "Atteintes aux personnes",
+      "legend": "Atteintes aux personnes enregistrées, par an",
+      "filter": "Atteintes aux personnes, au plus",
+      "about": "Violences contre les personnes enregistrées par la police et la gendarmerie (SSMSI), au lieu de l'infraction, pour 1 000 habitants."
+    },
+    "burglary": {
+      "name": "Cambriolages",
+      "legend": "Cambriolages de logements enregistrés, par an",
+      "filter": "Cambriolages, au plus",
+      "about": "Cambriolages de logements enregistrés par la police et la gendarmerie (SSMSI), pour 1 000 habitants."
+    }
+  },
+  "units": {
+    "eurM2": "{{value}} €/m²",
+    "km": "{{value}} km",
+    "m": "{{value}} m",
+    "hoursYear": "{{value}} h/an",
+    "daysYear": "{{value}} j/an",
+    "percent": "{{value}} %",
+    "per1000": "{{value}} pour 1 000 hab.",
+    "eurM2Month": "{{value}} €/m²/mois",
+    "count": "{{value}}",
+    "class": "{{value}} ({{name}})"
+  },
+  "optIn": {
+    "label": "Afficher la délinquance enregistrée",
+    "note": "Désactivé par défaut. Ce choix reste dans ce navigateur et n'est jamais transmis."
   }
 }

@@ -28,10 +28,7 @@
     },
     "colourTab": "Colour",
     "filtersTab": "Filters",
-    "colourBy": "Colour the map by",
-    "groupPrice": "Price",
-    "groupRisk": "Risks",
-    "groupAccess": "Proximity (straight line)"
+    "colourBy": "Colour the map by"
   },
   "legend": {
     "title": "Median price, €/m²",
@@ -43,15 +40,10 @@
     "low": "Fewer than 10 sales: indicative",
     "none": "No sales kept",
     "noCoverage": "Outside DVF",
-    "seismicTitle": "Seismic zone",
-    "distanceTitle": "Distance to the nearest: {{theme}}",
     "noData": "No data",
     "dimmed": "Outside the criteria",
-    "underKm": "under {{value}} km",
-    "overKm": "{{value}} km and more",
-    "rangeKm": "{{from}} to {{to}} km",
-    "zone": "Zone {{zone}}: {{name}}",
-    "priceOnlyNote": "Textures describe the reliability of the price."
+    "priceOnlyNote": "Textures describe the reliability of the price.",
+    "doubt": "Hatched: rough estimate (few listings)"
   },
   "inspector": {
     "title": "Place details",
@@ -75,11 +67,9 @@
     "disclaimer": "Indicative: median sale price divided by built surface. It is not a valuation of any property.",
     "windowWide": "Period widened to {{months}} months because of few sales",
     "trendRange": "{{fromYear}}: {{from}} → {{toYear}}: {{to}} ({{change}})",
-    "indicators": "Nearest services (straight line)",
-    "seismic": "Seismic zone: {{zone}} ({{name}})",
-    "distance": "{{theme}} : {{value}} km",
-    "distanceNote": "Straight-line distances from a point in the commune, not travel times.",
-    "noIndicators": "No other indicators at this level."
+    "noIndicators": "No other indicators at this level.",
+    "doubt": "rough estimate",
+    "row": "{{name}}: {{value}}"
   },
   "sources": {
     "short": "Sources",
@@ -108,38 +98,18 @@
     "mapLabel": "Map of property prices in France"
   },
   "skip": "Skip to content",
-  "themes": {
-    "price": "Median price per m²",
-    "seismic": "Seismic zone",
-    "hospital": "Hospital",
-    "gp": "General practitioner",
-    "school": "Primary school",
-    "supermarket": "Supermarket",
-    "bakery": "Bakery",
-    "pool": "Swimming pool"
-  },
   "filters": {
     "intro": "Greyed-out communes do not meet the criteria.",
     "reset": "Reset all",
     "any": "No limit",
     "upTo": "up to {{value}}",
     "unknown": "A commune with no data does not match an active criterion.",
-    "price": "Maximum median price (€/m²)",
-    "seismic": "Maximum seismic zone",
-    "hospital": "Hospital within",
-    "gp": "GP within",
-    "school": "Primary school within",
-    "supermarket": "Supermarket within",
-    "bakery": "Bakery within",
-    "pool": "Swimming pool within",
-    "zoneUpTo": "zone {{value}} at most"
-  },
-  "seismic": {
-    "1": "very low",
-    "2": "low",
-    "3": "moderate",
-    "4": "medium",
-    "5": "strong"
+    "atLeast": "at least {{value}}",
+    "atMost": "{{value}} at most",
+    "from": "from {{value}}",
+    "between": "{{from}} to {{to}}",
+    "rangeFrom": "{{name}}: minimum",
+    "rangeTo": "{{name}}: maximum"
   },
   "pwa": {
     "title": "App",
@@ -163,5 +133,263 @@
     "title": "Anonymous usage counts",
     "explain": "settling-map counts, without identifying you, how often pages and features are used: totals per day, with no IP address, no cookie and no typed text. The Do Not Track signal is respected.",
     "optOut": "Do not count my visits"
+  },
+  "groups": {
+    "price": {
+      "title": "Price"
+    },
+    "risk": {
+      "title": "Risks",
+      "note": "Indicative classes from screening maps: they do not describe your plot and do not replace the official risk statement (ERRIAL)."
+    },
+    "relief": {
+      "title": "Altitude and relief",
+      "note": "Altitude of one point of the commune; height range between its lowest and highest points."
+    },
+    "climate": {
+      "title": "Climate",
+      "note": "Values interpolated from Météo-France stations, not measured in the commune.",
+      "station": "Nearest station: {{value}} km."
+    },
+    "services": {
+      "title": "Nearby (straight line)",
+      "note": "Straight-line distances from one point of the commune, not travel times."
+    },
+    "connectivity": {
+      "title": "Internet",
+      "note": "Fibre eligibility, not a subscription or a guaranteed speed."
+    },
+    "costs": {
+      "title": "Housing costs",
+      "note": "Advertised rent and voted tax rate: benchmarks, not the cost of a given home."
+    },
+    "safety": {
+      "title": "Recorded crime",
+      "note": "Recorded offences, not the risk of being a victim: figures also depend on how many people report, and swing widely from year to year in small communes."
+    }
+  },
+  "ind": {
+    "price": {
+      "name": "Median price per m²",
+      "legend": "Median price, €/m²",
+      "filter": "Maximum median price (€/m²)",
+      "about": "Median sale price per square metre of built floor area (DVF)."
+    },
+    "seismic": {
+      "name": "Seismic zone",
+      "legend": "Seismic zone",
+      "filter": "Maximum seismic zone",
+      "short": "zone {{value}}",
+      "classLabel": "Zone {{value}}: {{name}}",
+      "classes": {
+        "1": "very low",
+        "2": "low",
+        "3": "moderate",
+        "4": "medium",
+        "5": "high"
+      },
+      "about": "Regulatory seismic zone of the commune, from 1 (very low) to 5 (high). It sets building rules; it is not a survey of your land."
+    },
+    "flood": {
+      "name": "Flooding",
+      "legend": "Flood exposure",
+      "filter": "Flooding: maximum class",
+      "short": "class {{value}}",
+      "classLabel": "Class {{value}}: {{name}}",
+      "classes": {
+        "0": "no known flood zone",
+        "1": "low exposure",
+        "2": "medium exposure",
+        "3": "high exposure"
+      },
+      "about": "Indicative screening at commune level from known flood zones (Géorisques). It does not describe your plot and does not replace the official risk statement (ERRIAL). \"No known zone\" does not mean no risk."
+    },
+    "clay": {
+      "name": "Clay shrink-swell",
+      "legend": "Clay shrink-swell",
+      "filter": "Clay: maximum exposure",
+      "short": "class {{value}}",
+      "classLabel": "Class {{value}}: {{name}}",
+      "classes": {
+        "0": "soil not expected to be clay",
+        "1": "low exposure",
+        "2": "medium exposure",
+        "3": "high exposure"
+      },
+      "about": "Regional exposure map by BRGM: it shows where a soil study is worth doing before building, not the state of your land."
+    },
+    "radon": {
+      "name": "Radon",
+      "legend": "Soil radon potential",
+      "filter": "Radon: maximum category",
+      "short": "category {{value}}",
+      "classLabel": "Category {{value}}: {{name}}",
+      "classes": {
+        "1": "low potential",
+        "2": "low, with aggravating geology",
+        "3": "significant potential"
+      },
+      "about": "Soil radon potential per commune (IRSN). Only a measurement inside the home gives the real exposure."
+    },
+    "cavities": {
+      "name": "Underground cavities",
+      "legend": "Known underground cavities",
+      "filter": "Known cavities, at most",
+      "about": "Number of cavities in the BRGM inventory (quarries, cellars, works, natural cavities). 0 means none known, not none."
+    },
+    "altitude": {
+      "name": "Altitude",
+      "legend": "Altitude",
+      "filter": "Altitude",
+      "about": "Altitude of one representative point of the commune (IGN). Large mountain communes vary a lot from place to place."
+    },
+    "relief": {
+      "name": "Relief",
+      "legend": "Height range within the commune",
+      "filter": "Maximum height range",
+      "about": "Difference between the lowest and highest point of the commune: a sense of the terrain, not the slope of your land."
+    },
+    "sunshine": {
+      "name": "Sunshine",
+      "legend": "Sunshine, hours per year",
+      "filter": "Minimum sunshine",
+      "about": "Average sunshine 1991-2020, interpolated from nearby Météo-France stations: a regional trend, not the shade in your street."
+    },
+    "heat": {
+      "name": "Hot days",
+      "legend": "Days at 30 °C or more per year",
+      "filter": "Days at 30 °C or more, at most",
+      "about": "Average number of days per year, 1991-2020, with a maximum of 30 °C or more, interpolated from nearby stations."
+    },
+    "heat2050": {
+      "name": "Hot days around 2050",
+      "legend": "Days at 30 °C or more around 2050",
+      "filter": "Days at 30 °C around 2050, at most",
+      "about": "Projection for a France warmed by 2.7 °C (TRACC reference pathway, around 2050). A climate projection, not a forecast."
+    },
+    "hospital": {
+      "name": "Hospital",
+      "legend": "Distance to the nearest hospital",
+      "filter": "Hospital within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "gp": {
+      "name": "GP",
+      "legend": "Distance to the nearest GP",
+      "filter": "GP within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "pharmacy": {
+      "name": "Pharmacy",
+      "legend": "Distance to the nearest pharmacy",
+      "filter": "Pharmacy within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "dentist": {
+      "name": "Dentist",
+      "legend": "Distance to the nearest dentist",
+      "filter": "Dentist within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "creche": {
+      "name": "Nursery (crèche)",
+      "legend": "Distance to the nearest nursery (crèche)",
+      "filter": "Nursery (crèche) within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "school": {
+      "name": "Primary school",
+      "legend": "Distance to the nearest primary school",
+      "filter": "Primary school within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "college": {
+      "name": "Lower secondary school (collège)",
+      "legend": "Distance to the nearest lower secondary school (collège)",
+      "filter": "Lower secondary school (collège) within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "lycee": {
+      "name": "Upper secondary school (lycée)",
+      "legend": "Distance to the nearest upper secondary school (lycée)",
+      "filter": "Upper secondary school (lycée) within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "supermarket": {
+      "name": "Supermarket",
+      "legend": "Distance to the nearest supermarket",
+      "filter": "Supermarket within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "bakery": {
+      "name": "Bakery",
+      "legend": "Distance to the nearest bakery",
+      "filter": "Bakery within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "post": {
+      "name": "Post office",
+      "legend": "Distance to the nearest post office",
+      "filter": "Post office within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "pool": {
+      "name": "Swimming pool",
+      "legend": "Distance to the nearest swimming pool",
+      "filter": "Swimming pool within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "station": {
+      "name": "Train station",
+      "legend": "Distance to the nearest train station",
+      "filter": "Train station within",
+      "about": "Straight-line distance from one point of the commune to the nearest facility, in any commune: not a travel time."
+    },
+    "fibre": {
+      "name": "Fibre broadband",
+      "legend": "Premises eligible for fibre",
+      "filter": "Fibre eligibility, at least",
+      "about": "Share of homes and business premises eligible for fibre to the premises (Arcep). Eligible means neither subscribed nor a guaranteed speed."
+    },
+    "rent": {
+      "name": "Indicative rent",
+      "legend": "Indicative rent, per month",
+      "filter": "Indicative rent",
+      "about": "Advertised rent including charges for a typical flat (carte des loyers). An average of listings, not the rent of a given home."
+    },
+    "landtax": {
+      "name": "Property tax",
+      "legend": "Property tax rate (buildings)",
+      "filter": "Maximum property tax rate",
+      "about": "Rate voted by the commune and its intercommunality on built property. The amount due also depends on the rental value of the home."
+    },
+    "violence": {
+      "name": "Offences against persons",
+      "legend": "Recorded offences against persons, per year",
+      "filter": "Offences against persons, at most",
+      "about": "Violence against persons recorded by police and gendarmerie (SSMSI), where the offence took place, per 1,000 residents."
+    },
+    "burglary": {
+      "name": "Home burglaries",
+      "legend": "Recorded home burglaries, per year",
+      "filter": "Home burglaries, at most",
+      "about": "Home burglaries recorded by police and gendarmerie (SSMSI), per 1,000 residents."
+    }
+  },
+  "units": {
+    "eurM2": "{{value}} €/m²",
+    "km": "{{value}} km",
+    "m": "{{value}} m",
+    "hoursYear": "{{value}} h/yr",
+    "daysYear": "{{value}} days/yr",
+    "percent": "{{value}}%",
+    "per1000": "{{value}} per 1,000 residents",
+    "eurM2Month": "{{value}} €/m²/month",
+    "count": "{{value}}",
+    "class": "{{value}} ({{name}})"
+  },
+  "optIn": {
+    "label": "Show recorded crime",
+    "note": "Off by default. This choice stays in this browser and is never sent anywhere."
   }
 }

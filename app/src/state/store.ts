@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { type FilterKey, type Filters, withFilter } from '../domain/filters'
+import { type FilterKey, type FilterValue, type Filters, withFilter, withoutFilters } from '../domain/filters'
+import { layerById } from '../domain/layers'
 import type { Place, PriceType } from '../domain/place'
 import type { ThemeId } from '../domain/themes'
 import type { Lang, UrlState } from './urlState'
@@ -30,6 +31,8 @@ interface AppState {
   priceType: PriceType
   theme: ThemeId
   filters: Filters
+  /** Opt-in layers (recorded crime) are listed, drawn and filtered only once the visitor asks for them. */
+  showOptIn: boolean
   selection: Selection | null
   pendingCode: string | null
   flyRequest: FlyRequest | null
@@ -39,8 +42,9 @@ interface AppState {
   manifest: Manifest | null
   setPriceType: (type: PriceType) => void
   setTheme: (theme: ThemeId) => void
-  setFilter: (key: FilterKey, value: number) => void
+  setFilter: (key: FilterKey, value: FilterValue) => void
   resetFilters: () => void
+  setShowOptIn: (show: boolean) => void
   select: (selection: Selection | null) => void
   flyTo: (target: Omit<FlyRequest, 'nonce'>) => void
   setLayersOpen: (open: boolean) => void
@@ -49,12 +53,21 @@ interface AppState {
   setManifest: (manifest: Manifest) => void
 }
 
-export function createStore(initial: UrlState) {
+const isOptIn = (id: string) => layerById(id)?.optIn === true
+
+/** Theme and filters with every opt-in layer removed, for visitors who have not opted in. */
+export function withoutOptIn(theme: ThemeId, filters: Filters): { theme: ThemeId; filters: Filters } {
+  return { theme: isOptIn(theme) ? 'price' : theme, filters: withoutFilters(filters, (def) => def.optIn === true) }
+}
+
+export function createStore(initial: UrlState, showOptIn = false, persistOptIn: (show: boolean) => void = () => undefined) {
+  const start = showOptIn ? { theme: initial.theme, filters: initial.filters } : withoutOptIn(initial.theme, initial.filters)
   return create<AppState>((set) => ({
     lang: initial.lang,
     priceType: initial.type,
-    theme: initial.theme,
-    filters: initial.filters,
+    theme: start.theme,
+    filters: start.filters,
+    showOptIn,
     selection: null,
     pendingCode: initial.selected,
     flyRequest: null,
@@ -63,9 +76,13 @@ export function createStore(initial: UrlState) {
     mapStatus: 'loading',
     manifest: null,
     setPriceType: (priceType) => set({ priceType }),
-    setTheme: (theme) => set({ theme }),
-    setFilter: (key, value) => set((state) => ({ filters: withFilter(state.filters, key, value) })),
+    setTheme: (theme) => set((state) => (isOptIn(theme) && !state.showOptIn ? {} : { theme })),
+    setFilter: (key, value) => set((state) => (isOptIn(key) && !state.showOptIn ? {} : { filters: withFilter(state.filters, key, value) })),
     resetFilters: () => set({ filters: {} }),
+    setShowOptIn: (show) => {
+      persistOptIn(show)
+      set((state) => (show ? { showOptIn: true } : { showOptIn: false, ...withoutOptIn(state.theme, state.filters) }))
+    },
     select: (selection) => set({ selection, pendingCode: null }),
     flyTo: (target) => set((state) => ({ flyRequest: { ...target, nonce: (state.flyRequest?.nonce ?? 0) + 1 }, pendingCode: target.code })),
     setLayersOpen: (layersOpen) => set({ layersOpen }),

@@ -1,49 +1,54 @@
 import type { ExpressionSpecification } from 'maplibre-gl'
+import { contrast } from './colour'
+import { LAYERS, NO_DATA_COLOR, type LayerDef, type LayerId, isLayerId, layerById, layerColors, propertyOf } from './layers'
 import type { PriceType } from './place'
-import { NO_PRICE_COLOR, priceFillExpression } from './priceLadder'
+import { HATCH_INK_DARK, HATCH_INK_LIGHT } from './priceLadder'
 
-export type DistanceTheme = 'hospital' | 'gp' | 'school' | 'supermarket' | 'bakery' | 'pool'
-export type ThemeId = 'price' | 'seismic' | DistanceTheme
+/** Every catalogue layer can colour the map. */
+export type ThemeId = LayerId
 
-export const DISTANCE_THEMES: readonly DistanceTheme[] = ['hospital', 'gp', 'school', 'supermarket', 'bakery', 'pool']
-export const THEMES: readonly ThemeId[] = ['price', 'seismic', ...DISTANCE_THEMES]
+export const THEMES: readonly ThemeId[] = LAYERS.map((def) => def.id)
 
-/** Tile property of each distance, in metres rounded to 100. */
-export const DISTANCE_PROPERTY: Record<DistanceTheme, string> = {
-  hospital: 'd_hos',
-  gp: 'd_gp',
-  school: 'd_sch',
-  supermarket: 'd_sup',
-  bakery: 'd_bak',
-  pool: 'd_pool',
+export const isTheme = (value: string | null): value is ThemeId => isLayerId(value)
+
+export function themeDef(theme: ThemeId): LayerDef {
+  const def = layerById(theme)
+  if (!def) throw new Error(`Unknown theme ${theme}`)
+  return def
 }
 
-export const SEISMIC_PROPERTY = 'sz'
-export const SEISMIC_ZONES = [1, 2, 3, 4, 5] as const
-
-// Each quantity keeps its own hue (the blue ladder is price's alone) and, like price,
-// gets brighter as the value grows: farther, or more exposed.
-export const DISTANCE_BREAKS = [1000, 2000, 5000, 10000, 20000] as const
-export const DISTANCE_COLORS = ['#0F4C4F', '#12706F', '#1F9E94', '#5CCBB8', '#A5E8D6', '#E2FBF2'] as const
-export const SEISMIC_COLORS = ['#2B2466', '#4A3BA0', '#7160D6', '#A99BF0', '#E6E0FF'] as const
-
-export function isTheme(value: string | null): value is ThemeId {
-  return THEMES.some((theme) => theme === value)
+/** Colour of each class; an absent value or an unknown class code falls back to the no-data colour, never to a class. */
+export function fillExpression(def: LayerDef, priceType: PriceType): ExpressionSpecification {
+  const property = propertyOf(def, priceType)
+  const colours = layerColors(def)
+  const value: ExpressionSpecification = ['get', property]
+  const coloured =
+    def.scale.kind === 'classes'
+      ? ['match', value, ...def.scale.values.flatMap((code, index) => [code, colours[index]]), NO_DATA_COLOR]
+      : ['step', value, colours[0], ...def.scale.breaks.flatMap((limit, index) => [limit, colours[index + 1]])]
+  return ['case', ['has', property], coloured, NO_DATA_COLOR] as unknown as ExpressionSpecification
 }
 
-export function distanceClass(metres: number): number {
-  let index = 0
-  while (index < DISTANCE_BREAKS.length && metres >= DISTANCE_BREAKS[index]) index += 1
-  return index
-}
+export const themeFillExpression = (theme: ThemeId, priceType: PriceType): ExpressionSpecification => fillExpression(themeDef(theme), priceType)
 
-export function themeFillExpression(theme: ThemeId, priceType: PriceType): ExpressionSpecification {
-  if (theme === 'price') return priceFillExpression(priceType)
-  if (theme === 'seismic') {
-    const cases = SEISMIC_ZONES.flatMap((zone, index) => [zone, SEISMIC_COLORS[index]])
-    return ['case', ['has', SEISMIC_PROPERTY], ['match', ['get', SEISMIC_PROPERTY], ...cases, NO_PRICE_COLOR], NO_PRICE_COLOR] as unknown as ExpressionSpecification
+/** Hatch ink with the better contrast on a fill colour (porcelain on dark classes, midnight on light ones). */
+export const hatchInkOn = (fill: string): string => (contrast(fill, HATCH_INK_LIGHT) >= contrast(fill, HATCH_INK_DARK) ? HATCH_INK_LIGHT : HATCH_INK_DARK)
+
+/**
+ * Filters of the two hatch layers that mark rough estimates (for instance rents from few listings) on themes that
+ * declare a `doubt` property; null for the others. The ink flips per class so it stays legible on its fill.
+ */
+export function doubtFilters(theme: ThemeId, priceType: PriceType): { light: ExpressionSpecification; dark: ExpressionSpecification } | null {
+  const def = themeDef(theme)
+  if (!def.doubt || def.scale.kind !== 'steps') return null
+  const property = propertyOf(def, priceType)
+  const colours = layerColors(def)
+  const firstDark = colours.findIndex((colour) => hatchInkOn(colour) === HATCH_INK_DARK)
+  // Expressions are JSON, so "every class" and "no class" are spelled with the largest safe integers, not infinities.
+  const split = firstDark === -1 ? Number.MAX_SAFE_INTEGER : firstDark === 0 ? -Number.MAX_SAFE_INTEGER : def.scale.breaks[firstDark - 1]
+  const doubtful: ExpressionSpecification = ['all', ['has', property], ['has', def.doubt.property], ['<', ['get', def.doubt.property], def.doubt.below]]
+  return {
+    light: ['all', doubtful, ['<', ['get', property], split]],
+    dark: ['all', doubtful, ['>=', ['get', property], split]],
   }
-  const property = DISTANCE_PROPERTY[theme]
-  const stops = DISTANCE_BREAKS.flatMap((limit, index) => [limit, DISTANCE_COLORS[index + 1]])
-  return ['case', ['has', property], ['step', ['get', property], DISTANCE_COLORS[0], ...stops], NO_PRICE_COLOR] as ExpressionSpecification
 }

@@ -1,4 +1,5 @@
 import { langFromPath, pathForLang } from '../i18n'
+import { readOptIn, writeOptIn } from './prefs'
 import { createStore } from './store'
 import { parseHash } from './urlState'
 
@@ -10,4 +11,4 @@ if (lang === 'fr' && new URLSearchParams(window.location.hash.slice(1)).get('l')
 }
 
 export const initialState = parseHash(window.location.hash, lang)
-export const useAppStore = createStore(initialState)
+export const useAppStore = createStore(initialState, readOptIn(), writeOptIn)

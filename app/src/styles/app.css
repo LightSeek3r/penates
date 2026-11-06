@@ -419,7 +419,14 @@ ol {
   width: 32px;
   height: 12px;
   border: 1px solid var(--line);
-  background-color: var(--price-3);
+  /* Themes other than price set --swatch to a class of their own ladder. */
+  background-color: var(--swatch, var(--price-3));
+}
+
+.legend__caveat {
+  margin-top: var(--space-2);
+  color: var(--text-dim);
+  font-size: var(--text-xs);
 }
 
 .state--low::before {
@@ -681,6 +688,10 @@ ol {
     display: none;
   }
 
+  .legend__caveat {
+    margin-top: var(--space-1);
+  }
+
   .states {
     display: flex;
     flex-wrap: wrap;
@@ -729,11 +740,12 @@ ol {
     left: var(--space-2);
     bottom: 96px;
     width: auto;
-    max-height: none;
+    /* With every indicator listed the details can outgrow the screen, so the sheet scrolls. */
+    max-height: 60vh;
   }
 
   .inspector {
-    overflow: visible;
+    overflow: auto;
   }
 
   .inspector--empty {
@@ -750,10 +762,6 @@ ol {
 @media (max-width: 719px) and (max-height: 699px) {
   .stage__right {
     max-height: 50vh;
-  }
-
-  .inspector {
-    overflow: auto;
   }
 }
 
@@ -837,12 +845,78 @@ ol {
   border: 0;
 }
 
-.themes__group + .themes__group {
-  margin-top: var(--space-3);
+/* Indicator families: one heading per group; a closed group is a single tab stop. */
+.group {
+  border-top: 1px solid var(--line);
 }
 
-.themes__label {
-  margin-bottom: var(--space-1);
+.group:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--target);
+  padding: 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+summary.group__head {
+  list-style: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+summary.group__head::-webkit-details-marker {
+  display: none;
+}
+
+summary.group__head:hover {
+  background: var(--panel-raised);
+}
+
+.group__title {
+  flex: 1;
+}
+
+.group__meta {
+  overflow: hidden;
+  max-width: 50%;
+  color: var(--text-dim);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group__chevron {
+  flex: none;
+  color: var(--text-dim);
+  transition: transform 150ms ease-out;
+}
+
+.group[open] .group__chevron {
+  transform: rotate(180deg);
+}
+
+.group__body {
+  display: grid;
+  gap: var(--space-3);
+  padding: 0 var(--space-1) var(--space-3);
+}
+
+.themes .group__body {
+  gap: 0;
+}
+
+.optin {
+  margin-top: var(--space-4);
+}
+
+.optin__note {
   color: var(--text-dim);
   font-size: var(--text-xs);
 }
@@ -860,6 +934,12 @@ ol {
   width: 18px;
   height: 18px;
   accent-color: var(--text);
+}
+
+.theme__about {
+  margin: 0 0 var(--space-2) 26px;
+  color: var(--text-dim);
+  font-size: var(--text-xs);
 }
 
 .theme:has(input:checked) span {
@@ -901,6 +981,18 @@ ol {
   accent-color: var(--text);
 }
 
+.filter__classes {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filter__classes legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+}
+
 .state--nodata::before {
   background-color: var(--no-price);
 }
@@ -919,8 +1011,14 @@ ol {
   font-size: var(--text-sm);
 }
 
-.indicators__seismic {
-  margin-bottom: var(--space-2);
+.indicators__group + .indicators__group {
+  margin-top: var(--space-4);
+}
+
+.indicators__title {
+  color: var(--text-dim);
+  font-size: var(--text-xs);
+  font-weight: 400;
 }
 
 .indicators__list {
@@ -929,6 +1027,11 @@ ol {
   margin: var(--space-1) 0;
   color: var(--text);
   font-variant-numeric: tabular-nums;
+}
+
+.indicators__note {
+  color: var(--text-dim);
+  font-size: var(--text-xs);
 }
 
 /* ---- app: install, offline, update ---- */

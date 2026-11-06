@@ -26,7 +26,7 @@ export default defineConfig({
     ? undefined
     : [
         {
-          command: `node scripts/serve-data.mjs ${process.env.DATA_DIR ?? '../data/build/slice-p2'} ${DATA_PORT}`,
+          command: `node scripts/serve-data.mjs ${process.env.DATA_DIR ?? '../data/build/slice-p3'} ${DATA_PORT}`,
           url: `http://localhost:${DATA_PORT}/manifest.json`,
           reuseExistingServer: !process.env.CI,
         },

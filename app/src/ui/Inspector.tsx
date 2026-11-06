@@ -1,11 +1,62 @@
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CONFIDENCE, TREND_YEARS, readIndicators, readPlace } from '../domain/place'
-import { DISTANCE_THEMES } from '../domain/themes'
+import { STATION_DISTANCE_PROPERTY, type LayerDef, layersByGroup, readLayerValue, visibleLayers } from '../domain/layers'
+import { CONFIDENCE, TREND_YEARS, readPlace } from '../domain/place'
 import { useAppStore } from '../state/appStore'
-import { formatChange, formatDecimal, formatNumber, formatPeriod } from './format'
+import type { Lang } from '../state/urlState'
+import { formatChange, formatNumber, formatPeriod } from './format'
+import { type Translate, formatLayerValue } from './layerText'
 import { Sparkline } from './Sparkline'
 
 const PIPS = [CONFIDENCE.low, CONFIDENCE.medium, CONFIDENCE.high]
+
+function isDoubtful(def: LayerDef, props: Record<string, unknown>): boolean {
+  const reliability = def.doubt ? props[def.doubt.property] : undefined
+  return def.doubt !== undefined && typeof reliability === 'number' && reliability < def.doubt.below
+}
+
+function rowText(t: Translate, def: LayerDef, value: number, props: Record<string, unknown>, lang: Lang): string {
+  const text = formatLayerValue(t, def, value, lang)
+  return t('inspector.row', { name: t(`ind.${def.id}.name`), value: isDoubtful(def, props) ? `${text} (${t('inspector.doubt')})` : text })
+}
+
+/** Every indicator the commune has, grouped by family with each family's limits; absent ones are left out. */
+function Indicators({ props }: { props: Record<string, unknown> }) {
+  const { t } = useTranslation()
+  const lang = useAppStore((state) => state.lang)
+  const showOptIn = useAppStore((state) => state.showOptIn)
+  const base = useId()
+  const sections = layersByGroup(visibleLayers(showOptIn).filter((def) => def.group !== 'price')).flatMap(({ group, layers }) => {
+    const rows = layers.flatMap((def) => {
+      const value = readLayerValue(def, props)
+      return value === null ? [] : [{ id: def.id, text: rowText(t, def, value, props, lang) }]
+    })
+    return rows.length === 0 ? [] : [{ group, rows }]
+  })
+  if (sections.length === 0) return null
+  const station = props[STATION_DISTANCE_PROPERTY]
+
+  return (
+    <div className="indicators">
+      {sections.map(({ group, rows }) => (
+        <div key={group} className="indicators__group" role="group" aria-labelledby={`${base}-${group}`}>
+          <h3 id={`${base}-${group}`} className="indicators__title">
+            {t(`groups.${group}.title`)}
+          </h3>
+          <ul className="indicators__list">
+            {rows.map((row) => (
+              <li key={row.id}>{row.text}</li>
+            ))}
+          </ul>
+          <p className="indicators__note">
+            {t(`groups.${group}.note`)}
+            {group === 'climate' && typeof station === 'number' && Number.isFinite(station) && ` ${t('groups.climate.station', { value: formatNumber(station, lang) })}`}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export function Inspector() {
   const { t } = useTranslation()
@@ -26,8 +77,6 @@ export function Inspector() {
   const covered = place.confidence !== CONFIDENCE.noCoverage
   const period = place.period ? formatPeriod(place.period, lang) : null
   const known = place.trend.flatMap((value, index) => (value === null ? [] : [{ value, year: TREND_YEARS[index] }]))
-  const indicators = readIndicators(selection.props)
-  const distanceThemes = DISTANCE_THEMES.filter((theme) => indicators.distances[theme] !== undefined)
   const first = known[0]
   const last = known.at(-1)
 
@@ -101,29 +150,7 @@ export function Inspector() {
         </div>
       )}
 
-      {place.kind === 'commune' && (indicators.seismicZone !== null || distanceThemes.length > 0) && (
-        <div className="indicators">
-          {indicators.seismicZone !== null && (
-            <p className="indicators__seismic">{t('inspector.seismic', { zone: indicators.seismicZone, name: t(`seismic.${indicators.seismicZone}`) })}</p>
-          )}
-          {distanceThemes.length > 0 && (
-            <>
-              <p className="trend__label">{t('inspector.indicators')}</p>
-              <ul className="indicators__list">
-                {distanceThemes.map((theme) => (
-                  <li key={theme}>
-                    {t('inspector.distance', {
-                      theme: t(`themes.${theme}`),
-                      value: formatDecimal((indicators.distances[theme] ?? 0) / 1000, lang),
-                    })}
-                  </li>
-                ))}
-              </ul>
-              <p className="trend__label">{t('inspector.distanceNote')}</p>
-            </>
-          )}
-        </div>
-      )}
+      {place.kind === 'commune' && <Indicators props={selection.props} />}
 
       <p className="inspector__disclaimer">{t('inspector.disclaimer')}</p>
     </section>
