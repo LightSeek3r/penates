@@ -261,20 +261,22 @@ def test_compute_from_a_station_table_marks_distance_and_leaves_far_communes_abs
 
     monkeypatch.setattr(climate, "cached_altitudes", altitudes)
     archive = tracc_tar(tmp_path, monkeypatch, {
-        "q50": [(1, 43.2965, 5.3811, "60 days 12:00:00.0"), (2, 48.3904, -4.4861, "3 days 06:00:00.0")],
-        "min": [(1, 43.2965, 5.3811, "40 days 00:00:00.0"), (2, 48.3904, -4.4861, "1 days 00:00:00.0")],
-        "max": [(1, 43.2965, 5.3811, "80 days 00:00:00.0"), (2, 48.3904, -4.4861, "9 days 00:00:00.0")],
+        "q50": [(1, 43.2965, 5.3811, "18 days 12:00:00.0"), (2, 48.3904, -4.4861, "3 days 06:00:00.0")],
+        "min": [(1, 43.2965, 5.3811, "9 days 00:00:00.0"), (2, 48.3904, -4.4861, "1 days 00:00:00.0")],
+        "max": [(1, 43.2965, 5.3811, "30 days 00:00:00.0"), (2, 48.3904, -4.4861, "9 days 00:00:00.0")],
     })
     ctx = LayerContext(session=requests.Session(), raw=tmp_path, communes=communes, merged_codes={},
                        origins=np.zeros((3, 2)), overrides={"climate": table, "climate_tracc": archive})
     result = climate.compute(ctx)
     assert asked == [["13201", "29019"]]  # overseas out of scope, no altitude asked
-    # Marignane station to the Marseille 1er town hall: 21 km, as in the national build. Brest has no station
-    # but a grid point, so it gets the projection only.
-    assert result.properties == {"13201": {"sun": 2900, "hot": 51, "cd": 21, "h50": 61}, "29019": {"h50": 3}}
+    # Marignane station to the Marseille 1er town hall: 21 km, as in the national build. h50 = 50.6 + 18.5.
+    # Brest has a grid point but no station normal, so no base and no projection.
+    assert result.properties == {"13201": {"sun": 2900, "hot": 51, "cd": 21, "h50": 69}}
     assert result.source["h50_projection"]["sha256"] == climate.TRACC_SHA256
+    assert "observed 1991-2020" in result.source["h50_projection"]["method"]
+    assert result.report["h50"]["increment_days"]["p100"] == 18.5  # report covers every grid-matched target
     assert result.report["stations_used"] == {"sun": 1, "hot": 1}
-    assert result.report["coverage"] == {"sun": 1, "hot": 1, "cd": 1, "h50": 2}
+    assert result.report["coverage"] == {"sun": 1, "hot": 1, "cd": 1, "h50": 1}
     assert result.source["licence"] == "Licence Ouverte / Etalab 2.0"
 
 
@@ -317,7 +319,7 @@ def tracc_csv(rows: list[tuple[int, float, float, str]], indicator: str = "TX30D
         "# Modele     : MAX de l’ensemble EXPLORE2  / ADAMONT / RCP8.5",
         "# Niveau de réchauffement régional (RWL) :2.7°C", rule, "# Indices : ",
         f"#    {indicator} : Nombre de jours avec une température maximale ≥ 30 °C ",
-        "#     Moyenne temporelle sur la période autour du niveau de réchauffement ", "#     Valeur absolue",
+        "#     Moyenne temporelle sur la période autour du niveau de réchauffement ", "#     Anomalie par rapport à la période 1976-2005",
         rule, "# Format des enregistrements ", f"# Point;Latitude;Longitude;RWL;{indicator};", rule, "",
         "Point;Latitude;Longitude;RWL;Value",
     ]
@@ -343,7 +345,8 @@ SEA = (0, 41.3614, -4.0969, "nan")  # first row of the real files
 
 @pytest.mark.parametrize(
     ("text", "days"),
-    [("6 days 08:23:59.991760256", 6.35), ("0 days 17:36:00.001373290", 0.7333), ("12.5", 12.5)],
+    [("6 days 08:23:59.991760256", 6.35), ("0 days 17:36:00.001373290", 0.7333), ("-1 days +12:00:00", -0.5),
+     ("12.5", 12.5)],
 )
 def test_tracc_day_counts_are_read_from_timedeltas(text: str, days: float) -> None:
     assert climate.tracc_days(text) == pytest.approx(days, abs=1e-4)
@@ -394,10 +397,12 @@ def test_nearest_grid_point_within_the_cutoff_only() -> None:
     assert np.isnan(values[1:]).all()
 
 
-def test_projection_is_rounded_and_absent_stays_absent() -> None:
+def test_projection_adds_the_increment_to_the_unrounded_normal_and_never_goes_below_zero() -> None:
     properties = {"a": {"hot": 3, "cd": 4}}
-    climate.add_projection(properties, ["a", "b", "c"], np.array([10.5, 2.4, np.nan]))
-    assert properties == {"a": {"hot": 3, "cd": 4, "h50": 11}, "b": {"h50": 2}}
+    # bases 2.6 / NaN / 1.2 / 3.0 with increments 7.9 / 5 / -2.0 / NaN
+    climate.add_projection(properties, ["a", "b", "c", "d"], np.array([2.6, np.nan, 1.2, 3.0]),
+                           np.array([7.9, 5.0, -2.0, np.nan]))
+    assert properties == {"a": {"hot": 3, "cd": 4, "h50": 11}, "c": {"h50": 0}}
 
 
 def _tracc_ctx(tmp_path: Path, overrides: dict) -> LayerContext:
@@ -410,7 +415,7 @@ def test_blocked_archive_leaves_h50_absent_with_the_reason(tmp_path: Path, monke
         raise SourceError("url: HTTP 403 (text/html). A proxy may be blocking this file type; download it ...")
 
     monkeypatch.setattr(climate, "download", blocked)
-    values, source, report = climate.tracc_h50(_tracc_ctx(tmp_path, {}), np.zeros((1, 2)), np.array([True]))
+    values, source, report = climate.tracc_increment(_tracc_ctx(tmp_path, {}), np.zeros((1, 2)), np.array([True]))
     assert np.isnan(values).all() and "proxy may be blocking" in source["unavailable"] and report == {}
 
 
@@ -418,7 +423,7 @@ def test_archive_other_than_the_pinned_one_is_refused(tmp_path: Path) -> None:
     other = tmp_path / "other.tar"
     other.write_bytes(b"not the pinned archive")
     with pytest.raises(SourceError, match="differs from the pinned"):
-        climate.tracc_h50(_tracc_ctx(tmp_path, {"climate_tracc": other}), np.zeros((1, 2)), np.array([True]))
+        climate.tracc_increment(_tracc_ctx(tmp_path, {"climate_tracc": other}), np.zeros((1, 2)), np.array([True]))
 
 
 def test_inconsistent_ensemble_statistics_fail_the_layer(tmp_path: Path, monkeypatch) -> None:
@@ -426,14 +431,21 @@ def test_inconsistent_ensemble_statistics_fail_the_layer(tmp_path: Path, monkeyp
     archive = tracc_tar(tmp_path, monkeypatch, {"q50": point, "min": point,
                                                 "max": [(1, 43.2965, 5.3811, "50 days 00:00:00.0")]})
     with pytest.raises(SourceError, match="above ENSmax"):
-        climate.tracc_h50(_tracc_ctx(tmp_path, {"climate_tracc": archive}), np.zeros((1, 2)), np.array([True]))
+        climate.tracc_increment(_tracc_ctx(tmp_path, {"climate_tracc": archive}), np.zeros((1, 2)), np.array([True]))
 
 
 def test_gate_wants_h50_mostly_at_or_above_hot() -> None:
-    communes = {f"01{i:03d}": {"hot": 10, "h50": 5 if i < 5 else 20, "cd": 1} for i in range(30)}
-    assert climate.gate(communes) == ["h50 >= hot for only 83.3% of communes, expected at least 90%"]
+    communes = {f"01{i:03d}": {"hot": 10, "h50": 9 if i < 2 else 20, "cd": 1} for i in range(30)}
+    assert climate.gate(communes) == ["h50 >= hot for only 93.3% of communes, expected at least 95%"]
+
+
+def test_gate_refuses_h50_without_the_observed_base() -> None:
+    assert climate.gate({"01001": {"h50": 12}}) == ["1 communes have h50 without the observed base hot, e.g. ['01001']"]
 
 
 def test_gate_wants_the_mediterranean_well_above_brittany() -> None:
-    communes = {f"13{i:03d}": {"h50": 30} for i in range(300, 330)} | {f"29{i:03d}": {"h50": 20} for i in range(300, 330)}
+    def commune(value: int) -> dict:
+        return {"hot": value, "h50": value, "cd": 1}
+
+    communes = {f"13{i:03d}": commune(30) for i in range(300, 330)} | {f"29{i:03d}": commune(20) for i in range(300, 330)}
     assert climate.gate(communes) == ["median h50 ('13', '30', '34', '84') 30.0 d is not 20 d above ('22', '29', '35', '56') 20.0 d"]
