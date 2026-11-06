@@ -1,6 +1,7 @@
 import { Map as MapLibreMap, NavigationControl, addProtocol, setWorkerUrl, type MapGeoJSONFeature, type PointLike } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import './map.css'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -57,7 +58,11 @@ function nationalView() {
   }
 }
 
-export function MapView({ manifest }: { manifest: Manifest }) {
+export interface MapViewProps {
+  manifest: Manifest
+}
+
+export function MapView({ manifest }: MapViewProps) {
   const { t } = useTranslation()
   const container = useRef<HTMLDivElement>(null)
 

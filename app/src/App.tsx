@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { type ComponentType, Suspense, lazy, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { afterFirstPaint } from './afterFirstPaint'
 import { loadManifest, tileUrl } from './data/manifest'
 import { refreshOfflineStatus } from './pwa/register'
-import { MapView } from './map/MapView'
+import type { MapViewProps } from './map/MapView'
 import { useAppStore } from './state/appStore'
 import { Inspector } from './ui/Inspector'
 import { Legend } from './ui/Legend'
@@ -10,6 +11,22 @@ import { ControlPanel } from './ui/ControlPanel'
 import { SourcesDialog } from './ui/SourcesDialog'
 import { TopBar } from './ui/TopBar'
 import { UpdateNotice } from './ui/UpdateNotice'
+
+// The manifest request starts as soon as this module runs. MapLibre (most of the JavaScript) is requested once
+// the shell is on screen, so neither its download nor its start-up delays the first paint.
+const manifestRequest = loadManifest()
+const mapModule = afterFirstPaint().then(() => import('./map/MapView')).then(
+  (module): { default: ComponentType<MapViewProps> } => ({ default: module.MapView }),
+  () => ({ default: MapUnavailable }),
+)
+const MapView = lazy(() => mapModule)
+
+// Shown in place of the map when its code cannot be fetched (offline before the shell was cached).
+function MapUnavailable() {
+  const setMapStatus = useAppStore((state) => state.setMapStatus)
+  useEffect(() => setMapStatus('error'), [setMapStatus])
+  return null
+}
 
 export default function App() {
   const { t, i18n } = useTranslation()
@@ -31,15 +48,20 @@ export default function App() {
   }, [manifest])
 
   useEffect(() => {
-    const controller = new AbortController()
-    loadManifest(controller.signal)
-      .then(setManifest)
-      .catch((error: unknown) => {
-        if ((error as Error).name === 'AbortError') return
+    let active = true
+    manifestRequest.then(
+      (loaded) => {
+        if (active) setManifest(loaded)
+      },
+      () => {
+        if (!active) return
         setFailed(true)
         setMapStatus('error')
-      })
-    return () => controller.abort()
+      },
+    )
+    return () => {
+      active = false
+    }
   }, [setManifest, setMapStatus])
 
   return (
@@ -49,7 +71,11 @@ export default function App() {
       </a>
       <TopBar />
       <main id="map" className="stage" data-layers-open={layersOpen} data-map-status={mapStatus}>
-        {manifest && <MapView manifest={manifest} />}
+        {manifest && (
+          <Suspense fallback={null}>
+            <MapView manifest={manifest} />
+          </Suspense>
+        )}
         <div className="stage__left">
           <ControlPanel />
           <Legend />

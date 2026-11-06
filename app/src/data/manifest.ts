@@ -19,8 +19,8 @@ export function parseManifest(value: unknown): Manifest {
   }
 }
 
-export async function loadManifest(signal: AbortSignal): Promise<Manifest> {
-  const response = await fetch(`${DATA_BASE}/manifest.json`, { signal, cache: 'no-cache' })
+export async function loadManifest(): Promise<Manifest> {
+  const response = await fetch(`${DATA_BASE}/manifest.json`, { cache: 'no-cache' })
   if (!response.ok) throw new Error(`Manifest request failed: ${response.status}`)
   return parseManifest(await response.json())
 }
