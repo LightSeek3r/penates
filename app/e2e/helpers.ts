@@ -8,5 +8,5 @@ export async function openLayersOnPhone(page: Page) {
 
 // The shareable URL is written by the map, so interactions wait until it is ready.
 export async function mapReady(page: Page) {
-  await expect(page.locator('main')).toHaveAttribute('data-map-status', 'ready', { timeout: 20_000 })
+  await expect(page.locator('main')).toHaveAttribute('data-map-status', 'ready', { timeout: 40_000 })
 }

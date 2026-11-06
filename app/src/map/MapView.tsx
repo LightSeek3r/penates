@@ -1,6 +1,7 @@
 import { Map as MapLibreMap, NavigationControl, addProtocol, setWorkerUrl, type MapGeoJSONFeature, type PointLike } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import './map.css'
 import { Protocol } from 'pmtiles'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -58,7 +59,11 @@ function nationalView() {
   }
 }
 
-export function MapView({ manifest }: { manifest: Manifest }) {
+export interface MapViewProps {
+  manifest: Manifest
+}
+
+export function MapView({ manifest }: MapViewProps) {
   const { t } = useTranslation()
   const container = useRef<HTMLDivElement>(null)
 
@@ -80,6 +85,10 @@ export function MapView({ manifest }: { manifest: Manifest }) {
       attributionControl: { compact: true },
       hash: false,
     })
+    // The compact attribution opens by default once the sources name themselves, covering the map on phones and
+    // shifting the controls above it; marking it compact while still empty keeps it closed from the first frame.
+    // Users can still open it.
+    element.querySelector('.maplibregl-ctrl-attrib')?.classList.add('maplibregl-compact')
     map.touchZoomRotate.disableRotation()
     map.touchPitch.disable()
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
@@ -126,10 +135,6 @@ export function MapView({ manifest }: { manifest: Manifest }) {
 
     map.on('load', () => {
       applyAppearance(map, store.getState())
-      // The compact attribution opens by default and covers the map on phones; users can still open it.
-      const attribution = element.querySelector('.maplibregl-ctrl-attrib')
-      attribution?.classList.remove('maplibregl-compact-show')
-      attribution?.removeAttribute('open')
       store.getState().setMapStatus('ready')
       map.once('idle', () => resolvePending(false))
       syncHash()

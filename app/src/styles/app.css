@@ -253,11 +253,6 @@ ol {
   overflow: hidden;
 }
 
-.map {
-  position: absolute;
-  inset: var(--sheet-margin);
-}
-
 .sheet-frame {
   position: absolute;
   inset: 0;
@@ -608,74 +603,6 @@ ol {
   border-color: var(--scarlet);
 }
 
-/* ---- map controls ---- */
-
-.maplibregl-ctrl-group {
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-}
-
-.maplibregl-ctrl-group button {
-  width: var(--target);
-  height: var(--target);
-}
-
-.maplibregl-ctrl-group button + button {
-  border-top: 1px solid var(--line);
-}
-
-.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
-  filter: invert(1);
-}
-
-.sheet-scale {
-  padding: var(--space-1) var(--space-2) 2px;
-  border-radius: var(--radius);
-  background: rgb(11 27 58 / 82%);
-  color: var(--text);
-  font-size: var(--text-xs);
-  line-height: 1.2;
-}
-
-.sheet-scale__bar {
-  display: flex;
-  height: 6px;
-  border: 1px solid var(--text);
-}
-
-.sheet-scale__bar span {
-  flex: 1;
-}
-
-.sheet-scale__bar [data-tone='light'] {
-  background: var(--text);
-}
-
-.sheet-scale__bar [data-tone='dark'] {
-  background: var(--ground);
-}
-
-.sheet-scale__labels {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-top: 2px;
-  white-space: nowrap;
-}
-
-.sheet-scale {
-  min-width: 96px;
-}
-
-.maplibregl-ctrl-attrib {
-  background: rgb(11 27 58 / 80%) !important;
-  color: var(--text-dim);
-}
-
-.maplibregl-ctrl-attrib a {
-  color: var(--text);
-}
-
 /* ---- narrow screens: sheets ---- */
 
 @media (max-width: 719px) {
@@ -816,11 +743,6 @@ ol {
   /* The two bottom sheets would overlap, so details step aside while layers are open. */
   .stage[data-layers-open='true'] .stage__right {
     display: none;
-  }
-
-  .maplibregl-ctrl-bottom-right {
-    top: var(--space-2);
-    bottom: auto;
   }
 }
 

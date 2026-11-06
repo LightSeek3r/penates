@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatChange, formatCompact, formatNumber, formatPeriod } from './format'
+import { formatChange, formatCompact, formatDecimal, formatNumber, formatPeriod, numberFormat } from './format'
 
 describe('formatting', () => {
   it('groups digits per locale', () => {
@@ -21,5 +21,16 @@ describe('formatting', () => {
 
   it('shortens thousands for the phone legend', () => {
     expect(formatCompact(1500, 'en')).toBe('1.5k')
+  })
+
+  it('writes one decimal per locale', () => {
+    expect(formatDecimal(3.84, 'en')).toBe('3.8')
+    expect(formatDecimal(12, 'fr')).toBe('12,0')
+  })
+
+  it('builds each formatter once per locale and options', () => {
+    expect(numberFormat('fr', { maximumFractionDigits: 0 })).toBe(numberFormat('fr', { maximumFractionDigits: 0 }))
+    expect(numberFormat('fr', { maximumFractionDigits: 0 })).not.toBe(numberFormat('en', { maximumFractionDigits: 0 }))
+    expect(numberFormat('fr')).not.toBe(numberFormat('fr', { maximumFractionDigits: 0 }))
   })
 })
