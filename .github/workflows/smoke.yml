@@ -58,6 +58,24 @@ jobs:
         run: |
           file=$(python3 -c "import json; print(json.load(open('manifest.json'))['tiles']['file'])")
           curl -sS -D - -o /dev/null -X OPTIONS -H "Origin: $ORIGIN" -H "Access-Control-Request-Method: GET" -H "Access-Control-Request-Headers: range" "$TILES/$file" | grep -i -E '^(HTTP|access-control)'
+      - name: Admin and its API are behind Cloudflare Access
+        run: |
+          set -u
+          for path in /admin/ /api/admin/stats; do
+            out=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "https://settling.unit42.fr$path")
+            echo "$path -> $out"
+            case "$out" in
+              302*cloudflareaccess.com*|403*) ;;
+              *) echo "::error::$path is not protected by Access"; exit 1 ;;
+            esac
+          done
+      - name: Event endpoint accepts a counter and rejects a foreign origin
+        run: |
+          set -u
+          ok=$(curl -s -o /dev/null -w '%{http_code}' -X POST https://settling.unit42.fr/api/event -H 'content-type: application/json' -d '{"events":[]}')
+          bad=$(curl -s -o /dev/null -w '%{http_code}' -X POST https://settling.unit42.fr/api/event -H 'origin: https://evil.example' -H 'content-type: application/json' -d '{"events":[]}')
+          echo "empty batch -> $ok, foreign origin -> $bad"
+          [ "$ok" = 204 ] && [ "$bad" = 403 ]
       - name: App responds
         if: ${{ inputs.app_url != '' }}
         run: |
