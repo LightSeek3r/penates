@@ -83,6 +83,8 @@ export function MapView({ manifest }: MapViewProps) {
       dragRotate: false,
       pitchWithRotate: false,
       attributionControl: { compact: true },
+      // Three device pixels per CSS pixel triples the fill cost on phones for no visible gain on flat colour fills.
+      pixelRatio: Math.min(window.devicePixelRatio || 1, matchMedia(WIDE_SCREEN).matches ? 3 : 2),
       hash: false,
     })
     // The compact attribution opens by default once the sources name themselves, covering the map on phones and
@@ -151,9 +153,17 @@ export function MapView({ manifest }: MapViewProps) {
       const picked = pickFeature(map, event.point)
       store.getState().select(picked ? { kind: picked.kind, props: { ...picked.feature.properties } } : null)
     })
-    map.on('mousemove', (event) => {
-      map.getCanvas().style.cursor = pickFeature(map, event.point) ? 'pointer' : ''
-    })
+    // Pointer cursor over a place: only where hovering exists, at most once per frame, and not while the map is moving.
+    if (matchMedia('(hover: hover)').matches) {
+      let hoverFrame = 0
+      map.on('mousemove', (event) => {
+        if (hoverFrame || map.isMoving()) return
+        hoverFrame = requestAnimationFrame(() => {
+          hoverFrame = 0
+          map.getCanvas().style.cursor = pickFeature(map, event.point) ? 'pointer' : ''
+        })
+      })
+    }
 
     const unsubscribe = store.subscribe((state, previous) => {
       const appearanceChanged = state.priceType !== previous.priceType || state.theme !== previous.theme || state.filters !== previous.filters

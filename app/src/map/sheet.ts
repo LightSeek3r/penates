@@ -4,7 +4,7 @@
  * Where the values returned by `valueAt` cross a multiple of `step` along 0..length.
  * `valueAt` is sampled every `sample` px and crossings are linearly interpolated.
  */
-export function crossings(valueAt: (position: number) => number, length: number, step: number, sample = 4): { position: number; value: number }[] {
+export function crossings(valueAt: (position: number) => number, length: number, step: number, sample = 12): { position: number; value: number }[] {
   const found: { position: number; value: number }[] = []
   let previousPosition = 0
   let previousValue = valueAt(0)
