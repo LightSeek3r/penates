@@ -31,8 +31,12 @@ export async function promptInstall(): Promise<void> {
   set({ installEvent: null, installed: outcome === 'accepted' })
 }
 
-/** Registers the service worker and wires install, update, connectivity and offline-download events into the store. */
-export function startPwa(): void {
+/**
+ * Wires install, update, connectivity and offline-download events into the store, and registers the service
+ * worker once `registerAfter` settles: its precache (the whole app, about 2.6 MB) then no longer competes with
+ * the map's first tiles on a first visit.
+ */
+export function startPwa(registerAfter: Promise<unknown>): void {
   window.addEventListener('online', () => set({ online: true }))
   window.addEventListener('offline', () => set({ online: false }))
   window.addEventListener('beforeinstallprompt', (event) => {
@@ -50,9 +54,11 @@ export function startPwa(): void {
     if (type === 'TILES_ERROR') set({ offlineMap: 'error' })
   })
 
-  const update = registerSW({
-    onNeedRefresh() {
-      set({ updateReady: true, applyUpdate: () => update(true) })
-    },
+  void registerAfter.finally(() => {
+    const update = registerSW({
+      onNeedRefresh() {
+        set({ updateReady: true, applyUpdate: () => update(true) })
+      },
+    })
   })
 }
