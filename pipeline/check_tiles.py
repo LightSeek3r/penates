@@ -23,7 +23,23 @@ COMMUNE_MIN_ZOOM = 4
 DEPARTMENT_ZOOM = 3
 NO_COVERAGE_DEPARTMENTS = ("57", "67", "68")
 PARIS_ARRONDISSEMENTS = {f"751{n:02d}" for n in range(1, 21)}
-DISTANCES = ("d_hos", "d_gp", "d_sch", "d_sup", "d_bak", "d_pool")
+DISTANCES = (
+    "d_hos", "d_gp", "d_sch", "d_sup", "d_bak", "d_pool", "d_col", "d_lyc", "d_pha", "d_den", "d_cre", "d_pos", "d_gar",
+)
+# Plausible national median of the commune distances, metres. BPE 2025 run of 2026-11-06 gave: GP 3.7 km,
+# collège 5.5, lycée 8.2, pharmacy 3.9, dentist 4.9, crèche 4.7, post office 2.5, railway station 8.4.
+MEDIAN_RANGES = {
+    "d_gp": (1_000, 6_000),
+    "d_col": (2_000, 10_000),
+    "d_lyc": (3_000, 15_000),
+    "d_pha": (1_000, 6_000),
+    "d_den": (1_500, 8_000),
+    "d_cre": (1_500, 8_000),
+    "d_pos": (1_000, 5_000),
+    "d_gar": (3_000, 15_000),
+}
+# Every Paris arrondissement has each of these within 3 km (2026-11-06: 1.8 km at most).
+PARIS_WITHIN_3_KM = ("d_col", "d_lyc", "d_pha", "d_den", "d_cre", "d_pos", "d_gar")
 # Géorisques API v1 zonage_sismique, checked 2026-11-05: Nice 4 (MOYENNE), Paris 1 (TRES FAIBLE),
 # Lyon 2 (FAIBLE), Marseille 2 (FAIBLE). Metropolitan France has no zone 5 (Antilles only).
 KNOWN_ZONES = {"06088": 4, "69381": 2, "13201": 2, **{code: 1 for code in PARIS_ARRONDISSEMENTS}}
@@ -118,14 +134,20 @@ def check_indicators(communes: dict[str, dict]) -> list[str]:
         problems.append(f"Paris arrondissements farther than 3 km from a hospital: {sorted(paris_hospital)}")
     if not any(c["d_hos"] > 20_000 for c in communes.values()):
         problems.append("no commune is more than 20 km from a hospital")
-    median_gp = statistics.median(c["d_gp"] for c in communes.values())
-    if not 1_000 <= median_gp <= 6_000:
-        problems.append(f"median distance to a GP is {median_gp} m (expected 1-6 km)")
+    medians = {prop: statistics.median(c[prop] for c in communes.values()) for prop in DISTANCES}
+    for prop, (low, high) in MEDIAN_RANGES.items():
+        if not low <= medians[prop] <= high:
+            problems.append(f"median {prop} is {medians[prop]} m (expected {low / 1000:g}-{high / 1000:g} km)")
     for prop in ("d_sch", "d_bak"):
-        median = statistics.median(c[prop] for c in communes.values())
-        if median > statistics.median(c["d_hos"] for c in communes.values()):
-            problems.append(f"median {prop} ({median} m) above the median distance to a hospital")
-    print("median distances:", {p: statistics.median(c[p] for c in communes.values()) for p in DISTANCES})
+        if medians[prop] > medians["d_hos"]:
+            problems.append(f"median {prop} ({medians[prop]} m) above the median distance to a hospital")
+    if medians["d_lyc"] < medians["d_col"]:
+        problems.append(f"median d_lyc ({medians['d_lyc']} m) below the median d_col ({medians['d_col']} m)")
+    for prop in PARIS_WITHIN_3_KM:
+        far = sorted(communes[code][prop] for code in PARIS_ARRONDISSEMENTS if code in communes and communes[code][prop] > 3_000)
+        if far:
+            problems.append(f"{prop}: Paris arrondissements farther than 3 km: {far}")
+    print("median distances:", medians)
     return problems
 
 

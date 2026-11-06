@@ -1,4 +1,4 @@
-"""Straight-line distance from each commune to the nearest equipment of six types (INSEE BPE).
+"""Straight-line distance from each commune to the nearest equipment of each mapped type (INSEE BPE).
 
 Distances are measured in Lambert-93 (EPSG:2154) metres from a representative point of the commune
 polygon to the nearest equipment of the type anywhere in metropolitan France and Corsica. Only these
@@ -26,6 +26,19 @@ AMENITIES: dict[str, tuple[str, ...]] = {
     "d_sup": ("B104", "B105"),  # hypermarché et grand magasin, supermarché et magasin multi-commerce
     "d_bak": ("B207",),  # boulangerie-pâtisserie
     "d_pool": ("F101",),  # bassin de natation
+    "d_col": ("C201",),  # collège
+    # lycée général et/ou technologique, professionnel, agricole, plus the general (SGT) and vocational (SEP)
+    # sections: 92% of section rows sit within 300 m of a C301-C303 row; the rest are separate teaching sites.
+    "d_lyc": ("C301", "C302", "C303", "C304", "C305"),
+    "d_pha": ("D307",),  # pharmacie (propharmacies included)
+    "d_den": ("D277",),  # chirurgien dentiste (replaces D221 since BPE 2024)
+    # établissement d'accueil du jeune enfant (crèche, halte-garderie, micro-crèche PSU), micro-crèche PAJE.
+    # Not D503 (lieu d'accueil enfant-parent), D504 (relais petite enfance): no childcare is provided there.
+    "d_cre": ("D502", "D509"),
+    # bureau de poste, relais poste, agence postale: every La Poste contact point sends letters and parcels.
+    "d_pos": ("A206", "A207", "A208"),
+    # gare de voyageurs d'intérêt national, régional, local (SNCF): every passenger station, all quality "B".
+    "d_gar": ("E107", "E108", "E109"),
 }
 METROPOLE_EPSG = "2154"
 # QUALITE_XY "M" (mauvaise): street only probable, or a random point in the street / commune >= 500 m off.

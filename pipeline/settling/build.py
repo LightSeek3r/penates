@@ -343,6 +343,13 @@ AMENITY_LABELS = {
     "d_sup": "supermarket or hypermarket (BPE B105, B104)",
     "d_bak": "bakery (BPE B207)",
     "d_pool": "public swimming pool (BPE F101)",
+    "d_col": "collège (BPE C201)",
+    "d_lyc": "lycée: general, technological, vocational or agricultural (BPE C301-C305)",
+    "d_pha": "pharmacy (BPE D307)",
+    "d_den": "dentist (BPE D277)",
+    "d_cre": "crèche or other early-childhood centre (BPE D502, D509)",
+    "d_pos": "post office, La Poste relay or communal postal agency (BPE A206, A207, A208)",
+    "d_gar": "SNCF passenger railway station (BPE E107, E108, E109)",
 }
 INDICATOR_FIELDS = {
     "sz": "Number: seismic zone 1 (very low) to 5 (strong), Géorisques; absent if unknown",

@@ -27,6 +27,22 @@ BPE_ROWS = [
     ("B105", "2154", "B", 703_000.0, 6_594_000.0),  # supermarché: 10 km
     ("B207", "2154", "B", 702_850.0, 6_604_000.0),  # 150 m rounds half up to 200
     ("F101", "2154", "_U", 703_000.0, 6_634_000.0),  # pools have no INSEE quality flag: kept
+    ("C201", "2154", "B", 703_000.0, 6_606_000.0),  # collège: 2 km
+    ("C301", "2154", "A", 711_000.0, 6_604_000.0),  # lycée général: 8 km
+    ("C303", "2154", "M", 703_000.0, 6_597_000.0),  # lycée agricole, approximate: 7 km
+    ("C305", "2154", "B", 698_000.0, 6_604_000.0),  # vocational section of a lycée: 5 km, nearest
+    ("D307", "2154", "B", 700_000.0, 6_604_000.0),  # pharmacie: 3 km
+    ("D275", "2154", "B", 703_000.0, 6_604_000.0),  # stomatologue: not a dentist type
+    ("D277", "2154", "B", 703_000.0, 6_608_000.0),  # chirurgien dentiste: 4 km
+    ("D504", "2154", "B", 703_000.0, 6_604_000.0),  # relais petite enfance: no childcare, not mapped
+    ("D502", "2154", "B", 703_000.0, 6_602_500.0),  # crèche: 1.5 km
+    ("D509", "2154", "_U", None, None),  # micro-crèche without coordinates: skipped
+    ("A206", "2154", "B", 706_000.0, 6_604_000.0),  # bureau de poste: 3 km
+    ("A207", "2154", "B", 703_000.0, 6_601_650.0),  # relais poste: 2350 m rounds half up to 2400
+    ("A208", "2154", "A", 703_000.0, 6_607_500.0),  # agence postale communale: 3.5 km
+    ("E102", "2154", "B", 703_000.0, 6_604_000.0),  # aéroport: not a railway station
+    ("E107", "2154", "B", 723_000.0, 6_604_000.0),  # gare d'intérêt national: 20 km
+    ("E109", "2154", "B", 703_000.0, 6_612_000.0),  # gare d'intérêt local: 8 km
 ]
 
 
@@ -57,6 +73,13 @@ def test_types_map_to_properties_and_bad_rows_are_counted(bpe_file: Path) -> Non
     assert counts["d_sup"].kept == 2  # B104 + B105
     assert counts["d_bak"].kept == 1
     assert counts["d_pool"] == EquipmentCounts(1, 1, 0, 0, 0)  # quality "_U" is kept too
+    assert counts["d_col"].kept == 1
+    assert counts["d_lyc"] == EquipmentCounts(3, 0, 1, 0, 0)  # C301 + C303 + C305
+    assert counts["d_pha"].kept == 1
+    assert counts["d_den"].kept == 1  # D277, not D275
+    assert counts["d_cre"] == EquipmentCounts(1, 0, 0, 1, 0)  # D502 kept, D509 without coordinates; not D504
+    assert counts["d_pos"].kept == 3  # A206 + A207 + A208
+    assert counts["d_gar"].kept == 2  # E107 + E109, not E102
 
 
 def test_approximately_located_equipment_counts_as_nearest(distances: dict[str, int]) -> None:
@@ -64,7 +87,10 @@ def test_approximately_located_equipment_counts_as_nearest(distances: dict[str, 
 
 
 def test_distances_round_to_100_metres_half_up(distances: dict[str, int]) -> None:
-    assert distances == {"d_hos": 4500, "d_gp": 100, "d_sch": 300, "d_sup": 10000, "d_bak": 200, "d_pool": 30000}
+    assert distances == {
+        "d_hos": 4500, "d_gp": 100, "d_sch": 300, "d_sup": 10000, "d_bak": 200, "d_pool": 30000,
+        "d_col": 2000, "d_lyc": 5000, "d_pha": 3000, "d_den": 4000, "d_cre": 1500, "d_pos": 2400, "d_gar": 8000,
+    }
 
 
 @pytest.mark.parametrize(("metres", "expected"), [(0, 0), (49.9, 0), (50, 100), (149.9, 100), (150, 200), (1049, 1000)])
