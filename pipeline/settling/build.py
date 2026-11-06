@@ -27,6 +27,7 @@ import truststore
 import numpy as np
 
 from settling import aggregate as agg
+from settling import layers as layer_registry
 from settling import proximity, seismic
 from settling.aggregate import AreaResult
 from settling.boundaries import Area, Boundaries, load_boundaries
@@ -92,6 +93,7 @@ def main(argv: list[str] | None = None) -> None:
         distances = proximity.nearest_distances(origins, equipments)
         indicators = _indicators(commune_codes, zones, distances)
         log.info("seismic zones: %s", seismic_report.by_method)
+        layer_results = _run_layers(session, args, boundaries, origins, indicators)
     with _timed("aggregate", timings):
         window_by_months = agg.windows(con, cleaned.newest_date)
         communes = _area_results(con, boundaries.communes, "code_commune", window_by_months, with_trend=True)
@@ -99,7 +101,9 @@ def main(argv: list[str] | None = None) -> None:
     con.close()
     with _timed("tiles", timings):
         tile_path = args.out / TILE_FILE
-        tiles = _write_tiles(tile_path, boundaries, communes, departments, indicators, window_by_months, args.workers)
+        tiles = _write_tiles(
+            tile_path, boundaries, communes, departments, indicators, window_by_months, args.workers, layer_results
+        )
     timings["total"] = round(time.perf_counter() - started, 1)
 
     sources = {
@@ -107,10 +111,13 @@ def main(argv: list[str] | None = None) -> None:
         "boundaries": {"edition_id": edition.edition_id, "edition_date": edition.edition_date},
         "bpe": bpe_source,
         "seismic": seismic_source,
+        "layers": {name: result.source for name, result in layer_results.items()},
     }
-    indicator_report = _indicator_report(seismic_report, equipments, distances, communes, indicators)
+    indicator_report = _indicator_report(seismic_report, equipments, distances, communes, indicators) | {
+        "layers": {name: result.report for name, result in layer_results.items()}
+    }
     _write_json(
-        args.out / "manifest.json", _manifest(tile_path, sources, cleaned, join, communes, departments, indicators)
+        args.out / "manifest.json", _manifest(tile_path, sources, cleaned, join, communes, departments, indicators, layer_results)
     )
     _write_json(
         args.out / "build-report.json",
@@ -118,6 +125,46 @@ def main(argv: list[str] | None = None) -> None:
         | {"indicators": indicator_report},
     )
     log.info("wrote %s (%d bytes, %d tiles) in %.1fs", tile_path, tile_path.stat().st_size, len(tiles), timings["total"])
+
+
+def _layer_file(text: str) -> tuple[str, Path]:
+    name, separator, path = text.partition("=")
+    if not separator or not name or not path:
+        raise argparse.ArgumentTypeError("expected NAME=PATH")
+    return name, Path(path)
+
+
+def _run_layers(
+    session: requests.Session,
+    args: argparse.Namespace,
+    boundaries: Boundaries,
+    origins: np.ndarray,
+    indicators: dict[str, dict],
+) -> dict[str, layer_registry.LayerResult]:
+    """Run every selected layer and merge its properties into `indicators` (a layer failure fails the build)."""
+    selected = [layer for layer in layer_registry.discover() if args.layer is None or layer.name in args.layer]
+    unknown = set(args.layer or []) - {layer.name for layer in selected}
+    if unknown:
+        raise SystemExit(f"unknown layer(s): {sorted(unknown)}")
+    context = layer_registry.LayerContext(
+        session=session,
+        raw=args.raw,
+        communes=boundaries.communes,
+        merged_codes=boundaries.merged_codes,
+        origins=origins,
+        overrides=dict(args.layer_file),
+    )
+    results = {}
+    for layer in selected:
+        with _timed(f"layer_{layer.name}", {}):
+            result = layer.compute(context)
+        stray = result.properties.keys() - indicators.keys()
+        if stray:
+            raise ValueError(f"layer {layer.name} returned codes that are not communes: {sorted(stray)[:5]}")
+        layer_registry.merge(result.properties, indicators, layer.name)
+        log.info("layer %s: %d communes with values", layer.name, len(result.properties))
+        results[layer.name] = result
+    return results
 
 
 def _open_duckdb(raw: Path) -> duckdb.DuckDBPyConnection:
@@ -138,15 +185,17 @@ def _write_tiles(
     indicators: dict[str, dict[str, int]],
     window_by_months: dict[int, agg.Window],
     workers: int,
+    layer_results: dict[str, layer_registry.LayerResult],
 ) -> dict[int, bytes]:
     layers = [
         _tile_layer("departments", DEPARTMENTS_ZOOMS, departments, indicators=None),
         _tile_layer("communes", COMMUNES_ZOOMS, communes, indicators, COMMUNES_SIMPLIFY_UNITS),
     ]
+    layer_fields = {prop: text for layer in layer_registry.discover() if layer.name in layer_results for prop, text in layer.fields.items()}
     tiles = build_tiles(layers, workers=workers)
     bounds = _bounds(boundaries)
     center = ((bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2, CENTER_ZOOM)
-    write_pmtiles(tile_path, tiles, _tile_metadata(window_by_months), bounds, center)
+    write_pmtiles(tile_path, tiles, _tile_metadata(window_by_months, layer_fields), bounds, center)
     return tiles
 
 
@@ -169,6 +218,20 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--seismic-file",
         type=Path,
         help="use this CSV (columns code_insee,code_zone) instead of querying the Géorisques API",
+    )
+    parser.add_argument(
+        "--layer-file",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        type=_layer_file,
+        help="use this local file for the layer NAME instead of downloading it (repeatable)",
+    )
+    parser.add_argument(
+        "--layer",
+        action="append",
+        metavar="NAME",
+        help="run only these layers (repeatable); default: every layer in settling/layers",
     )
     parser.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     return parser.parse_args(argv)
@@ -292,7 +355,7 @@ IDENTITY_FIELDS = {
 }
 
 
-def _tile_metadata(window_by_months: dict[int, agg.Window]) -> dict:
+def _tile_metadata(window_by_months: dict[int, agg.Window], layer_fields: dict[str, str]) -> dict:
     trend = {f"t{y}": f"Number: median EUR/m2 of all homes sold in {y} (absent below {agg.MIN_N_YEARLY} sales)"
              for y in agg.TREND_YEARS}
     primary = window_by_months[agg.PRIMARY_WINDOW_MONTHS]
@@ -308,7 +371,7 @@ def _tile_metadata(window_by_months: dict[int, agg.Window]) -> dict:
              "fields": IDENTITY_FIELDS | PRICE_FIELDS},
             {"id": "communes", "minzoom": COMMUNES_ZOOMS[0], "maxzoom": COMMUNES_ZOOMS[1],
              "fields": IDENTITY_FIELDS | {"dep": "String: department code"} | PRICE_FIELDS | trend
-             | INDICATOR_FIELDS},
+             | INDICATOR_FIELDS | layer_fields},
         ],
     }
 
@@ -321,7 +384,9 @@ def _manifest(
     communes: list[AreaResult],
     departments: list[AreaResult],
     indicators: dict[str, dict[str, int]],
+    layer_results: dict[str, layer_registry.LayerResult],
 ) -> dict:
+    layer_properties = {prop for layer in layer_registry.discover() if layer.name in layer_results for prop in layer.fields}
     return {
         "version": datetime.now(UTC).date().isoformat(),
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
@@ -335,6 +400,7 @@ def _manifest(
             "departments": len(departments),
             "communes_with_sz": sum("sz" in v for v in indicators.values()),
             **{f"communes_with_{prop}": sum(prop in v for v in indicators.values()) for prop in proximity.AMENITIES},
+            **{f"communes_with_{prop}": sum(prop in v for v in indicators.values()) for prop in sorted(layer_properties)},
         },
         "confidence_histogram": {
             "communes": _confidence_histogram(communes),

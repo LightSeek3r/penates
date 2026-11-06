@@ -15,6 +15,8 @@ from pathlib import Path
 import mapbox_vector_tile
 from pmtiles.reader import MmapSource, all_tiles
 
+from settling import layers
+
 COMMUNE_ZOOM = 8
 # The national view (filters must work there): every commune must already exist at this zoom.
 COMMUNE_MIN_ZOOM = 4
@@ -77,6 +79,13 @@ def check(path: Path) -> list[str]:
     if set(national_view) != set(communes):
         problems.append(f"{len(set(communes) - set(national_view))} communes missing at z{COMMUNE_MIN_ZOOM}")
     problems += check_indicators(communes)
+    registered = layers.discover()
+    problems += layers.check_properties(registered, communes)
+    for prop in sorted({prop for layer in registered for prop in layer.fields}):
+        at_detail = sum(prop in c for c in communes.values())
+        at_national = sum(prop in c for c in national_view.values())
+        if at_detail != at_national:
+            problems.append(f"{prop}: present for {at_detail} communes at z{COMMUNE_ZOOM} but {at_national} at z{COMMUNE_MIN_ZOOM}")
 
     print(f"communes={len(communes)} priced={len(priced)} departments={len(departments)} paris={sorted(paris)[:1]}..{sorted(paris)[-1:]}")
     return problems

@@ -51,3 +51,39 @@ Flood (TRI) share of commune, clay shrink-swell, radon, cavities; altitude (IGN 
 - Local proxy blocks some downloads; heavy builds run in CI. Local runs use `--bpe-file` style fallbacks.
 - Commune-level straight-line distance hides intra-commune variation (large rural communes): stated in the UI.
 - z5 commune tiles may be large; measure before committing.
+
+## Slice 2 plan (started 2026-11-06): everything that remains
+
+Approved by the user ("go for all the remaining"). Delivered as two parallel tracks on one contract, then Search mode, address report and shading.
+
+### Track A: data layers (pipeline)
+
+`pipeline/settling/layers/` is a plug-in package (`Layer`, `LayerContext`, `LayerResult`, `discover`, `check_properties`). One module per topic defines `LAYER`; the build merges the returned properties by INSEE code, records provenance in `manifest.json` under `sources.layers`, adds the fields to the PMTiles metadata, and the gate (`check_tiles.py`) applies each layer's `ranges`, `min_coverage` and `gate`. Local run: `python -m settling.build --dep 69 --layer NAME --layer-file NAME=path`. A layer module owns its tests (`tests/test_layers_<name>.py`) and never edits shared files. Missing = absent, never 0.
+
+| Layer module | Tile properties (communes layer) | Source (to verify) |
+|---|---|---|
+| `georisques` | `fl` flood class 0-3, `cl` clay shrink-swell class 0-3, `rn` radon class 1-3, `cv` known underground cavities (count) | Géorisques / BRGM / IRSN open data |
+| `altitude` | `alt` metres (representative point), `rel` relief within the commune in metres | IGN altimetry (RGE ALTI) or open commune table |
+| `climate` | `sun` sunshine hours/year (rounded to 10), `hot` days >= 30 C per year, `h50` hot days around 2050 under TRACC, `cd` km to nearest contributing station | Météo-France normals 1991-2020, DRIAS/TRACC |
+| `amenities2` (extends `proximity.AMENITIES`) | `d_col` collège, `d_lyc` lycée, `d_pha` pharmacy, `d_den` dentist, `d_cre` crèche, `d_pos` post office, `d_gar` train station | INSEE BPE (already read) / SNCF open data |
+| `fibre` | `fb` % of premises eligible to FttH (0-100) | ARCEP "Ma connexion internet" open data |
+| `crime` (opt-in in the app) | `cr_v` recorded violence against persons per 1,000 residents, `cr_b` recorded home burglaries per 1,000 | SSMSI recorded offences, communal base |
+| `rent_tax` | `rt` indicative rent EUR/m2 (+ `rtq` reliability 1-3), `tf` communal land-tax rate % (built property) | carte des loyers (ANIL / Ministère), DGFiP REI |
+
+Not done in this slice, stated openly: DPE energy labels (too heavy to aggregate honestly) and individual-address data.
+
+Tile budget: the largest national-view tile was 1.85 MB gzip. After merging, measure; if above 3 MB, trim (integer-only values, drop rarely used properties at z4-5) before publishing.
+
+### Track B: app (data-driven layers)
+
+`app/src/domain/layers.ts` becomes the single catalogue: for each property its theme id, i18n key, unit, break points, colour ladder family, filter kind (max/min/range/class set) and whether it is opt-in. Themes, filters, legend, inspector, URL state and tests are generated from it. New hues follow DESIGN.md (one ladder per quantity; risks warm-neutral family distinct from blue/teal/violet; crime opt-in and never in the default view).
+
+### After A and B
+
+1. Search mode: budget (and optional deposit/loan terms) -> affordable surface per commune from median EUR/m2 by kind, with confidence; shareable link; uses the same filters.
+2. Address report: BAN geocoding -> commune indicators + nearest amenities of the address -> printable report.
+3. On-demand sun shading for one address (BD TOPO buildings + terrain horizon, computed in the browser or a Worker); honest about limits.
+
+### Verification per integration
+
+pytest, vitest, local Playwright on the production build, CI Build data (gate) -> Deploy -> prod e2e + Lighthouse.
