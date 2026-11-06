@@ -24,8 +24,8 @@
     "methodology": {
       "slug": "methodology",
       "label": "Method",
-      "title": "Method: how the price per m² is computed · settling-map",
-      "description": "How settling-map computes the median price per m² by commune from DVF data: sales kept, time window, reliability indicator and limits."
+      "title": "Method: price per m², risks, services, climate and costs · settling-map",
+      "description": "How settling-map computes the median price per m² by commune (DVF) and every indicator it shows: risks, relief, climate, services, fibre, rents, land tax, recorded crime. Sources, thresholds and limits."
     },
     "sources": {
       "slug": "sources",

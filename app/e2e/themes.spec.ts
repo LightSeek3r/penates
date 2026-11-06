@@ -47,27 +47,34 @@ test('details list the seismic zone and distances of a commune', async ({ page }
   await expect(details.getByText(/vol d'oiseau/).first()).toBeVisible()
 })
 
+// Themes the tiles do not carry are not offered, so the test uses the flood stages when the data has them
+// and falls back to the seismic zone (present since the first release) otherwise.
+const FLOOD = { theme: 'flood', legend: "Inondation : démarches de l'État", radio: 'Inondation', slider: 'Inondation : étape maximale', value: 1, readout: 'étape 1 au plus', off: 3 }
+const SEISMIC = { theme: 'seismic', legend: 'Zone sismique', radio: 'Zone sismique', slider: 'Zone sismique maximale', value: 2, readout: 'zone 2 au plus', off: 5 }
+
 test('a risk theme and its filter open from a link, and the filter counter follows the link', async ({ page }) => {
-  await page.goto('/#z=6&lat=46.6&lng=2.4&th=flood&l=fr')
+  const fields = await communeTileFields()
+  const risk = fields?.has('fl') ? FLOOD : SEISMIC
+  await page.goto(`/#z=6&lat=46.6&lng=2.4&th=${risk.theme}&l=fr`)
   await mapReady(page)
   await openLayersOnPhone(page)
-  await expect(page.getByRole('region', { name: 'Exposition aux inondations' })).toBeVisible()
-  await expect(page.getByRole('radio', { name: 'Inondation' })).toBeChecked()
+  await expect(page.getByRole('region', { name: risk.legend })).toBeVisible()
+  await expect(page.getByRole('radio', { name: risk.radio })).toBeChecked()
   const filtersTab = page.getByRole('tab', { name: /Filtres/ })
   await expect(filtersTab.locator('.badge')).toHaveCount(0)
 
   await page.goto('about:blank')
-  await page.goto('/#z=6&lat=46.6&lng=2.4&th=flood&f=flood-1.altitude-200_800&l=fr')
+  await page.goto(`/#z=6&lat=46.6&lng=2.4&th=${risk.theme}&f=${risk.theme}-${risk.value}.hospital-10000&l=fr`)
   await mapReady(page)
   await openLayersOnPhone(page)
   await expect(filtersTab).toContainText('2')
   await filtersTab.click()
   // The first group holding an active filter opens by itself.
-  await expect(page.getByRole('slider', { name: 'Inondation : classe maximale' })).toHaveValue('1')
-  await expect(page.getByText('classe 1 au plus')).toBeVisible()
-  await page.getByRole('slider', { name: 'Inondation : classe maximale' }).fill('3')
+  await expect(page.getByRole('slider', { name: risk.slider })).toHaveValue(String(risk.value))
+  await expect(page.getByText(risk.readout)).toBeVisible()
+  await page.getByRole('slider', { name: risk.slider }).fill(String(risk.off))
   await expect(filtersTab).toContainText('1')
-  await expect(page).toHaveURL(/f=altitude-200_800(&|$)/)
+  await expect(page).toHaveURL(/f=hospital-10000(&|$)/)
 })
 
 test("details list a commune's risk indicators when the tiles carry them", async ({ page }) => {
@@ -78,5 +85,16 @@ test("details list a commune's risk indicators when the tiles carry them", async
   const details = page.getByRole('region', { name: 'Fiche du lieu' })
   await expect(details.getByText(/Inondation : \d \(/)).toBeVisible({ timeout: 20_000 })
   await expect(details.getByText(/ERRIAL/)).toBeVisible()
+})
+
+test('a shared link to a theme the tiles do not carry falls back to price', async ({ page }) => {
+  const fields = await communeTileFields()
+  test.skip(fields === null || fields.has('h50'), 'needs local tiles without the 2050 heat property (h50)')
+  await page.goto('/#z=6&lat=46.6&lng=2.4&th=heat2050&f=heat2050-10&l=fr')
+  await mapReady(page)
+  await openLayersOnPhone(page)
+  await expect(page.getByRole('region', { name: 'Prix médian, €/m²' })).toBeVisible()
+  await expect(page).not.toHaveURL(/th=heat2050|f=heat2050/)
+  await expect(page.getByRole('radio', { name: 'Jours de chaleur vers 2050' })).toHaveCount(0)
 })
 

@@ -2,11 +2,12 @@ import { Map as MapLibreMap, NavigationControl, addProtocol, setWorkerUrl, type 
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './map.css'
-import { Protocol } from 'pmtiles'
+import { PMTiles, Protocol } from 'pmtiles'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { track } from '../analytics/track'
 import { tileUrl } from '../data/manifest'
+import { tileFieldsOf } from '../domain/layers'
 import { initialState, useAppStore } from '../state/appStore'
 import type { Manifest } from '../state/store'
 import { formatHash } from '../state/urlState'
@@ -15,13 +16,28 @@ import { SheetScale, attachSheetFrame } from './sheetFrame'
 import { applyAppearance } from './appearance'
 import { LAYER_IDS, SELECTION_LAYERS, buildStyle } from './style'
 
-let protocolRegistered = false
-function registerProtocol() {
-  if (protocolRegistered) return
+let protocol: Protocol | null = null
+function registerProtocol(): Protocol {
+  if (protocol) return protocol
   // MapLibre 6 starts a module worker from a URL the bundler does not emit on its own.
   setWorkerUrl(workerUrl)
-  addProtocol('pmtiles', new Protocol().tile)
-  protocolRegistered = true
+  protocol = new Protocol()
+  addProtocol('pmtiles', protocol.tile)
+  return protocol
+}
+
+/**
+ * Tells the store which properties the communes tiles carry, so themes and filters the data lacks are not offered.
+ * The archive is shared with the map's protocol, so its header and metadata are fetched once. On failure every
+ * layer stays offered, as before.
+ */
+function readTileFields(url: string, onFields: (fields: ReturnType<typeof tileFieldsOf>) => void) {
+  const archive = new PMTiles(url)
+  registerProtocol().add(archive)
+  archive.getMetadata().then(
+    (metadata) => onFields(tileFieldsOf(metadata)),
+    (error: unknown) => console.warn('Tile metadata unavailable:', error),
+  )
 }
 
 const COMMUNE_ZOOM = 6.5
@@ -70,8 +86,8 @@ export function MapView({ manifest }: MapViewProps) {
   useEffect(() => {
     const element = container.current
     if (!element) return
-    registerProtocol()
     const store = useAppStore
+    readTileFields(tileUrl(manifest), (fields) => store.getState().setTileFields(fields))
     const initial = store.getState()
 
     const map = new MapLibreMap({

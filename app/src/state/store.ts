@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { type FilterKey, type FilterValue, type Filters, withFilter, withoutFilters } from '../domain/filters'
-import { layerById } from '../domain/layers'
+import { type TileFields, isAvailable, layerById } from '../domain/layers'
 import type { Place, PriceType } from '../domain/place'
 import type { ThemeId } from '../domain/themes'
 import type { Lang, UrlState } from './urlState'
@@ -33,6 +33,8 @@ interface AppState {
   filters: Filters
   /** Opt-in layers (recorded crime) are listed, drawn and filtered only once the visitor asks for them. */
   showOptIn: boolean
+  /** Properties the communes tiles carry; null until the tile metadata is read. */
+  tileFields: TileFields
   selection: Selection | null
   pendingCode: string | null
   flyRequest: FlyRequest | null
@@ -45,6 +47,7 @@ interface AppState {
   setFilter: (key: FilterKey, value: FilterValue) => void
   resetFilters: () => void
   setShowOptIn: (show: boolean) => void
+  setTileFields: (fields: TileFields) => void
   select: (selection: Selection | null) => void
   flyTo: (target: Omit<FlyRequest, 'nonce'>) => void
   setLayersOpen: (open: boolean) => void
@@ -54,6 +57,17 @@ interface AppState {
 }
 
 const isOptIn = (id: string) => layerById(id)?.optIn === true
+
+/** False for a layer whose property the tiles lack: choosing it would only grey the whole map out. */
+const isOffered = (id: string, fields: TileFields) => {
+  const def = layerById(id)
+  return def !== undefined && isAvailable(def, fields)
+}
+
+/** Theme and filters the tiles can serve; a theme the tiles lack falls back to price. */
+export function withoutMissing(theme: ThemeId, filters: Filters, fields: TileFields): { theme: ThemeId; filters: Filters } {
+  return { theme: isOffered(theme, fields) ? theme : 'price', filters: withoutFilters(filters, (def) => !isAvailable(def, fields)) }
+}
 
 /** Theme and filters with every opt-in layer removed, for visitors who have not opted in. */
 export function withoutOptIn(theme: ThemeId, filters: Filters): { theme: ThemeId; filters: Filters } {
@@ -68,6 +82,7 @@ export function createStore(initial: UrlState, showOptIn = false, persistOptIn: 
     theme: start.theme,
     filters: start.filters,
     showOptIn,
+    tileFields: null,
     selection: null,
     pendingCode: initial.selected,
     flyRequest: null,
@@ -76,13 +91,15 @@ export function createStore(initial: UrlState, showOptIn = false, persistOptIn: 
     mapStatus: 'loading',
     manifest: null,
     setPriceType: (priceType) => set({ priceType }),
-    setTheme: (theme) => set((state) => (isOptIn(theme) && !state.showOptIn ? {} : { theme })),
-    setFilter: (key, value) => set((state) => (isOptIn(key) && !state.showOptIn ? {} : { filters: withFilter(state.filters, key, value) })),
+    setTheme: (theme) => set((state) => ((isOptIn(theme) && !state.showOptIn) || !isOffered(theme, state.tileFields) ? {} : { theme })),
+    setFilter: (key, value) =>
+      set((state) => ((isOptIn(key) && !state.showOptIn) || !isOffered(key, state.tileFields) ? {} : { filters: withFilter(state.filters, key, value) })),
     resetFilters: () => set({ filters: {} }),
     setShowOptIn: (show) => {
       persistOptIn(show)
       set((state) => (show ? { showOptIn: true } : { showOptIn: false, ...withoutOptIn(state.theme, state.filters) }))
     },
+    setTileFields: (tileFields) => set((state) => ({ tileFields, ...withoutMissing(state.theme, state.filters, tileFields) })),
     select: (selection) => set({ selection, pendingCode: null }),
     flyTo: (target) => set((state) => ({ flyRequest: { ...target, nonce: (state.flyRequest?.nonce ?? 0) + 1 }, pendingCode: target.code })),
     setLayersOpen: (layersOpen) => set({ layersOpen }),

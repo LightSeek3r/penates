@@ -31,7 +31,12 @@ describe('legend rows', () => {
   })
 
   it('name each class and count whole numbers', () => {
-    expect(labels('flood')).toEqual(['Classe 0 : aucune zone inondable recensée', 'Classe 1 : exposition faible', 'Classe 2 : exposition moyenne', 'Classe 3 : exposition forte'])
+    expect(labels('flood')).toEqual([
+      'Étape 0 : aucune démarche recensée',
+      'Étape 1 : atlas des zones inondables ou DDRM seulement',
+      'Étape 2 : plan de prévention prescrit',
+      'Étape 3 : plan de prévention approuvé',
+    ])
     expect(labels('cavities')).toEqual(['0', '1', '2 à 4', '5 à 9', '10 à 24', '25 et plus'])
     expect(shorts('cavities')[0]).toBe('0')
     expect(labels('sunshine')[0]).toBe('moins de 1 700 h/an')
@@ -46,6 +51,7 @@ describe('filter read-outs', () => {
     expect(plain(filterValueText(t, def('hospital'), 10_000, 'fr'))).toBe("jusqu'à 10 km")
     expect(plain(filterValueText(t, def('price'), 3500, 'fr'))).toBe("jusqu'à 3 500 €/m²")
     expect(filterValueText(t, def('seismic'), 3, 'fr')).toBe('zone 3 au plus')
+    expect(filterValueText(t, def('flood'), 1, 'fr')).toBe('étape 1 au plus')
     expect(plain(filterValueText(t, def('sunshine'), 2000, 'fr'))).toBe('au moins 2 000 h/an')
     expect(filterValueText(t, def('altitude'), [200, 800], 'fr')).toBe('200 à 800 m')
     expect(filterValueText(t, def('altitude'), [0, 800], 'fr')).toBe("jusqu'à 800 m")
@@ -60,5 +66,7 @@ describe('details values', () => {
     expect(formatLayerValue(t, def('hospital'), 1200, 'fr')).toBe('1,2 km')
     expect(formatLayerValue(t, def('rent'), 12.5, 'fr')).toBe('12,5 €/m²/mois')
     expect(plain(formatLayerValue(t, def('violence'), 3.2, 'fr'))).toBe('3,2 pour 1 000 hab.')
+    // Burglaries are counted against dwellings, offences against persons against residents.
+    expect(plain(formatLayerValue(t, def('burglary'), 4.1, 'fr'))).toBe('4,1 pour 1 000 logements')
   })
 })

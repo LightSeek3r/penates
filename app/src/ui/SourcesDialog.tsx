@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../state/appStore'
 import { PrivacySwitch } from './PrivacySwitch'
 import { PwaSection } from './PwaSection'
+import { SourceCredits } from './SourceCredits'
 
 export function SourcesDialog() {
   const { t } = useTranslation()
@@ -34,14 +35,7 @@ export function SourcesDialog() {
       <p>{t('sources.methodExtra')}</p>
       <p>{t('sources.limits')}</p>
       {dataThrough && <p>{t('sources.dataAsOf', { date: dataThrough })}</p>}
-      <h3 className="legend__subtitle">{t('sources.credits')}</h3>
-      <ul className="credits">
-        <li>{t('sources.creditsDvf')}</li>
-        <li>{t('sources.creditsIgn')}</li>
-        <li>{t('sources.creditsInsee')}</li>
-        <li>{t('sources.creditsGeorisques')}</li>
-        <li>{t('sources.creditsOsm')}</li>
-      </ul>
+      <SourceCredits />
       <p>{t('sources.privacy')}</p>
       <h3 className="legend__subtitle">{t('sources.pages')}</h3>
       <ul className="credits">

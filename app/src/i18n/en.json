@@ -80,13 +80,35 @@
     "limits": "Départements 57, 67, 68 and Mayotte are not covered by the DVF database. The data lags by about one semester.",
     "dataAsOf": "Data up to {{date}}",
     "credits": "Credits",
-    "creditsDvf": "Property transactions: DGFiP / Etalab, Licence Ouverte v2.0",
-    "creditsIgn": "Administrative boundaries: IGN, Licence Ouverte v2.0",
-    "creditsOsm": "Basemap: © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap",
+    "creditGroups": {
+      "price": "Price and communes",
+      "risk": "Risks",
+      "relief": "Altitude and relief",
+      "climate": "Climate",
+      "services": "Services",
+      "connectivity": "Internet",
+      "costs": "Housing costs",
+      "safety": "Recorded crime (on request)",
+      "basemap": "Basemap"
+    },
+    "credit": {
+      "dvf": "Property transactions: DGFiP / Etalab (DVF), Licence Ouverte v2.0",
+      "ign": "Boundaries and chefs-lieux: IGN (Admin Express), Licence Ouverte v2.0",
+      "seismic": "Seismic zoning: Géorisques (BRGM, ministry of ecological transition), Licence Ouverte",
+      "gaspar": "Flood: Géorisques, GASPAR database (ministry of ecological transition), Licence Ouverte v2.0",
+      "brgm": "Clay and cavities: BRGM via Géorisques (2026 exposure map, BDCavités), Licence Ouverte v2.0",
+      "asnr": "Radon: ASNR (formerly IRSN), Licence Ouverte v1.0",
+      "rgeAlti": "Source: IGN, RGE ALTI, Licence Ouverte v2.0",
+      "meteoFrance": "Source: Météo-France, station climate sheets (1991-2020 normals), Licence Ouverte v2.0",
+      "insee": "Source: INSEE, permanent facilities base (BPE 2025), Licence Ouverte v2.0",
+      "arcep": "Source: Arcep, Ma connexion internet and FttH deployment observatory (2026 Q2), Licence Ouverte v2.0",
+      "anil": "Rents: « Estimations ANIL, à partir des données du Groupe SeLoger et de leboncoin » (Carte des loyers 2025), Licence Ouverte v2.0",
+      "dgfip": "Land tax: DGFiP, local tax records (REI), Licence Ouverte v2.0",
+      "ssmsi": "Source: SSMSI, Ministry of the Interior, communal base of recorded crime, Licence Ouverte v2.0",
+      "osm": "Basemap: © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap"
+    },
     "privacy": "No account, no cookies. Only anonymous usage totals are counted (see below). Map tiles are loaded from OpenFreeMap and Cloudflare.",
-    "methodExtra": "Seismic zone: regulatory zoning by commune (Géorisques). Distances: shortest straight line from a point in the commune to the nearest facility in INSEE's permanent facilities base; they are not travel times and a single point stands for the whole commune.",
-    "creditsInsee": "Facilities: INSEE, permanent facilities base, Licence Ouverte v2.0",
-    "creditsGeorisques": "Seismic zoning: Géorisques (BRGM, ministry of ecological transition), Licence Ouverte",
+    "methodExtra": "The other indicators (risks, altitude, climate, distances, fibre, rent, land tax, recorded crime on request) are values per commune from public data; an unknown stays empty, never 0. Risks do not describe your plot and do not replace the official risk statement (ERRIAL). Climate is interpolated from nearby stations. Distances run in a straight line from a point in the commune to the nearest facility in INSEE's permanent facilities base: they are not travel times. Rent is an asking rent, and the land-tax rate is not the tax bill.",
     "pages": "Documentation pages",
     "methodPage": "Detailed method",
     "sourcesPage": "Sources and licences",
@@ -140,11 +162,11 @@
     },
     "risk": {
       "title": "Risks",
-      "note": "Indicative classes from screening maps: they do not describe your plot and do not replace the official risk statement (ERRIAL)."
+      "note": "Commune-level screening indicators: they do not describe your plot and do not replace the official risk statement (ERRIAL)."
     },
     "relief": {
       "title": "Altitude and relief",
-      "note": "Altitude of one point of the commune; height range between its lowest and highest points."
+      "note": "Altitude at the town-hall point (chef-lieu); height range between the lowest and highest points of the commune."
     },
     "climate": {
       "title": "Climate",
@@ -192,17 +214,17 @@
     },
     "flood": {
       "name": "Flooding",
-      "legend": "Flood exposure",
-      "filter": "Flooding: maximum class",
-      "short": "class {{value}}",
-      "classLabel": "Class {{value}}: {{name}}",
+      "legend": "Flooding: State procedures",
+      "filter": "Flooding: highest stage",
+      "short": "stage {{value}}",
+      "classLabel": "Stage {{value}}: {{name}}",
       "classes": {
-        "0": "no known flood zone",
-        "1": "low exposure",
-        "2": "medium exposure",
-        "3": "high exposure"
+        "0": "no procedure recorded",
+        "1": "flood atlas or DDRM only",
+        "2": "prevention plan prescribed",
+        "3": "prevention plan approved"
       },
-      "about": "Indicative screening at commune level from known flood zones (Géorisques). It does not describe your plot and does not replace the official risk statement (ERRIAL). \"No known zone\" does not mean no risk."
+      "about": "How far the State's flood procedures have gone in the commune (Géorisques): a flood-zone atlas or the departmental risk file (DDRM), then a prevention plan prescribed, then approved. It is not a measure of your plot's exposure and does not replace the official risk statement (ERRIAL). 0 means no procedure recorded, not no risk."
     },
     "clay": {
       "name": "Clay shrink-swell",
@@ -229,7 +251,7 @@
         "2": "low, with aggravating geology",
         "3": "significant potential"
       },
-      "about": "Soil radon potential per commune (IRSN). Only a measurement inside the home gives the real exposure."
+      "about": "Soil radon potential per commune (ASNR, formerly IRSN). Only a measurement inside the home gives the real exposure."
     },
     "cavities": {
       "name": "Underground cavities",
@@ -241,7 +263,7 @@
       "name": "Altitude",
       "legend": "Altitude",
       "filter": "Altitude",
-      "about": "Altitude of one representative point of the commune (IGN). Large mountain communes vary a lot from place to place."
+      "about": "Altitude of the town-hall point (chef-lieu, IGN), not of the whole commune: large mountain communes vary a lot from place to place."
     },
     "relief": {
       "name": "Relief",
@@ -265,7 +287,7 @@
       "name": "Hot days around 2050",
       "legend": "Days at 30 °C or more around 2050",
       "filter": "Days at 30 °C around 2050, at most",
-      "about": "Projection for a France warmed by 2.7 °C (TRACC reference pathway, around 2050). A climate projection, not a forecast."
+      "about": "Observed 1991-2020 normal plus the modelled increase for a France warmed by 2.7 °C (TRACC reference pathway, around 2050). A projection, not a forecast."
     },
     "hospital": {
       "name": "Hospital",
@@ -355,7 +377,7 @@
       "name": "Indicative rent",
       "legend": "Indicative rent, per month",
       "filter": "Indicative rent",
-      "about": "Advertised rent including charges for a typical flat (carte des loyers). An average of listings, not the rent of a given home."
+      "about": "Indicative advertised rent including charges, combining flats and houses (carte des loyers). An average of listings, not the rent of a given home."
     },
     "landtax": {
       "name": "Property tax",
@@ -365,15 +387,15 @@
     },
     "violence": {
       "name": "Offences against persons",
-      "legend": "Recorded offences against persons, per year",
+      "legend": "Recorded offences against persons, per 1,000 residents per year",
       "filter": "Offences against persons, at most",
       "about": "Violence against persons recorded by police and gendarmerie (SSMSI), where the offence took place, per 1,000 residents."
     },
     "burglary": {
       "name": "Home burglaries",
-      "legend": "Recorded home burglaries, per year",
+      "legend": "Recorded home burglaries, per 1,000 dwellings per year",
       "filter": "Home burglaries, at most",
-      "about": "Home burglaries recorded by police and gendarmerie (SSMSI), per 1,000 residents."
+      "about": "Home burglaries recorded by police and gendarmerie (SSMSI), per 1,000 dwellings (not per 1,000 residents)."
     }
   },
   "units": {
@@ -384,6 +406,7 @@
     "daysYear": "{{value}} days/yr",
     "percent": "{{value}}%",
     "per1000": "{{value}} per 1,000 residents",
+    "per1000Dwellings": "{{value}} per 1,000 dwellings",
     "eurM2Month": "{{value}} €/m²/month",
     "count": "{{value}}",
     "class": "{{value}} ({{name}})"

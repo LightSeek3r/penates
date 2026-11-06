@@ -1,7 +1,7 @@
 import { useId, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type FilterDef, type FilterKey, type FilterValue, activeFilterCount, isFilterable } from '../domain/filters'
-import { type LayerDef, type LayerGroup, layersByGroup, visibleLayers } from '../domain/layers'
+import { LAYERS, type LayerDef, type LayerGroup, isAvailable, layersByGroup, visibleLayers } from '../domain/layers'
 import { PRICE_TYPES } from '../domain/place'
 import type { ThemeId } from '../domain/themes'
 import { useAppStore } from '../state/appStore'
@@ -65,7 +65,10 @@ function Group({ group, collapsible, open, onOpen, meta, children }: GroupProps)
 function OptInSwitch() {
   const { t } = useTranslation()
   const showOptIn = useAppStore((state) => state.showOptIn)
+  const tileFields = useAppStore((state) => state.tileFields)
   const setShowOptIn = useAppStore((state) => state.setShowOptIn)
+  // Nothing to opt in to while the tiles carry no opt-in layer.
+  if (!LAYERS.some((def: LayerDef) => def.optIn && isAvailable(def, tileFields))) return null
   return (
     <div className="optin">
       <label className="theme">
@@ -84,7 +87,8 @@ function ThemeList() {
   const priceType = useAppStore((state) => state.priceType)
   const setPriceType = useAppStore((state) => state.setPriceType)
   const showOptIn = useAppStore((state) => state.showOptIn)
-  const groups = layersByGroup(visibleLayers(showOptIn))
+  const tileFields = useAppStore((state) => state.tileFields)
+  const groups = layersByGroup(visibleLayers(showOptIn, tileFields))
   const current = groups.find((entry) => entry.layers.some((def) => def.id === theme))?.group ?? null
   const [open, setOpen] = useState<LayerGroup | null>(current)
   const base = useId()
@@ -231,8 +235,9 @@ function FilterList() {
   const setFilter = useAppStore((state) => state.setFilter)
   const resetFilters = useAppStore((state) => state.resetFilters)
   const showOptIn = useAppStore((state) => state.showOptIn)
+  const tileFields = useAppStore((state) => state.tileFields)
   const base = useId()
-  const groups = layersByGroup(visibleLayers(showOptIn).filter(isFilterable))
+  const groups = layersByGroup(visibleLayers(showOptIn, tileFields).filter(isFilterable))
   const activeIn = (layers: readonly LayerDef[]) => layers.filter((def) => filters[def.id as FilterKey] !== undefined).length
   const [open, setOpen] = useState<LayerGroup | null>(() => groups.find((entry) => activeIn(entry.layers) > 0)?.group ?? null)
 

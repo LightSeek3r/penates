@@ -1,6 +1,6 @@
 # Mentions légales et confidentialité
 
-Dernière mise à jour : 5 novembre 2026. Ces informations concernent settling-map (settling.unit42.fr). Les mentions légales du domaine principal figurent sur [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
+Dernière mise à jour : 6 novembre 2026. Ces informations concernent settling-map (settling.unit42.fr). Les mentions légales du domaine principal figurent sur [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
 
 ## Éditeur
 
@@ -44,7 +44,7 @@ La politique de confidentialité du domaine principal, qui couvre les autres pag
 
 ## Stockage dans votre navigateur
 
-Le site ne dépose aucun cookie. Le seul élément qu'il garde dans votre navigateur de lui-même est votre choix de ne pas être compté, si vous le faites. L'application installable utilise le stockage du navigateur (Cache Storage) pour fonctionner hors connexion : fichiers de l'application, zones du fond de carte déjà consultées et, si vous le demandez, la carte des prix. Ce stockage ne contient aucune donnée personnelle ; vous pouvez le vider depuis les réglages du navigateur, ou supprimer la carte des prix enregistrée depuis la fenêtre « Sources et limites ».
+Le site ne dépose aucun cookie. Il ne garde de lui-même dans votre navigateur que deux choix, si vous les faites : ne pas être compté, et afficher la délinquance enregistrée. Ces choix ne sont jamais transmis. L'application installable utilise le stockage du navigateur (Cache Storage) pour fonctionner hors connexion : fichiers de l'application, zones du fond de carte déjà consultées et, si vous le demandez, la carte des prix. Ce stockage ne contient aucune donnée personnelle ; vous pouvez le vider depuis les réglages du navigateur, ou supprimer la carte des prix enregistrée depuis la fenêtre « Sources et limites ».
 
 ## Vos droits
 

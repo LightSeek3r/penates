@@ -34,7 +34,7 @@ export type LayerGroup = (typeof GROUPS)[number]
 export type Direction = 'worse' | 'better' | 'neutral'
 
 /** Display unit; the matching FR/EN template is `units.<unit>`. */
-export type Unit = 'eurM2' | 'km' | 'm' | 'hoursYear' | 'daysYear' | 'percent' | 'per1000' | 'eurM2Month' | 'count' | 'class'
+export type Unit = 'eurM2' | 'km' | 'm' | 'hoursYear' | 'daysYear' | 'percent' | 'per1000' | 'per1000Dwellings' | 'eurM2Month' | 'count' | 'class'
 
 /** Values cut into classes at each break (a value equal to a break belongs to the class above). */
 export interface StepScale {
@@ -284,7 +284,7 @@ export const LAYERS = [
     group: 'safety',
     ladder: 'safety',
     direction: 'worse',
-    unit: 'per1000',
+    unit: 'per1000Dwellings',
     decimals: 1,
     scale: { kind: 'steps', breaks: [1, 2, 3, 5, 8] },
     filter: { kind: 'max', min: 0, max: 15, step: 1 },
@@ -313,9 +313,31 @@ export function propertyOf(def: LayerDef, priceType: PriceType): string {
   return def.property.replace('{type}', priceType)
 }
 
-/** Visible layers, in catalogue order: opt-in layers only once the visitor has asked for them. */
-export function visibleLayers(showOptIn: boolean): readonly LayerDef[] {
-  return showOptIn ? LAYERS : LAYERS.filter((def: LayerDef) => !def.optIn)
+/** Properties the communes tiles carry, or null while unknown (everything is then offered). */
+export type TileFields = ReadonlySet<string> | null
+
+/** False when the loaded tiles do not carry the layer's property, so it would only grey the map out. */
+export function isAvailable(def: LayerDef, fields: TileFields): boolean {
+  return fields === null || fields.has(propertyOf(def, 'all'))
+}
+
+/**
+ * Layers to offer, in catalogue order: those the tiles carry, and opt-in layers only once the visitor has asked
+ * for them.
+ */
+export function visibleLayers(showOptIn: boolean, fields: TileFields = null): readonly LayerDef[] {
+  return LAYERS.filter((def: LayerDef) => (showOptIn || !def.optIn) && isAvailable(def, fields))
+}
+
+/** Field names of one vector layer in PMTiles / TileJSON metadata, or null when the metadata does not list them. */
+export function tileFieldsOf(metadata: unknown, layerId = 'communes'): TileFields {
+  const layers = (metadata as { vector_layers?: unknown } | null)?.vector_layers
+  if (!Array.isArray(layers)) return null
+  const layer = layers.find((candidate): candidate is { id: string; fields: Record<string, unknown> } => {
+    const entry = candidate as { id?: unknown; fields?: unknown } | null
+    return entry?.id === layerId && typeof entry.fields === 'object' && entry.fields !== null
+  })
+  return layer ? new Set(Object.keys(layer.fields)) : null
 }
 
 export function layersByGroup(layers: readonly LayerDef[]): ReadonlyArray<{ group: LayerGroup; layers: readonly LayerDef[] }> {

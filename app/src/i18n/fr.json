@@ -80,13 +80,35 @@
     "limits": "Les départements 57, 67, 68 et Mayotte ne sont pas couverts par la base DVF. Les données ont environ un semestre de retard.",
     "dataAsOf": "Données jusqu'au {{date}}",
     "credits": "Crédits",
-    "creditsDvf": "Valeurs foncières : DGFiP / Etalab, Licence Ouverte v2.0",
-    "creditsIgn": "Contours administratifs : IGN, Licence Ouverte v2.0",
-    "creditsOsm": "Fond de carte : © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap",
+    "creditGroups": {
+      "price": "Prix et communes",
+      "risk": "Risques",
+      "relief": "Altitude et relief",
+      "climate": "Climat",
+      "services": "Services",
+      "connectivity": "Internet",
+      "costs": "Coût du logement",
+      "safety": "Délinquance enregistrée (sur demande)",
+      "basemap": "Fond de carte"
+    },
+    "credit": {
+      "dvf": "Valeurs foncières : DGFiP / Etalab (DVF), Licence Ouverte v2.0",
+      "ign": "Contours et chefs-lieux : IGN (Admin Express), Licence Ouverte v2.0",
+      "seismic": "Zonage sismique : Géorisques (BRGM, ministère de la Transition écologique), Licence Ouverte",
+      "gaspar": "Inondation : Géorisques, base GASPAR (ministère de la Transition écologique), Licence Ouverte v2.0",
+      "brgm": "Argiles et cavités : BRGM via Géorisques (carte d'exposition 2026, BDCavités), Licence Ouverte v2.0",
+      "asnr": "Radon : ASNR (ex-IRSN), Licence Ouverte v1.0",
+      "rgeAlti": "Source : IGN, RGE ALTI, Licence Ouverte v2.0",
+      "meteoFrance": "Source : Météo-France, fiches climatologiques (normales 1991-2020), Licence Ouverte v2.0",
+      "insee": "Source : Insee, base permanente des équipements (BPE 2025), Licence Ouverte v2.0",
+      "arcep": "Source : Arcep, Ma connexion internet et observatoire des déploiements FttH (T2 2026), Licence Ouverte v2.0",
+      "anil": "Loyers : Estimations ANIL, à partir des données du Groupe SeLoger et de leboncoin (carte des loyers 2025), Licence Ouverte v2.0",
+      "dgfip": "Taxe foncière : DGFiP, fichier de recensement des éléments d'imposition (REI), Licence Ouverte v2.0",
+      "ssmsi": "Source : SSMSI, ministère de l'Intérieur, base communale de la délinquance enregistrée, Licence Ouverte v2.0",
+      "osm": "Fond de carte : © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap"
+    },
     "privacy": "Aucun compte, aucun cookie. Seuls des totaux anonymes d'utilisation sont comptés (voir ci-dessous). Les tuiles de carte sont chargées depuis OpenFreeMap et Cloudflare.",
-    "methodExtra": "Zone sismique : zonage réglementaire par commune (Géorisques). Distances : plus courte distance à vol d'oiseau entre un point de la commune et l'équipement le plus proche de la base permanente des équipements de l'Insee ; ce ne sont pas des temps de trajet et un point unique représente toute la commune.",
-    "creditsInsee": "Équipements : Insee, base permanente des équipements, Licence Ouverte v2.0",
-    "creditsGeorisques": "Zonage sismique : Géorisques (BRGM, ministère de la Transition écologique), Licence Ouverte",
+    "methodExtra": "Les autres indicateurs (risques, altitude, climat, distances, fibre, loyer, taxe foncière, délinquance sur demande) sont des valeurs par commune tirées de données publiques ; une donnée inconnue reste vide, jamais 0. Les risques ne décrivent pas votre parcelle et ne remplacent pas l'état des risques (ERRIAL). Le climat est interpolé depuis les stations voisines. Les distances vont à vol d'oiseau d'un point de la commune à l'équipement le plus proche de la base permanente des équipements de l'Insee : ce ne sont pas des temps de trajet. Le loyer est un loyer d'annonce et le taux de taxe foncière n'est pas le montant de l'impôt.",
     "pages": "Pages de documentation",
     "methodPage": "Méthode détaillée",
     "sourcesPage": "Sources et licences",
@@ -140,11 +162,11 @@
     },
     "risk": {
       "title": "Risques",
-      "note": "Classes indicatives tirées de cartes de repérage : elles ne décrivent pas votre parcelle et ne remplacent pas l'état des risques (ERRIAL)."
+      "note": "Indicateurs de repérage à l'échelle de la commune : ils ne décrivent pas votre parcelle et ne remplacent pas l'état des risques (ERRIAL)."
     },
     "relief": {
       "title": "Altitude et relief",
-      "note": "Altitude d'un point de la commune ; dénivelé entre ses points le plus bas et le plus haut."
+      "note": "Altitude au chef-lieu (point de la mairie) ; dénivelé entre les points le plus bas et le plus haut de la commune."
     },
     "climate": {
       "title": "Climat",
@@ -192,17 +214,17 @@
     },
     "flood": {
       "name": "Inondation",
-      "legend": "Exposition aux inondations",
-      "filter": "Inondation : classe maximale",
-      "short": "classe {{value}}",
-      "classLabel": "Classe {{value}} : {{name}}",
+      "legend": "Inondation : démarches de l'État",
+      "filter": "Inondation : étape maximale",
+      "short": "étape {{value}}",
+      "classLabel": "Étape {{value}} : {{name}}",
       "classes": {
-        "0": "aucune zone inondable recensée",
-        "1": "exposition faible",
-        "2": "exposition moyenne",
-        "3": "exposition forte"
+        "0": "aucune démarche recensée",
+        "1": "atlas des zones inondables ou DDRM seulement",
+        "2": "plan de prévention prescrit",
+        "3": "plan de prévention approuvé"
       },
-      "about": "Repérage indicatif à l'échelle de la commune, d'après les zones inondables connues (Géorisques). Il ne décrit pas votre parcelle et ne remplace pas l'état des risques (ERRIAL). « Aucune zone recensée » ne veut pas dire sans risque."
+      "about": "Avancement des démarches de l'État face aux inondations dans la commune (Géorisques) : atlas des zones inondables ou dossier départemental des risques (DDRM), puis plan de prévention prescrit, puis approuvé. Ce n'est pas une mesure de l'exposition de votre parcelle et cela ne remplace pas l'état des risques (ERRIAL). 0 veut dire aucune démarche recensée, pas absence de risque."
     },
     "clay": {
       "name": "Argiles (retrait-gonflement)",
@@ -229,7 +251,7 @@
         "2": "faible, facteurs géologiques aggravants",
         "3": "potentiel significatif"
       },
-      "about": "Potentiel radon des sols par commune (IRSN). Seule une mesure dans le logement donne l'exposition réelle."
+      "about": "Potentiel radon des sols par commune (ASNR, ex-IRSN). Seule une mesure dans le logement donne l'exposition réelle."
     },
     "cavities": {
       "name": "Cavités souterraines",
@@ -241,7 +263,7 @@
       "name": "Altitude",
       "legend": "Altitude",
       "filter": "Altitude",
-      "about": "Altitude d'un point représentatif de la commune (IGN). Dans les grandes communes de montagne, elle varie beaucoup d'un lieu à l'autre."
+      "about": "Altitude du chef-lieu (le point de la mairie, IGN), pas de toute la commune : dans les grandes communes de montagne, elle varie beaucoup d'un lieu à l'autre."
     },
     "relief": {
       "name": "Dénivelé",
@@ -265,7 +287,7 @@
       "name": "Jours de chaleur vers 2050",
       "legend": "Jours à 30 °C ou plus vers 2050",
       "filter": "Jours à 30 °C vers 2050, au plus",
-      "about": "Projection pour une France réchauffée de 2,7 °C (trajectoire de référence TRACC, vers 2050). Une projection climatique, pas une prévision."
+      "about": "Normale observée 1991-2020, augmentée de l'écart modélisé pour une France réchauffée de 2,7 °C (trajectoire de référence TRACC, vers 2050). Une projection, pas une prévision."
     },
     "hospital": {
       "name": "Hôpital",
@@ -355,7 +377,7 @@
       "name": "Loyer indicatif",
       "legend": "Loyer indicatif, par mois",
       "filter": "Loyer indicatif",
-      "about": "Loyer d'annonce charges comprises pour un appartement type (carte des loyers). Une moyenne d'annonces, pas le loyer d'un logement précis."
+      "about": "Loyer d'annonce indicatif, charges comprises, mêlant appartements et maisons (carte des loyers). Une moyenne d'annonces, pas le loyer d'un logement précis."
     },
     "landtax": {
       "name": "Taxe foncière",
@@ -365,15 +387,15 @@
     },
     "violence": {
       "name": "Atteintes aux personnes",
-      "legend": "Atteintes aux personnes enregistrées, par an",
+      "legend": "Atteintes aux personnes enregistrées, pour 1 000 habitants par an",
       "filter": "Atteintes aux personnes, au plus",
       "about": "Violences contre les personnes enregistrées par la police et la gendarmerie (SSMSI), au lieu de l'infraction, pour 1 000 habitants."
     },
     "burglary": {
       "name": "Cambriolages",
-      "legend": "Cambriolages de logements enregistrés, par an",
+      "legend": "Cambriolages de logements enregistrés, pour 1 000 logements par an",
       "filter": "Cambriolages, au plus",
-      "about": "Cambriolages de logements enregistrés par la police et la gendarmerie (SSMSI), pour 1 000 habitants."
+      "about": "Cambriolages de logements enregistrés par la police et la gendarmerie (SSMSI), pour 1 000 logements (et non pour 1 000 habitants)."
     }
   },
   "units": {
@@ -384,6 +406,7 @@
     "daysYear": "{{value}} j/an",
     "percent": "{{value}} %",
     "per1000": "{{value}} pour 1 000 hab.",
+    "per1000Dwellings": "{{value}} pour 1 000 logements",
     "eurM2Month": "{{value}} €/m²/mois",
     "count": "{{value}}",
     "class": "{{value}} ({{name}})"

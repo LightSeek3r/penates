@@ -1,22 +1,37 @@
 # Data licences and attributions
 
-One row per source. Add a row before a layer ships. Verified 2026-11-04 unless noted. Layers marked "in progress" or "planned" are not yet published on the map.
+One row per source. Add a row before a layer ships. Rows on price, boundaries, facilities, seismic zoning and the basemap were verified on 2026-11-04; the rows of the layers added on 2026-11-06 take the licence recorded in each pipeline module's provenance (`pipeline/settling/layers/`). Each edition, download date and checksum is also written to the build manifest. Layers marked "planned" are not yet published on the map.
 
-| Layer | Producer | Licence | Required attribution / conditions |
-|---|---|---|---|
-| Property transactions (DVF, geo-DVF) | DGFiP, Etalab | Licence Ouverte v2.0 + DGFiP terms of use | Do not re-identify persons; data must not be indexable by search engines. Publish aggregates only. Alsace-Moselle (57, 67, 68) and Mayotte absent. |
-| Rent estimates (planned) | ANIL | Licence Ouverte v2.0 | « Estimations ANIL, à partir des données du Groupe SeLoger et de leboncoin » (asking rents, not signed leases) |
-| Administrative boundaries | IGN (Admin Express, Contours IRIS) | Licence Ouverte v2.0 | Source: IGN |
-| Seismic zoning | Géorisques (BRGM, MTE) | Licence Ouverte | Source: Géorisques. Indicative only; does not replace the legal ERRIAL |
-| Clay (RGA), flood (TRI), cavities, radon (planned) | Géorisques (BRGM, MTE) | Licence Ouverte / Etalab 2.0 | Indicative only; does not replace the legal ERRIAL |
-| Elevation (RGE ALTI, LiDAR HD, BD TOPO) (planned) | IGN | Licence Ouverte v2.0 | Source: IGN |
-| Sunshine, temperature (planned) | Météo-France | Licence Ouverte v2.0 | Source: Météo-France |
-| Recorded crime (planned) | SSMSI, Ministère de l'Intérieur | Licence Ouverte v2.0 | Recorded offences, not actual crime; small communes hidden by statistical secrecy |
-| Hospitals (FINESS+) (planned) | ANS | Licence Ouverte v2.0 | Source: ANS |
-| GP accessibility (APL) (planned) | DREES | Licence Ouverte v2.0 | Source: DREES |
-| Schools, IPS, IVAL (planned) | Ministère de l'Éducation nationale | Licence Ouverte v2.0 | Source: MENJ |
-| Equipment base (BPE 2025): hospitals, GPs, schools, supermarkets, bakeries, pools | INSEE | Licence Ouverte v2.0 | « Source : Insee », BPE 2025, with the file's update date. Aggregated distances only |
-| Population, income (planned) | INSEE | Licence Ouverte v2.0 | « Source : Insee » plus update date |
-| Basemap | OpenFreeMap / OpenMapTiles / OpenStreetMap contributors | ODbL (OSM data) | © OpenStreetMap contributors, OpenMapTiles |
+Every source below under a Licence Ouverte requires naming the source and the date of its last update; the wording to display is given in the last column.
+
+## Published layers
+
+| Layer (tile properties) | Publisher | Licence | Source | What we use | Required attribution / conditions |
+| --- | --- | --- | --- | --- | --- |
+| Property transactions (`p_*`, sales counts) | DGFiP, Etalab (DVF, geo-DVF) | Licence Ouverte v2.0 + DGFiP terms of use | [data.gouv.fr: DVF géolocalisées](https://www.data.gouv.fr/datasets/demandes-de-valeurs-foncieres-geolocalisees/) | Five years of sales, reduced to medians and counts per commune | Do not re-identify persons; data must not be indexable by search engines. Publish aggregates only. Alsace-Moselle (57, 67, 68) and Mayotte absent. |
+| Administrative boundaries, chef-lieu points | IGN (ADMIN EXPRESS COG-CARTO PE) | Licence Ouverte v2.0 | [Géoplateforme: ADMIN EXPRESS COG-CARTO PE](https://data.geopf.fr/telechargement/resource/ADMIN-EXPRESS-COG-CARTO-PE) | Commune and arrondissement outlines; chef-lieu points as reference for altitude and climate | « Source : IGN » |
+| Seismic zoning (`sz`) | Géorisques (BRGM, Ministère de la Transition écologique) | Licence Ouverte | [Géorisques API: zonage sismique](https://www.georisques.gouv.fr/api/v1/zonage_sismique) | Regulatory zone per commune | « Source : Géorisques ». Indicative only; does not replace the legal ERRIAL |
+| Flood procedures (`fl`) | Ministère de la Transition écologique / Géorisques (GASPAR) | Licence Ouverte v2.0 (Etalab) | [files.georisques.fr: gaspar.zip](https://files.georisques.fr/GASPAR/gaspar.zip) | PPR, AZI and DDRM tables (flood risk only); the CatNat table only to know which communes GASPAR lists | « Source : Géorisques, base GASPAR » with the file date. Indicative only; does not replace the legal ERRIAL |
+| Clay shrink-swell (`cl`) | BRGM / Géorisques | Licence Ouverte v2.0 (as stated on georisques.gouv.fr) | [Géorisques: carte d'exposition 2026, per département](https://www.georisques.gouv.fr/webappReport/ws/telechargement/alearg_25) | Exposure polygons (levels 1 to 3), as shares of each commune's area | « Source : BRGM, Géorisques », exposure map 2026. Indicative only; does not replace the legal ERRIAL |
+| Radon potential (`rn`) | ASNR (formerly IRSN) | Licence Ouverte v1.0 | [data.gouv.fr: Connaître le potentiel radon de ma commune](https://www.data.gouv.fr/datasets/connaitre-le-potentiel-radon-de-ma-commune/) | Radon potential category per commune | « Source : ASNR » with the resource date. Indicative only; does not replace the legal ERRIAL |
+| Underground cavities (`cv`) | BRGM / Géorisques (BDCavités) | Licence Ouverte v2.0 (as stated on georisques.gouv.fr) | [Géorisques: cavités souterraines, per département](https://www.georisques.gouv.fr/webappReport/ws/telechargement/cavites) | Cavity records (commune code, coordinates), counted per commune; no record is published | « Source : BRGM, BDCavités (Géorisques) ». Incomplete inventory; not published for Île-de-France |
+| Altitude and relief (`alt`, `rel`) | IGN (RGE ALTI, Géoplateforme) | Licence Ouverte v2.0 (Etalab) | [data.gouv.fr: RGE ALTI](https://www.data.gouv.fr/datasets/rge-alti-r); [altimetry API](https://data.geopf.fr/altimetrie/1.0/calcul/alti/rest/elevation.json) and [WMS-R](https://data.geopf.fr/wms-r/wms) | Ground altitude at the chef-lieu; lowest and highest values on a 25 m grid; altitude of the climate target points | « Source : IGN, RGE ALTI » |
+| Sunshine and hot days (`sun`, `hot`, `cd`) | Météo-France | Licence Ouverte v2.0 (Etalab) | [data.gouv.fr: Fiches climatologiques](https://www.data.gouv.fr/datasets/fiches-climatologiques) | Station normals 1991-2020: annual sunshine hours and days with a maximum of 30 °C or more, interpolated per commune | « Source : Météo-France », normals 1991-2020, with the sheet date |
+| Facilities (`d_*`, 13 types) | INSEE (BPE 2025) | Licence Ouverte v2.0 | [insee.fr: BPE 2025](https://www.insee.fr/fr/statistiques/8217525) | Positions of hospitals, GPs, pharmacies, dentists, crèches, primary schools, collèges, lycées, supermarkets, bakeries, post offices, swimming pools, railway stations; only distances per commune leave the build | « Source : Insee », BPE 2025, with the file's update date. Aggregated distances only |
+| Fibre (`fb`) | Arcep | Licence Ouverte v2.0 (Etalab) | [data.gouv.fr: Ma connexion internet](https://www.data.gouv.fr/datasets/ma-connexion-internet); [observatoire des déploiements FttH](https://www.data.gouv.fr/datasets/le-marche-du-haut-et-tres-haut-debit-fixe-deploiements) | Premises and FttH-eligible premises per commune, quarter 2026 T2; observatory (connectable premises) for the Paris, Lyon and Marseille arrondissements | « Source : Arcep », Ma connexion internet and observatoire des déploiements FttH, T2 2026. Eligible, not subscribed |
+| Recorded crime (`cr_v`, `cr_b`), opt-in | SSMSI, Ministère de l'Intérieur | Licence Ouverte v2.0 (Etalab) | [data.gouv.fr: base statistique communale de la délinquance enregistrée](https://www.data.gouv.fr/datasets/bases-statistiques-communale-departementale-et-regionale-de-la-delinquance-enregistree-par-la-police-et-la-gendarmerie-nationales) | Edition July 2026: violence (three victim indicators) and home burglaries, 2023-2025, with the base's residents and dwellings | « Source : SSMSI, base statistique communale de la délinquance enregistrée ». Recorded offences, not actual crime; communes withheld by statistical secrecy stay absent |
+| Rent estimates (`rt`, `rtq`) | Ministère chargé du logement (DHUP) / ANIL (Carte des loyers 2025) | Licence Ouverte v2.0 (Etalab) | [data.gouv.fr: Carte des loyers 2025](https://www.data.gouv.fr/datasets/carte-des-loyers-indicateurs-de-loyers-dannonce-par-commune-en-2025) | Predicted rent per m² for flats and houses, prediction interval, listings in the commune, model R² | « Estimations ANIL, à partir des données du Groupe SeLoger et de leboncoin ». Asking rents, not signed leases |
+| Land-tax rate (`tf`) | DGFiP (REI), via data.economie.gouv.fr | Licence Ouverte v2.0 (Etalab) | [data.economie.gouv.fr: Fiscalité locale des particuliers](https://data.economie.gouv.fr/explore/dataset/fiscalite-locale-des-particuliers) | Global built-property rate (`taux_global_tfb`) of the latest year, and its parts to check the sum | « Source : DGFiP, fichier de recensement des éléments d'imposition (REI) » with the tax year. A rate, not a bill |
+| Basemap | OpenFreeMap / OpenMapTiles / OpenStreetMap contributors | ODbL (OSM data) | [openfreemap.org](https://openfreemap.org) | Vector tiles and fonts, loaded by your browser | © OpenStreetMap contributors, OpenMapTiles |
+
+## Planned
+
+| Layer | Publisher | Licence | Notes |
+| --- | --- | --- | --- |
+| Hot days around 2050 (`h50`, TRACC +2.7 °C) | Météo-France (Climadiag Commune, DRIAS) | To verify before it ships | Listed in the app but not produced: the files are published only as `.tar` archives the build cannot download yet |
+| Hospitals (FINESS+) | ANS | Licence Ouverte v2.0 | « Source : ANS » |
+| GP accessibility (APL) | DREES | Licence Ouverte v2.0 | « Source : DREES » |
+| Schools, IPS, IVAL | Ministère de l'Éducation nationale | Licence Ouverte v2.0 | « Source : MENJ » |
+| Population, income | INSEE | Licence Ouverte v2.0 | « Source : Insee » plus update date |
 
 Not used in v1 (licence constraints): Atmo air quality (ODbL share-alike).

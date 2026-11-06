@@ -24,8 +24,8 @@
     "methodology": {
       "slug": "methodologie",
       "label": "Méthode",
-      "title": "Méthode : comment est calculé le prix au m² · settling-map",
-      "description": "Comment settling-map calcule le prix médian au m² par commune à partir des données DVF : ventes retenues, fenêtre de temps, indice de fiabilité et limites."
+      "title": "Méthode : prix au m², risques, services, climat et coûts · settling-map",
+      "description": "Comment settling-map calcule le prix médian au m² par commune (DVF), et chaque indicateur affiché : risques, relief, climat, services, fibre, loyers, taxe foncière, délinquance enregistrée. Sources, seuils et limites."
     },
     "sources": {
       "slug": "sources",

@@ -48,7 +48,10 @@ from settling.tiles import TileFeature, TileLayer, build_tiles, to_web_mercator,
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TILE_FILE = "communes.pmtiles"
-ATTRIBUTION = "© IGN, DGFiP/Etalab, INSEE, Géorisques (Licence Ouverte v2.0)"
+ATTRIBUTION = (
+    "© IGN, DGFiP/Etalab, INSEE, Géorisques, BRGM, ASNR, Météo-France, ARCEP, SSMSI, ANIL "
+    "(Licence Ouverte, Etalab)"
+)
 DEPARTMENTS_ZOOMS = (0, 7)
 # The app frames metropolitan France at about z4.8 on a phone: communes must exist from z4 for filters.
 COMMUNES_ZOOMS = (4, 10)

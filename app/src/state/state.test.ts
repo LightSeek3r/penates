@@ -98,3 +98,18 @@ describe('opt-in layers', () => {
     expect(saved).toEqual([true, false])
   })
 })
+
+describe('layers the tiles lack', () => {
+  it('fall back to price and lose their filters once the tile fields are known', () => {
+    const store = createStore(parseHash('#th=heat2050&f=heat2050-10.gp-5000.sunshine-2000', 'fr'))
+    expect(store.getState().theme).toBe('heat2050')
+    store.getState().setTileFields(new Set(['code', 'p_all', 'd_gp', 'sun']))
+    expect(store.getState()).toMatchObject({ theme: 'price', filters: { gp: 5000, sunshine: 2000 } })
+    store.getState().setTheme('heat2050')
+    store.getState().setFilter('heat2050', 10)
+    expect(store.getState()).toMatchObject({ theme: 'price', filters: { gp: 5000, sunshine: 2000 } })
+    store.getState().setTheme('sunshine')
+    expect(store.getState().theme).toBe('sunshine')
+  })
+})
+

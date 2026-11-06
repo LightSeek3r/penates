@@ -1,6 +1,6 @@
 # Legal notice and privacy
 
-Last updated: November 5, 2026. This covers settling-map (settling.unit42.fr). The legal notice of the main domain is at [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
+Last updated: November 6, 2026. This covers settling-map (settling.unit42.fr). The legal notice of the main domain is at [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
 
 ## Publisher
 
@@ -44,7 +44,7 @@ The privacy policy of the main domain, which covers the other pages of unit42.fr
 
 ## Storage in your browser
 
-The site sets no cookies. The only thing it keeps in your browser by itself is your choice not to be counted, if you make it. The installable app uses browser storage (Cache Storage) to work offline: app files, basemap areas you have already viewed and, if you ask for it, the price map. This storage holds no personal data; you can clear it from your browser settings, or remove the saved price map from the "Sources and limits" window.
+The site sets no cookies. The only things it keeps in your browser by itself are two choices, if you make them: not to be counted, and to show recorded crime. These choices are never sent. The installable app uses browser storage (Cache Storage) to work offline: app files, basemap areas you have already viewed and, if you ask for it, the price map. This storage holds no personal data; you can clear it from your browser settings, or remove the saved price map from the "Sources and limits" window.
 
 ## Your rights
 

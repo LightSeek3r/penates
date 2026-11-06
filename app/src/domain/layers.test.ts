@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { THEMES as COUNTED_THEMES, FILTERS as COUNTED_FILTERS } from '../../functions/_lib/events'
 import { dictionaries } from '../i18n'
 import { FILTER_DEFS, type FilterDef, type FilterValue, type Filters, formatFilters, matchExpression, normaliseFilter, parseFilters } from './filters'
-import { GROUPS, LADDERS, LAYERS as CATALOGUE, NO_DATA_COLOR, type LayerDef, layerColors, layersByGroup, pickLadder, readLayerValue, visibleLayers } from './layers'
+import { GROUPS, LADDERS, LAYERS as CATALOGUE, NO_DATA_COLOR, tileFieldsOf, type LayerDef, layerColors, layersByGroup, pickLadder, readLayerValue, visibleLayers } from './layers'
 import { fillExpression } from './themes'
 
 const LAYERS: readonly LayerDef[] = CATALOGUE
@@ -241,3 +241,21 @@ describe('URL state', () => {
     expect(parseFilters('flood-')).toEqual({})
   })
 })
+
+describe('properties missing from the tiles', () => {
+  const metadata = { vector_layers: [{ id: 'departments', fields: { p_all: 'Number', h50: 'Number' } }, { id: 'communes', fields: { code: 'String', p_all: 'Number', sz: 'Number', d_hos: 'Number' } }] }
+
+  it('reads the communes fields from the tile metadata, and nothing from malformed metadata', () => {
+    expect(tileFieldsOf(metadata)).toEqual(new Set(['code', 'p_all', 'sz', 'd_hos']))
+    expect(tileFieldsOf({})).toBeNull()
+    expect(tileFieldsOf(null)).toBeNull()
+    expect(tileFieldsOf({ vector_layers: [{ id: 'communes' }] })).toBeNull()
+  })
+
+  it('offers only the layers the tiles carry, and everything while the fields are unknown', () => {
+    const fields = tileFieldsOf(metadata)
+    expect(visibleLayers(true, fields).map((def) => def.id)).toEqual(['price', 'seismic', 'hospital'])
+    expect(visibleLayers(false, null)).toHaveLength(LAYERS.filter((def) => !def.optIn).length)
+  })
+})
+
