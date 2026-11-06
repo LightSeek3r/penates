@@ -24,9 +24,23 @@ Climate is measured at stations, not in communes, so every commune value is an i
 
 Overseas communes are absent: the Lambert-93 geometry used here is metropolitan.
 
-`h50` (hot days around 2050 under the TRACC France warming level +2.7 °C) is not produced. The per-commune
-Climadiag Commune files and the gridded TRACC-2023 indicators are published only as `.tar` archives under
-object.files.data.gouv.fr/meteofrance-drias, and the build machine's proxy blocks that file type.
+`h50` is a PROJECTION, not a measurement: mean number of days per year with a maximum >= 30 °C "around 2050"
+under France's reference warming trajectory TRACC (PNACC-3: +1.5 / +2 / +3 °C worldwide in 2030 / 2050 /
+2100, that is +2 / +2.7 / +4 °C for mainland France and Corsica, per Météo-France's README_TRACC). Source:
+Météo-France TRACC-2023 indicators (DRIAS, Licence Ouverte), member `TRACC_MEMBERS["q50"]` of the pinned archive
+`TRACC_URL`: indicator TX30D ("Nombre de jours avec une température maximale ≥ 30 °C", absolute value),
+warming level RWL-27 (+2.7 °C), Explore2-2022 regional simulations bias-adjusted by ADAMONT on SAFRAN
+(adjustment reference 1980-2011), RCP8.5 used only as a path to the warming level, ensemble median (ENSq50).
+"Around 2050" means: for each simulation, the mean over the 20-year window [Y-10, Y+9] centred on the year Y
+when that simulation reaches +2.7 °C over France; Y differs between simulations; the median is then taken
+across simulations. Values are on the SAFRAN 8 km grid: a commune takes the grid point nearest its target
+point (within `TRACC_MAX_KM`), else `h50` is absent. A grid cell stands for its mean altitude, so a valley
+chef-lieu in the mountains gets a value representative of higher ground (too few hot days). `h50` and `hot`
+come from different sources (model grid against station normals 1991-2020); compare them with care.
+Climadiag Commune (Météo-France's per-commune version of the same data) was probed but not used: its CSV
+codes indicators as G1..T1 with no definition in the files sampled so far.
+On a machine whose proxy blocks `.tar` downloads, `h50` is absent and the source records why; a local copy of
+the archive can be given with `--layer-file climate_tracc=PATH` (its sha256 must match `TRACC_SHA256`).
 
 A station table cached by this module (CSV, columns `STATION_COLUMNS`) can be given with
 `--layer-file climate=PATH`.
@@ -41,6 +55,7 @@ import logging
 import math
 import re
 import statistics
+import tarfile
 import threading
 import time
 from collections import Counter
@@ -87,6 +102,25 @@ CHEF_LIEU_LAYERS = {
     "chef_lieu_de_commune": "code_insee_de_la_commune",
     "chef_lieu_d_arrondissement_municipal": "code_insee_de_l_arrondissement_municipal",
 }
+
+# Pinned from the GitHub Actions probe of 2026-11-06 (run 42246011372).
+TRACC_URL = (
+    "https://object.files.data.gouv.fr/meteofrance-drias/TRACC-2023/CSV_wk_032025/"
+    "Indicateurs-Absolue_Centiles-Explore2-Climat_Moyenne-20ans_RWL27_csv.tar"
+)
+TRACC_SIZE = 108_503_040
+TRACC_SHA256 = "59f03c86830c7804cf30b11d8095839e5238e73206eb727416d7dafda34c94df"
+TRACC_MEMBERS = {
+    stat: f"TX30D_yr_RWL-27_TIMEavg_GEOxy_FR-Metro_EXPLORE2-2022_MF-ADAMONT_rcp85_ENS{stat}.csv"
+    for stat in ("q50", "min", "max")
+}
+TRACC_INDICATOR = "TX30D"
+TRACC_RWL = "RWL-27"
+TRACC_COLUMNS = ["Point", "Latitude", "Longitude", "RWL", "Value"]
+TRACC_LICENCE = "Licence Ouverte / Etalab 2.0 (Météo-France, DRIAS)"
+TRACC_MAX_KM = 8  # grid spacing; any land point is within 5.7 km of a cell centre
+ENSEMBLE_TOLERANCE_DAYS = 0.01
+TIMEDELTA = re.compile(r"(-)?(\d+) days (\d{2}):(\d{2}):(\d{2}(?:\.\d+)?)")
 
 NORMALS = (1991, 2020)
 MIN_YEARS = 25
@@ -138,7 +172,8 @@ class Station:
 
 
 STATION_COLUMNS = tuple(f.name for f in fields(Station))
-PROPERTIES = ("sun", "hot")
+PROPERTIES = ("sun", "hot")  # interpolated from stations
+OUTPUTS = (*PROPERTIES, "cd", "h50")
 
 
 def normal(station: Station, prop: str) -> float | None:
@@ -493,6 +528,159 @@ def to_properties(codes: list[str], sun: Interpolated, hot: Interpolated) -> Pro
     return properties
 
 
+def add_projection(properties: Properties, codes: list[str], h50: np.ndarray) -> None:
+    """Add the rounded `h50` projection in place; NaN stays absent."""
+    for code, value in zip(codes, h50):
+        if not math.isnan(value):
+            properties.setdefault(code, {})["h50"] = round_half_up(value)
+
+
+# --- TRACC projection (h50) -------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class TraccGrid:
+    point: np.ndarray  # grid point id (shared by the files of one archive)
+    lon: np.ndarray
+    lat: np.ndarray
+    value: np.ndarray  # days per year; only points with a value are kept
+
+
+def tracc_days(text: str) -> float:
+    """A TRACC day count. The CSVs write it as a pandas timedelta ("6 days 08:23:59.991760256" = 6.35 days,
+    seen in every TX30D file of the probe); plain numbers and "nan" are accepted too."""
+    match = TIMEDELTA.fullmatch(text.strip())
+    if match:
+        sign = -1.0 if match[1] else 1.0
+        return sign * (int(match[2]) + int(match[3]) / 24 + int(match[4]) / 1440 + float(match[5]) / 86400)
+    try:
+        return float(text)  # "nan" included
+    except ValueError:
+        raise SourceError(f"TRACC value {text!r} is neither a number nor a timedelta") from None
+
+
+def parse_tracc_csv(text: str) -> TraccGrid:
+    """Grid points with a value; checks indicator, warming level, columns and the RWL of every row."""
+    lines = text.splitlines()
+    comments = [line for line in lines if line.startswith("#")]
+    if not any(TRACC_INDICATOR in line and "30 °C" in line for line in comments):
+        raise SourceError(f"TRACC file does not describe {TRACC_INDICATOR} (days with Tx >= 30 °C)")
+    if not any("RWL" in line and "2.7" in line for line in comments):
+        raise SourceError("TRACC file is not for the +2.7 °C warming level")
+    start = next((i for i, line in enumerate(lines) if line.startswith("Point;")), None)
+    if start is None or lines[start].rstrip(";").split(";") != TRACC_COLUMNS:
+        raise SourceError(f"TRACC file columns differ from {TRACC_COLUMNS}")
+    rows = []
+    for line in lines[start + 1:]:
+        if not line.strip():
+            continue
+        point, lat, lon, rwl, value = line.rstrip(";").split(";")
+        if rwl != TRACC_RWL:
+            raise SourceError(f"TRACC row for {rwl}, expected {TRACC_RWL}")
+        days = tracc_days(value)
+        if not math.isnan(days):
+            rows.append((int(point), float(lon), float(lat), days))
+    if not rows:
+        raise SourceError("TRACC file has no value")
+    point, lon, lat, value = (np.asarray(column) for column in zip(*rows))
+    return TraccGrid(point.astype(np.int64), lon.astype(float), lat.astype(float), value.astype(float))
+
+
+def read_tracc_members(tar_path: Path) -> dict[str, str]:
+    """Statistic -> text of its TX30D member, read from the archive without extracting it to disk."""
+    with tarfile.open(tar_path) as tar:
+        by_name = {Path(m.name).name: m for m in tar.getmembers() if m.isfile()}
+        missing = sorted(set(TRACC_MEMBERS.values()) - by_name.keys())
+        if missing:
+            raise SourceError(f"{tar_path.name} lacks members {missing}")
+        return {stat: tar.extractfile(by_name[name]).read().decode("utf-8") for stat, name in TRACC_MEMBERS.items()}
+
+
+def check_ensemble_order(grids: dict[str, TraccGrid]) -> list[str]:
+    """The in-file "Modele" labels do not match the file names (the ENSq50 file says "MAX de l'ensemble", the
+    ENSmax file "MEAN"), while the values seen follow the names (min < q50 < max). Every point is checked."""
+    median = grids["q50"]
+    problems = []
+    for stat, sign in (("min", 1), ("max", -1)):
+        other = dict(zip(grids[stat].point.tolist(), grids[stat].value.tolist()))
+        if set(other) != set(median.point.tolist()):
+            problems.append(f"ENS{stat} and ENSq50 cover different grid points")
+            continue
+        bound = np.array([other[p] for p in median.point.tolist()])
+        wrong = int((sign * (median.value - bound) < -ENSEMBLE_TOLERANCE_DAYS).sum())
+        if wrong:
+            problems.append(f"ENSq50 is {'below ENSmin' if sign == 1 else 'above ENSmax'} at {wrong} grid points")
+    return problems
+
+
+def tracc_archive(ctx: LayerContext) -> Path:
+    """Path of the verified archive: `--layer-file climate_tracc=PATH`, else the cached download."""
+    path = ctx.overrides.get("climate_tracc")
+    if path is None:
+        path = ctx.raw / "climate" / "tracc" / TRACC_URL.rsplit("/", 1)[-1]
+        download(ctx.session, TRACC_URL, path, expected_size=TRACC_SIZE, override_flag="--layer-file climate_tracc")
+    digest = _file_sha256(path)
+    if digest != TRACC_SHA256:
+        raise SourceError(f"{path}: sha256 {digest} differs from the pinned {TRACC_SHA256}; review the new edition")
+    return path
+
+
+def nearest_grid_values(grid: TraccGrid, targets_l93: np.ndarray, max_m: float) -> tuple[np.ndarray, np.ndarray]:
+    """Value of the nearest grid point within `max_m` of each target, and its distance in metres
+    (NaN beyond the distance or for a NaN target)."""
+    grid_xy = np.column_stack(_TO_L93.transform(grid.lon, grid.lat))
+    values, distances = np.full(len(targets_l93), np.nan), np.full(len(targets_l93), np.nan)
+    valid = ~np.isnan(targets_l93).any(axis=1)
+    if valid.any():
+        found_distance, index = cKDTree(grid_xy).query(targets_l93[valid], k=1, distance_upper_bound=max_m)
+        found = np.isfinite(found_distance)
+        safe = np.where(found, index, 0)
+        values[valid] = np.where(found, grid.value[safe], np.nan)
+        distances[valid] = np.where(found, found_distance, np.nan)
+    return values, distances
+
+
+def tracc_h50(ctx: LayerContext, targets: np.ndarray, in_scope: np.ndarray) -> tuple[np.ndarray, dict, dict]:
+    """`h50` (float days, NaN where absent) per target point, its provenance and report."""
+    source = {
+        "url": TRACC_URL, "member": TRACC_MEMBERS["q50"], "sha256": TRACC_SHA256, "size": TRACC_SIZE,
+        "licence": TRACC_LICENCE, "indicator": "TX30D, days with Tx >= 30 °C, absolute value",
+        "warming_level": "RWL-27: +2.7 °C over mainland France (TRACC 2050)",
+        "window": "per simulation, 20 years [Y-10, Y+9] around the year Y it reaches +2.7 °C",
+        "ensemble": "median (ENSq50, by file name) of Explore2-2022 ADAMONT RCP8.5 simulations",
+        "grid": f"SAFRAN 8 km, nearest point within {TRACC_MAX_KM} km of the target point",
+    }
+    try:
+        texts = read_tracc_members(tracc_archive(ctx))
+    except SourceError as error:
+        if "proxy may be blocking" not in str(error):
+            raise
+        log.warning("climate: h50 unavailable: %s", error)
+        return np.full(len(targets), np.nan), source | {"unavailable": str(error)}, {}
+    grids = {stat: parse_tracc_csv(text) for stat, text in texts.items()}
+    problems = check_ensemble_order(grids)
+    if problems:
+        raise SourceError(f"TRACC ensemble statistics inconsistent: {problems}")
+    grid = grids["q50"]
+    scoped = np.where(in_scope[:, None], targets, np.nan)
+    values, distances = nearest_grid_values(grid, scoped, TRACC_MAX_KM * 1000.0)
+    present = distances[~np.isnan(distances)]
+    report = {
+        "grid_points_with_value": len(grid.value),
+        "grid_distance_km": {f"p{round(q * 100)}": round(float(np.quantile(present, q)) / 1000, 1) for q in QUANTILES}
+        if len(present) else {},
+    }
+    return values, source, report
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 # --- layer ------------------------------------------------------------------------------------------------
 
 
@@ -554,6 +742,8 @@ def compute(ctx: LayerContext) -> LayerResult:
         results[prop] = interpolate(station_xyz[usable], values[usable], target_xyz, CUTOFF_KM[prop] * 1000.0)
         used[prop] = int(usable.sum())
     properties = to_properties(codes, results["sun"], results["hot"])
+    h50, tracc_source, tracc_report = tracc_h50(ctx, targets, in_scope)
+    add_projection(properties, codes, h50)
 
     edited = sorted({s.edited for s in stations if s.edited})
     source = {
@@ -573,6 +763,7 @@ def compute(ctx: LayerContext) -> LayerResult:
             "vertical_scale": VERTICAL_SCALE,
             "min_years": MIN_YEARS,
         },
+        "h50_projection": tracc_source,
     } | fetched
     report = {
         "stations": len(stations),
@@ -585,11 +776,12 @@ def compute(ctx: LayerContext) -> LayerResult:
         "communes_in_scope": int(in_scope.sum()),
         "targets_chef_lieu": int((is_chef_lieu & in_scope).sum()),
         "targets_without_altitude": int((in_scope & np.isnan(altitudes)).sum()),
-        "coverage": {prop: sum(prop in p for p in properties.values()) for prop in (*PROPERTIES, "cd")},
+        "coverage": {prop: sum(prop in p for p in properties.values()) for prop in OUTPUTS},
         "quantiles": _quantiles(properties),
         "contributors": {
             prop: dict(sorted(Counter(results[prop].contributors[in_scope].tolist()).items())) for prop in PROPERTIES
         },
+        "h50": tracc_report,
     }
     return LayerResult(properties=properties, source=source, report=report)
 
@@ -606,7 +798,7 @@ def _in_metropole(xy: np.ndarray) -> np.ndarray:
 
 def _quantiles(properties: Properties) -> dict[str, dict[str, int]]:
     summary = {}
-    for prop in (*PROPERTIES, "cd"):
+    for prop in OUTPUTS:
         values = np.array([p[prop] for p in properties.values() if prop in p])
         if len(values):
             summary[prop] = {f"p{round(q * 100)}": int(np.quantile(values, q, method="nearest")) for q in QUANTILES}
@@ -639,11 +831,18 @@ MIN_SUNSHINE_GAP_H = 700
 # loose `min_coverage` floors: mountain departments legitimately lack stations (sun: 2B 39%, 2A 40%,
 # 06 48%, 66 57%, 23 61%; hot: 2B 82%, 66 86%).
 NATIONAL_MIN_COMMUNES = 30_000
-NATIONAL_MIN_COVERAGE = {"sun": 0.9, "hot": 0.98}
+# h50 is absent where the proxy blocks the archive, so it has no department floor; nationally (CI) it must be there.
+NATIONAL_MIN_COVERAGE = {"sun": 0.9, "hot": 0.98, "h50": 0.97}
+# A +2.7 °C projection below today's station normal is possible locally (grid cell against station, model
+# against measurement), but must stay rare. To be confirmed by .github/workflows/check-tracc.yml.
+MIN_SHARE_H50_NOT_BELOW_HOT = 0.9
+MEDITERRANEAN = ("13", "30", "34", "84")
+BRITTANY = ("22", "29", "35", "56")
+MIN_H50_GAP_DAYS = 20
 
 
 def gate(communes: dict[str, dict]) -> list[str]:
-    problems = []
+    problems = _projection_problems(communes)
     if len(communes) >= NATIONAL_MIN_COMMUNES:
         for prop, least in NATIONAL_MIN_COVERAGE.items():
             share = sum(prop in c for c in communes.values()) / len(communes)
@@ -666,6 +865,20 @@ def gate(communes: dict[str, dict]) -> list[str]:
     return problems
 
 
+def _projection_problems(communes: dict[str, dict]) -> list[str]:
+    problems = []
+    both = [c for c in communes.values() if "h50" in c and "hot" in c]
+    if len(both) >= 20:
+        share = sum(c["h50"] >= c["hot"] for c in both) / len(both)
+        if share < MIN_SHARE_H50_NOT_BELOW_HOT:
+            problems.append(f"h50 >= hot for only {share:.1%} of communes, expected at least {MIN_SHARE_H50_NOT_BELOW_HOT:.0%}")
+    south = _median(communes, "h50", MEDITERRANEAN)
+    west = _median(communes, "h50", BRITTANY)
+    if south is not None and west is not None and south - west < MIN_H50_GAP_DAYS:
+        problems.append(f"median h50 {MEDITERRANEAN} {south} d is not {MIN_H50_GAP_DAYS} d above {BRITTANY} {west} d")
+    return problems
+
+
 def _median(communes: dict[str, dict], prop: str, departments: tuple[str, ...]) -> float | None:
     values = [c[prop] for code, c in communes.items() if code[:2] in departments and prop in c]
     return statistics.median(values) if len(values) >= 20 else None
@@ -677,9 +890,11 @@ LAYER = Layer(
         "sun": "annual sunshine hours, rounded to 10; Météo-France normals 1991-2020 interpolated from stations",
         "hot": "mean days per year with a maximum >= 30 °C; Météo-France normals 1991-2020 interpolated from stations",
         "cd": "km from the chef-lieu to the nearest station used for sun/hot (the larger of the two)",
+        "h50": "PROJECTION: mean days per year with a maximum >= 30 °C around 2050 under TRACC (+2.7 °C in France), "
+               "median of the Explore2 model ensemble, Météo-France TRACC-2023 on the 8 km grid; not a measurement",
     },
     compute=compute,
-    ranges={"sun": (1200, 3100), "hot": (0, 90), "cd": (0, max(CUTOFF_KM.values()))},
+    ranges={"sun": (1200, 3100), "hot": (0, 90), "cd": (0, max(CUTOFF_KM.values())), "h50": (0, 150)},
     # floors that every department build passes; the national figure is checked by `gate`
     min_coverage={"sun": 0.3, "hot": 0.75},
     gate=gate,

@@ -1,0 +1,118 @@
+name: Check climate h50 (TRACC)
+
+# Manual evidence run for the `climate` layer's h50 projection: the TRACC .tar archives cannot be downloaded
+# behind the development proxy. Runs the real layer nationally and prints coverage, quantiles, spot values and
+# the gate; also prints the Climadiag Commune indicator dictionary (.odt) for a later choice of source.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pipeline requirements
+        run: pip install --quiet -r requirements.txt
+      - name: Run the climate layer nationally
+        shell: python
+        run: |
+          import json, logging, statistics, sys, tarfile
+          from collections import defaultdict
+          from pathlib import Path
+          import requests
+          sys.path.insert(0, ".")
+          from settling import proximity
+          from settling.boundaries import load_boundaries
+          from settling.layers import LayerContext, check_properties
+          from settling.layers import climate
+          from settling.sources import fetch_admin_express
+
+          logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+          logging.getLogger("urllib3").setLevel(logging.WARNING)
+          raw = Path("/tmp/raw")
+          session = requests.Session()
+          session.headers["User-Agent"] = "settling-map-pipeline"
+          _, paths = fetch_admin_express(session, raw)
+          boundaries = load_boundaries(paths, None)
+          origins = proximity.representative_points_l93([a.geometry for a in boundaries.communes])
+          ctx = LayerContext(session=session, raw=raw, communes=boundaries.communes,
+                             merged_codes=boundaries.merged_codes, origins=origins)
+          result = climate.LAYER.compute(ctx)
+          print("SOURCE", json.dumps(result.source, ensure_ascii=False, indent=1))
+          print("REPORT", json.dumps(result.report, ensure_ascii=False, indent=1))
+
+          archive = raw / "climate" / "tracc" / climate.TRACC_URL.rsplit("/", 1)[-1]
+          for stat, text in climate.read_tracc_members(archive).items():
+              print(f"--- header of {climate.TRACC_MEMBERS[stat]}")
+              print("\n".join(text.splitlines()[:19]))
+
+          names = {a.code: a.name for a in boundaries.communes}
+          communes = {a.code: result.properties.get(a.code, {}) for a in boundaries.communes}
+          print("GATE", check_properties([climate.LAYER], communes))
+          both = [c for c in communes.values() if "h50" in c and "hot" in c]
+          diffs = sorted(c["h50"] - c["hot"] for c in both)
+          print(f"h50 - hot over {len(both)} communes: p1={diffs[len(diffs) // 100]} p5={diffs[len(diffs) // 20]} "
+                f"median={diffs[len(diffs) // 2]} p95={diffs[len(diffs) * 19 // 20]}; "
+                f"share h50 >= hot = {sum(d >= 0 for d in diffs) / len(diffs):.3f}")
+          by_dep = defaultdict(list)
+          for code, c in communes.items():
+              if "h50" in c:
+                  by_dep[code[:2]].append(c["h50"])
+          medians = sorted((statistics.median(v), d) for d, v in by_dep.items())
+          print("h50 department medians, lowest:", medians[:8], "highest:", medians[-8:])
+          missing = [code for code, c in communes.items() if "h50" not in c]
+          print(f"h50 absent for {len(missing)} communes, e.g.", [(c, names[c]) for c in missing[:25]])
+          for code in ["06088", "13201", "13208", "66136", "2A004", "30189", "84007", "31555", "33063", "69381",
+                       "75114", "67482", "59350", "35238", "29019", "29155", "22113", "74056", "73054", "05023",
+                       "38185", "23096"]:
+              print(code, names.get(code), communes.get(code))
+          Path("/tmp/out").mkdir(exist_ok=True)
+          Path("/tmp/out/climate-properties.json").write_text(json.dumps(result.properties))
+      - name: Print the Climadiag Commune indicator dictionary
+        continue-on-error: true
+        shell: python
+        run: |
+          import io, re, tarfile, zipfile
+          from pathlib import Path
+          import requests
+          url = ("https://object.files.data.gouv.fr/meteofrance-drias/CLIMADIAG_COMMUNE/"
+                 "donnees_climadiag_commune_v411_20260909.tar")
+          path = Path("/tmp/climadiag.tar")
+          Path("/tmp/out").mkdir(exist_ok=True)
+          with requests.get(url, stream=True, timeout=120) as r:
+              r.raise_for_status()
+              with path.open("wb") as f:
+                  for chunk in r.iter_content(1 << 20):
+                      f.write(chunk)
+          wanted = {"13055", "13201", "29019", "84007", "75056", "75114", "69123", "69381"}
+          with tarfile.open(path) as tar:
+              for member in tar.getmembers():
+                  name = Path(member.name).name
+                  if name.endswith(".odt"):
+                      with zipfile.ZipFile(io.BytesIO(tar.extractfile(member).read())) as odt:
+                          xml = odt.read("content.xml").decode("utf-8")
+                      text = re.sub(r"<text:(p|h)[^>]*>", "\n", xml)
+                      text = re.sub(r"<[^>]+>", " ", text)
+                      text = re.sub(r"[ \t]+", " ", text)
+                      print(f"=== {member.name}\n{text[:12000]}")
+                      Path(f"/tmp/out/{name}.txt").write_text(text)
+                  elif name.removesuffix(".csv") in wanted:
+                      rows = tar.extractfile(member).read().decode("utf-8").splitlines()
+                      print(f"=== {member.name}: {len(rows)} rows")
+                      print("\n".join(rows))
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: check-tracc-output
+          path: /tmp/out/
+          retention-days: 7

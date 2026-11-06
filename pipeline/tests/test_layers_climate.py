@@ -1,5 +1,8 @@
 import gzip
+import hashlib
+import io
 import math
+import tarfile
 from pathlib import Path
 
 import numpy as np
@@ -257,14 +260,21 @@ def test_compute_from_a_station_table_marks_distance_and_leaves_far_communes_abs
         return np.full(len(codes), 20.0)
 
     monkeypatch.setattr(climate, "cached_altitudes", altitudes)
+    archive = tracc_tar(tmp_path, monkeypatch, {
+        "q50": [(1, 43.2965, 5.3811, "60 days 12:00:00.0"), (2, 48.3904, -4.4861, "3 days 06:00:00.0")],
+        "min": [(1, 43.2965, 5.3811, "40 days 00:00:00.0"), (2, 48.3904, -4.4861, "1 days 00:00:00.0")],
+        "max": [(1, 43.2965, 5.3811, "80 days 00:00:00.0"), (2, 48.3904, -4.4861, "9 days 00:00:00.0")],
+    })
     ctx = LayerContext(session=requests.Session(), raw=tmp_path, communes=communes, merged_codes={},
-                       origins=np.zeros((3, 2)), overrides={"climate": table})
+                       origins=np.zeros((3, 2)), overrides={"climate": table, "climate_tracc": archive})
     result = climate.compute(ctx)
     assert asked == [["13201", "29019"]]  # overseas out of scope, no altitude asked
-    # Marignane station to the Marseille 1er town hall: 21 km, as in the national build; Brest has no station.
-    assert result.properties == {"13201": {"sun": 2900, "hot": 51, "cd": 21}}
+    # Marignane station to the Marseille 1er town hall: 21 km, as in the national build. Brest has no station
+    # but a grid point, so it gets the projection only.
+    assert result.properties == {"13201": {"sun": 2900, "hot": 51, "cd": 21, "h50": 61}, "29019": {"h50": 3}}
+    assert result.source["h50_projection"]["sha256"] == climate.TRACC_SHA256
     assert result.report["stations_used"] == {"sun": 1, "hot": 1}
-    assert result.report["coverage"] == {"sun": 1, "hot": 1, "cd": 1}
+    assert result.report["coverage"] == {"sun": 1, "hot": 1, "cd": 1, "h50": 2}
     assert result.source["licence"] == "Licence Ouverte / Etalab 2.0"
 
 
@@ -293,3 +303,137 @@ def test_gate_checks_national_coverage_only_on_a_national_build() -> None:
 def test_layer_ranges_accept_the_extremes_of_the_national_build() -> None:
     communes = {"a": {"sun": 1550, "hot": 0, "cd": 0}, "b": {"sun": 2900, "hot": 71, "cd": 80}}
     assert check_properties([climate.LAYER], communes) == []
+
+
+# --- TRACC projection (h50) -------------------------------------------------------------------------------
+
+
+def tracc_csv(rows: list[tuple[int, float, float, str]], indicator: str = "TX30D", rwl: str = "RWL-27") -> str:
+    """Laid out like the TRACC-2023 TX30D CSVs of the probe of 2026-11-06 (values as pandas timedeltas, and
+    the misleading "Modele" label the real ENSq50 file carries)."""
+    rule = "#" + "-" * 77
+    head = [
+        rule, "# Date d'extraction : 09/05/2025", rule, "# Producteur : MF-DCSC", "# Experience : TRACC-2023",
+        "# Modele     : MAX de l’ensemble EXPLORE2  / ADAMONT / RCP8.5",
+        "# Niveau de réchauffement régional (RWL) :2.7°C", rule, "# Indices : ",
+        f"#    {indicator} : Nombre de jours avec une température maximale ≥ 30 °C ",
+        "#     Moyenne temporelle sur la période autour du niveau de réchauffement ", "#     Valeur absolue",
+        rule, "# Format des enregistrements ", f"# Point;Latitude;Longitude;RWL;{indicator};", rule, "",
+        "Point;Latitude;Longitude;RWL;Value",
+    ]
+    body = [f"{point};{lat};{lon};{rwl};{value}" for point, lat, lon, value in rows]
+    return "\n".join(head + body) + "\n"
+
+
+def tracc_tar(tmp_path: Path, monkeypatch, rows: dict[str, list]) -> Path:
+    """A tiny archive with the three TX30D members; its sha256 is pinned in place of the real one."""
+    path = tmp_path / "tracc.tar"
+    with tarfile.open(path, "w") as tar:
+        for stat, member_rows in rows.items():
+            data = tracc_csv(member_rows).encode()
+            info = tarfile.TarInfo(climate.TRACC_MEMBERS[stat])
+            info.size = len(data)
+            tar.addfile(info, io.BytesIO(data))
+    monkeypatch.setattr(climate, "TRACC_SHA256", hashlib.sha256(path.read_bytes()).hexdigest())
+    return path
+
+
+SEA = (0, 41.3614, -4.0969, "nan")  # first row of the real files
+
+
+@pytest.mark.parametrize(
+    ("text", "days"),
+    [("6 days 08:23:59.991760256", 6.35), ("0 days 17:36:00.001373290", 0.7333), ("12.5", 12.5)],
+)
+def test_tracc_day_counts_are_read_from_timedeltas(text: str, days: float) -> None:
+    assert climate.tracc_days(text) == pytest.approx(days, abs=1e-4)
+
+
+def test_tracc_nan_is_nan_and_garbage_fails() -> None:
+    assert math.isnan(climate.tracc_days("nan"))
+    with pytest.raises(SourceError, match="neither"):
+        climate.tracc_days("six")
+
+
+def test_tracc_csv_keeps_points_with_a_value() -> None:
+    grid = climate.parse_tracc_csv(tracc_csv([SEA, (14014, 48.3821, -4.9622, "1 days 07:11:59.995880128")]))
+    assert grid.point.tolist() == [14014]
+    assert grid.value[0] == pytest.approx(1.3)
+    assert (grid.lon[0], grid.lat[0]) == (-4.9622, 48.3821)
+
+
+@pytest.mark.parametrize(
+    ("text", "message"),
+    [(tracc_csv([SEA], indicator="TX35D"), "does not describe TX30D"),
+     (tracc_csv([(1, 45.0, 5.0, "1 days 00:00:00.0")], rwl="REF"), "expected RWL-27"),
+     (tracc_csv([SEA]), "no value")],
+)
+def test_tracc_csv_is_checked(text: str, message: str) -> None:
+    with pytest.raises(SourceError, match=message):
+        climate.parse_tracc_csv(text)
+
+
+def _grid(values: list[float]) -> climate.TraccGrid:
+    n = len(values)
+    return climate.TraccGrid(np.arange(n), np.full(n, 5.0), np.full(n, 45.0), np.array(values, dtype=float))
+
+
+def test_ensemble_order_confirms_the_file_names() -> None:
+    assert climate.check_ensemble_order({"q50": _grid([5, 6]), "min": _grid([4, 6]), "max": _grid([9, 6])}) == []
+    # what the in-file labels claim: the "ENSq50" file is the maximum
+    swapped = climate.check_ensemble_order({"q50": _grid([9, 6]), "min": _grid([4, 6]), "max": _grid([5, 6])})
+    assert swapped == ["ENSq50 is above ENSmax at 1 grid points"]
+
+
+def test_nearest_grid_point_within_the_cutoff_only() -> None:
+    grid = climate.TraccGrid(np.array([1]), np.array([5.3811]), np.array([43.2965]), np.array([60.4]))
+    targets, _ = climate.target_points(["13201", "29019"], np.zeros((2, 2)),
+                                       {"13201": (5.3811, 43.2965), "29019": (-4.4861, 48.3904)})
+    values, distances = climate.nearest_grid_values(grid, np.vstack([targets, [[np.nan, np.nan]]]), 8000.0)
+    assert values[0] == pytest.approx(60.4) and distances[0] == pytest.approx(0.0, abs=1.0)
+    assert np.isnan(values[1:]).all()
+
+
+def test_projection_is_rounded_and_absent_stays_absent() -> None:
+    properties = {"a": {"hot": 3, "cd": 4}}
+    climate.add_projection(properties, ["a", "b", "c"], np.array([10.5, 2.4, np.nan]))
+    assert properties == {"a": {"hot": 3, "cd": 4, "h50": 11}, "b": {"h50": 2}}
+
+
+def _tracc_ctx(tmp_path: Path, overrides: dict) -> LayerContext:
+    return LayerContext(session=requests.Session(), raw=tmp_path, communes=[], merged_codes={},
+                        origins=np.zeros((0, 2)), overrides=overrides)
+
+
+def test_blocked_archive_leaves_h50_absent_with_the_reason(tmp_path: Path, monkeypatch) -> None:
+    def blocked(*args, **kwargs):
+        raise SourceError("url: HTTP 403 (text/html). A proxy may be blocking this file type; download it ...")
+
+    monkeypatch.setattr(climate, "download", blocked)
+    values, source, report = climate.tracc_h50(_tracc_ctx(tmp_path, {}), np.zeros((1, 2)), np.array([True]))
+    assert np.isnan(values).all() and "proxy may be blocking" in source["unavailable"] and report == {}
+
+
+def test_archive_other_than_the_pinned_one_is_refused(tmp_path: Path) -> None:
+    other = tmp_path / "other.tar"
+    other.write_bytes(b"not the pinned archive")
+    with pytest.raises(SourceError, match="differs from the pinned"):
+        climate.tracc_h50(_tracc_ctx(tmp_path, {"climate_tracc": other}), np.zeros((1, 2)), np.array([True]))
+
+
+def test_inconsistent_ensemble_statistics_fail_the_layer(tmp_path: Path, monkeypatch) -> None:
+    point = [(1, 43.2965, 5.3811, "60 days 00:00:00.0")]
+    archive = tracc_tar(tmp_path, monkeypatch, {"q50": point, "min": point,
+                                                "max": [(1, 43.2965, 5.3811, "50 days 00:00:00.0")]})
+    with pytest.raises(SourceError, match="above ENSmax"):
+        climate.tracc_h50(_tracc_ctx(tmp_path, {"climate_tracc": archive}), np.zeros((1, 2)), np.array([True]))
+
+
+def test_gate_wants_h50_mostly_at_or_above_hot() -> None:
+    communes = {f"01{i:03d}": {"hot": 10, "h50": 5 if i < 5 else 20, "cd": 1} for i in range(30)}
+    assert climate.gate(communes) == ["h50 >= hot for only 83.3% of communes, expected at least 90%"]
+
+
+def test_gate_wants_the_mediterranean_well_above_brittany() -> None:
+    communes = {f"13{i:03d}": {"h50": 30} for i in range(300, 330)} | {f"29{i:03d}": {"h50": 20} for i in range(300, 330)}
+    assert climate.gate(communes) == ["median h50 ('13', '30', '34', '84') 30.0 d is not 20 d above ('22', '29', '35', '56') 20.0 d"]
