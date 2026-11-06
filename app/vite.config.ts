@@ -23,7 +23,7 @@ export default defineConfig({
       manifestFilename: 'manifest.webmanifest',
       manifest: webManifest('fr') as unknown as Partial<ManifestOptions>,
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,woff2,svg,ico}', 'pwa-*.png', 'maskable-icon-*.png', 'apple-touch-icon-*.png'],
+        globPatterns: ['**/*.{js,css,html,woff2,svg,ico}', 'assets/*.json', 'pwa-*.png', 'maskable-icon-*.png', 'apple-touch-icon-*.png'],
         maximumFileSizeToCacheInBytes: 3_000_000,
       },
       devOptions: { enabled: false },

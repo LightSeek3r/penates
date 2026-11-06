@@ -1,7 +1,8 @@
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSourceSpecification, LayerSpecification, StyleSpecification } from 'maplibre-gl'
 import type { PriceType } from '../domain/place'
 import { HATCH_LIGHT_BELOW, priceFillExpression } from '../domain/priceLadder'
-import kmGrid from './km-grid.json'
+// Fetched and parsed by MapLibre's worker rather than bundled: 128 KB less JavaScript to parse on the main thread.
+import kmGridUrl from './km-grid.json?url'
 import type { Lang } from '../state/urlState'
 
 export const GROUND = '#0B1B3A'
@@ -167,7 +168,7 @@ export function buildStyle(tileUrl: string, type: PriceType, lang: Lang): StyleS
         url: `pmtiles://${tileUrl}`,
         attribution: '© IGN · DGFiP/Etalab · Licence Ouverte v2.0',
       },
-      kmgrid: { type: 'geojson', data: kmGrid as GeoJSONSourceSpecification['data'] },
+      kmgrid: { type: 'geojson', data: new URL(kmGridUrl, window.location.href).href },
       notes: { type: 'geojson', data: NOTES },
     },
     layers: [
