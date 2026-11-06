@@ -1,0 +1,150 @@
+name: Probe TRACC / Climadiag files
+
+# One-off, manual probe of Météo-France's Climadiag Commune and TRACC-2023 archives (blocked as .tar by the
+# development laptop's proxy). Reads only; prints sizes, sha256, members and heads; uploads small samples.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install readers
+        run: pip install --quiet requests netCDF4 xarray pandas pyarrow
+      - name: Probe archives
+        env:
+          BASE: https://object.files.data.gouv.fr/meteofrance-drias
+          FILES: >-
+            CLIMADIAG_COMMUNE/donnees_climadiag_commune_v411_20260909.tar
+            CLIMADIAG_COMMUNE/donnees_climadiag_commune_json_v411_20260909.tar
+            TRACC-2023/CSV_wk_032025/Indicateurs-Absolue_Centiles-Explore2-Climat_Moyenne-20ans_RWL27_csv.tar
+            TRACC-2023/CSV_wk_032025/Indicateurs-Absolue_Centiles-Explore2-Climat_Moyenne-20ans_historical_csv.tar
+            TRACC-2023/NETCDF_wk_072026/Indicateurs-Absolue_Centiles-Explore2-Climat_Moyenne-20ans_RWL27_Netcdf.tar
+          EXTRA: >-
+            CLIMADIAG_COMMUNE/description_algorithme_choix_pointDeGrille_commune_Hexagone_20260316-2.pdf
+            OUTILS-HACKATHON-2025/TRACC/README_TRACC
+        shell: python
+        run: |
+          import gzip, hashlib, io, json, os, re, tarfile, zipfile
+          from pathlib import Path
+          import requests
+
+          base, out = os.environ["BASE"], Path("probe-samples")
+          out.mkdir()
+          budget = [4_500_000]  # artifact bytes left (< 5 MB)
+          hot = re.compile(r"(?i)tx.?(>=|ge|sup)?.?30|nortx|su30|jours?.?chaud|hot|tx30")
+
+          def keep(name: str, data: bytes) -> None:
+              data = data[: min(len(data), budget[0], 400_000)]
+              if data:
+                  path = out / name.replace("/", "__")
+                  path.write_bytes(data)
+                  budget[0] -= len(data)
+
+          def fetch(key: str) -> Path:
+              url = f"{base}/{key}"
+              dest = Path("dl") / key.rsplit("/", 1)[-1]
+              dest.parent.mkdir(exist_ok=True)
+              sha = hashlib.sha256()
+              with requests.get(url, stream=True, timeout=120) as r:
+                  print(f"\n=== {url}\nHTTP {r.status_code} {r.headers.get('Content-Type')} "
+                        f"length={r.headers.get('Content-Length')} last-modified={r.headers.get('Last-Modified')}")
+                  r.raise_for_status()
+                  with dest.open("wb") as f:
+                      for chunk in r.iter_content(1 << 20):
+                          f.write(chunk)
+                          sha.update(chunk)
+              print(f"size={dest.stat().st_size} sha256={sha.hexdigest()}")
+              return dest
+
+          def text_head(name: str, data: bytes, lines: int = 15) -> None:
+              text = data.decode("utf-8", errors="replace")
+              print("\n".join(text.splitlines()[:lines]))
+              keep(name + ".head.txt", "\n".join(text.splitlines()[:300]).encode())
+
+          def describe(name: str, data: bytes) -> None:
+              print(f"\n--- member {name} ({len(data)} bytes)")
+              lower = name.lower()
+              if lower.endswith(".gz"):
+                  return describe(name[:-3], gzip.decompress(data))
+              if lower.endswith(".zip"):
+                  with zipfile.ZipFile(io.BytesIO(data)) as z:
+                      names = z.namelist()
+                      print(f"zip with {len(names)} members: {names[:20]}")
+                      for inner in names[:2]:
+                          describe(f"{name}/{inner}", z.read(inner))
+                  return
+              if lower.endswith(".tar"):
+                  with tarfile.open(fileobj=io.BytesIO(data)) as t:
+                      names = t.getnames()
+                      print(f"nested tar with {len(names)} members: {names[:20]}")
+                  return
+              if lower.endswith(".parquet"):
+                  import pyarrow.parquet as pq
+                  table = pq.read_table(io.BytesIO(data))
+                  print(table.schema)
+                  print(table.slice(0, 15).to_pandas().to_string())
+                  keep(name + ".head.csv", table.slice(0, 300).to_pandas().to_csv(index=False).encode())
+                  return
+              if lower.endswith(".nc"):
+                  import xarray as xr
+                  path = Path("tmp.nc")
+                  path.write_bytes(data)
+                  with xr.open_dataset(path) as ds:
+                      print(ds)
+                      for var in ds.data_vars:
+                          print(f"VAR {var} dims={ds[var].dims} dtype={ds[var].dtype} attrs={dict(ds[var].attrs)}")
+                      print("GLOBAL ATTRS", json.dumps({k: str(v) for k, v in ds.attrs.items()}, ensure_ascii=False, indent=1))
+                      keep(name + ".cdl.txt", str(ds).encode() + b"\n" + json.dumps(
+                          {k: str(v) for k, v in ds.attrs.items()}, ensure_ascii=False, indent=1).encode())
+                  return
+              if lower.endswith(".json"):
+                  text = data.decode("utf-8", errors="replace")
+                  print(text[:3000])
+                  keep(name + ".head.json", data[:200_000])
+                  return
+              text_head(name, data)
+
+          for key in os.environ["FILES"].split():
+              try:
+                  path = fetch(key)
+              except Exception as error:
+                  print(f"FAILED {key}: {error}")
+                  continue
+              with tarfile.open(path) as t:
+                  members = [m for m in t.getmembers() if m.isfile()]
+                  listing = "\n".join(f"{m.size}\t{m.name}" for m in members)
+                  print(f"{len(members)} members, total {sum(m.size for m in members)} bytes; first 60:")
+                  print("\n".join(listing.splitlines()[:60]))
+                  print("extensions:", sorted({Path(m.name).suffix for m in members}))
+                  keep(path.name + ".members.txt", listing.encode())
+                  matching = [m for m in members if hot.search(m.name)]
+                  print(f"{len(matching)} members match the hot-days pattern; first 30:")
+                  print("\n".join(m.name for m in matching[:30]))
+                  chosen = list(dict.fromkeys(members[:3] + matching[:5]))
+                  for member in chosen:
+                      describe(member.name, t.extractfile(member).read())
+              path.unlink()
+
+          for key in os.environ["EXTRA"].split():
+              try:
+                  path = fetch(key)
+                  if path.suffix == ".pdf":
+                      keep(path.name, path.read_bytes())
+                  else:
+                      text_head(path.name, path.read_bytes(), lines=200)
+              except Exception as error:
+                  print(f"FAILED {key}: {error}")
+          print(f"\nartifact bytes used: {4_500_000 - budget[0]}")
+      - uses: actions/upload-artifact@v4
+        with:
+          name: probe-tracc-samples
+          path: probe-samples/
+          retention-days: 7
