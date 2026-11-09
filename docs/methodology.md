@@ -185,6 +185,22 @@ Parent-child meeting places and childcare information offices (D503, D504) are n
 
 A filter keeps the communes whose value is within the limit you set: at most a value (for example a hospital within 15 km), at least a value (sunshine, fibre), or between two values (altitude, rent). Communes that do not meet every active filter are greyed out. A commune with no value for an active criterion does not match it: an unknown is never counted as a pass.
 
+## Two indicators at once
+
+Under the list of colours you can add a second indicator, shown in one of two ways:
+
+- **Crossed colours.** Each indicator is cut into three tiers (low, middle, high) made of whole classes of its own legend, for example under 1,500, 1,500 to 3,500 and 3,500 €/m² or more for price, under 2, 2 to 10 and 10 km or more for distances, zones 1 to 2, 3 and 4 to 5 for the seismic zone. Each commune then takes one of nine colours, read from the 3 x 3 key: rows are the second indicator, columns the first. It answers questions such as "where is the price low and the hospital near".
+- **Discs.** The colours keep the first indicator, and a disc of three sizes shows the tier of the second.
+
+How to read them, and their limits:
+
+- **Tiers are coarse.** Two communes in the same tier can differ a lot (a 1,600 and a 3,400 €/m² commune share a tier), and the crossed colours hide that variation. The details panel always gives the exact figures of every indicator.
+- **No ranking.** Crossed colours show two indicators side by side; they are not a score and nothing is weighted.
+- **Missing values stay missing.** A commune lacking either value is drawn as "no data" in crossed colours and gets no disc: an unknown is never shown as low.
+- **Rough estimates.** In crossed colours a hatch means at least one of the two figures is a rough estimate (price from fewer than 10 sales, rent from few listings); the details panel says which. A rough estimate shown as a disc is an open ring.
+- **Discs thin out when zoomed out.** Where communes are too small to hold a disc each, overlapping discs are left out; from zoom 9 every commune with a value has its disc. A missing disc at a wide view therefore does not mean missing data.
+- Filters keep working on top of both views.
+
 ## Not covered by any indicator
 
 - **Energy performance (DPE)** of homes, building age or condition.

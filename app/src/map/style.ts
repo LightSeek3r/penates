@@ -1,4 +1,5 @@
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSourceSpecification, LayerSpecification, StyleSpecification } from 'maplibre-gl'
+import { markIcon } from '../domain/combine'
 import type { PriceType } from '../domain/place'
 import { HATCH_LIGHT_BELOW, priceFillExpression } from '../domain/priceLadder'
 // Fetched and parsed by MapLibre's worker rather than bundled: 128 KB less JavaScript to parse on the main thread.
@@ -47,6 +48,20 @@ export function patternFilters(type: PriceType): Record<string, FilterSpecificat
 /** Hatch layers for rough estimates on non-price themes: porcelain ink, then midnight ink. */
 export const DOUBT_LAYERS = ['communes-doubt-light', 'communes-doubt-dark'] as const
 
+/**
+ * Discs of the second indicator: thinned by collision while communes are small, then one per commune once they are
+ * large enough to hold one. From that zoom place names are drawn over the discs instead of hiding them.
+ */
+export const MARK_LAYERS = ['communes-marks-thinned', 'communes-marks'] as const
+const MARKS_ALL_FROM = 9
+// A disc is placed once per tile a commune falls in, so every tile edge that cuts a commune would give it two discs.
+// Discs therefore read the same archive through coarser tiles, whose edges cut few communes (about 2 % at zoom 9.5
+// on the Rhône slice instead of a third at zoom 11); MapView keeps those tiles whole when overscaled. A cut commune
+// can still show two identical discs side by side.
+const MARKS_TILE_ZOOM = 8
+
+export const NOTHING: FilterSpecification = ['==', ['get', 'code'], '']
+
 export const LAYER_IDS = {
   departmentsFill: 'departments-fill',
   communesFill: 'communes-fill',
@@ -74,7 +89,7 @@ function outlineLayers(sourceLayer: string, kind: keyof typeof SELECTION_LAYERS,
   const common = {
     source: 'data',
     'source-layer': sourceLayer,
-    filter: ['==', ['get', 'code'], ''] as FilterSpecification,
+    filter: NOTHING,
     ...(zoom.min === undefined ? {} : { minzoom: zoom.min }),
     ...(zoom.max === undefined ? {} : { maxzoom: zoom.max }),
   } as const
@@ -129,7 +144,7 @@ function dataLayers(type: PriceType): LayerSpecification[] {
         ...common,
         'source-layer': 'communes',
         minzoom: COMMUNES_FROM_TILE_ZOOM,
-        filter: ['==', ['get', 'code'], ''],
+        filter: NOTHING,
         layout: { visibility: 'none' },
         paint: { 'fill-pattern': id === DOUBT_LAYERS[0] ? 'hatch-low-light' : 'hatch-low-dark', 'fill-opacity': 0.94 },
       }),
@@ -140,7 +155,7 @@ function dataLayers(type: PriceType): LayerSpecification[] {
       ...common,
       'source-layer': 'communes',
       minzoom: FADE_FROM,
-      filter: ['==', ['get', 'code'], ''],
+      filter: NOTHING,
       layout: { visibility: 'none' },
       paint: { 'fill-color': GROUND, 'fill-opacity': 0.84 },
     },
@@ -164,9 +179,29 @@ function dataLayers(type: PriceType): LayerSpecification[] {
       maxzoom: 9,
       paint: { 'line-color': PORCELAIN, 'line-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0.45, 9, 0.15], 'line-width': 0.7 },
     },
+    ...MARK_LAYERS.map((id): LayerSpecification => markLayer(id, id === MARK_LAYERS[1])),
+    // After the discs, so a disc never covers the outline of the selected place.
     ...outlineLayers('departments', 'department', { max: FADE_TO }),
     ...outlineLayers('communes', 'commune', { min: FADE_FROM }),
   ]
+}
+
+function markLayer(id: string, everyCommune: boolean): LayerSpecification {
+  return {
+    id,
+    type: 'symbol',
+    source: 'marks',
+    'source-layer': 'communes',
+    ...(everyCommune ? { minzoom: MARKS_ALL_FROM } : { minzoom: COMMUNES_FROM_TILE_ZOOM, maxzoom: MARKS_ALL_FROM }),
+    filter: NOTHING,
+    layout: {
+      visibility: 'none',
+      'icon-image': markIcon(0, false),
+      'icon-allow-overlap': everyCommune,
+      'icon-ignore-placement': everyCommune,
+      'icon-padding': 1,
+    },
+  }
 }
 
 export function buildStyle(tileUrl: string, type: PriceType, lang: Lang): StyleSpecification {
@@ -184,6 +219,7 @@ export function buildStyle(tileUrl: string, type: PriceType, lang: Lang): StyleS
         url: `pmtiles://${tileUrl}`,
         attribution: '© IGN · DGFiP/Etalab · Licence Ouverte v2.0',
       },
+      marks: { type: 'vector', url: `pmtiles://${tileUrl}`, maxzoom: MARKS_TILE_ZOOM },
       kmgrid: { type: 'geojson', data: new URL(kmGridUrl, window.location.href).href },
       notes: { type: 'geojson', data: NOTES },
     },

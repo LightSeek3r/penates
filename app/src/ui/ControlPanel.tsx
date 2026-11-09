@@ -1,9 +1,10 @@
 import { useId, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { MIXES } from '../domain/combine'
 import { type FilterDef, type FilterKey, type FilterValue, activeFilterCount, isFilterable } from '../domain/filters'
 import { LAYERS, type LayerDef, type LayerGroup, isAvailable, layersByGroup, visibleLayers } from '../domain/layers'
 import { PRICE_TYPES } from '../domain/place'
-import type { ThemeId } from '../domain/themes'
+import { type ThemeId, isTheme } from '../domain/themes'
 import { useAppStore } from '../state/appStore'
 import { className, filterValueText } from './layerText'
 
@@ -84,8 +85,6 @@ function ThemeList() {
   const { t } = useTranslation()
   const theme = useAppStore((state) => state.theme)
   const setTheme = useAppStore((state) => state.setTheme)
-  const priceType = useAppStore((state) => state.priceType)
-  const setPriceType = useAppStore((state) => state.setPriceType)
   const showOptIn = useAppStore((state) => state.showOptIn)
   const tileFields = useAppStore((state) => state.tileFields)
   const groups = layersByGroup(visibleLayers(showOptIn, tileFields))
@@ -127,22 +126,95 @@ function ThemeList() {
                 )}
               </div>
             ))}
-            {group === 'price' && theme === 'price' && (
-              <fieldset className="segmented">
-                <legend>{t('layers.typeLabel')}</legend>
-                {PRICE_TYPES.map((type) => (
-                  <label key={type} className="segmented__option">
-                    <input type="radio" name="price-type" value={type} checked={priceType === type} onChange={() => setPriceType(type)} />
-                    <span>{t(`layers.type.${type}`)}</span>
-                  </label>
-                ))}
-              </fieldset>
-            )}
+            {group === 'price' && theme === 'price' && <PriceTypeControl />}
           </Group>
         ))}
       </fieldset>
       <OptInSwitch />
     </>
+  )
+}
+
+/** Houses, flats or both: shown under whichever of the two indicators is price. */
+function PriceTypeControl() {
+  const { t } = useTranslation()
+  const priceType = useAppStore((state) => state.priceType)
+  const setPriceType = useAppStore((state) => state.setPriceType)
+  return (
+    <fieldset className="segmented">
+      <legend>{t('layers.typeLabel')}</legend>
+      {PRICE_TYPES.map((type) => (
+        <label key={type} className="segmented__option">
+          <input type="radio" name="price-type" value={type} checked={priceType === type} onChange={() => setPriceType(type)} />
+          <span>{t(`layers.type.${type}`)}</span>
+        </label>
+      ))}
+    </fieldset>
+  )
+}
+
+/** Picks an indicator to show with the theme (never the theme itself) and how to draw it. */
+function SecondIndicator() {
+  const { t } = useTranslation()
+  const theme = useAppStore((state) => state.theme)
+  const compare = useAppStore((state) => state.compare)
+  const setCompare = useAppStore((state) => state.setCompare)
+  const mix = useAppStore((state) => state.mix)
+  const setMix = useAppStore((state) => state.setMix)
+  const showOptIn = useAppStore((state) => state.showOptIn)
+  const tileFields = useAppStore((state) => state.tileFields)
+  const groups = layersByGroup(visibleLayers(showOptIn, tileFields).filter((def) => def.id !== theme))
+  const base = useId()
+
+  return (
+    <section className="second" aria-label={t('second.title')}>
+      <label htmlFor={`${base}-pick`} className="second__label">
+        {t('second.pick')}
+      </label>
+      <div className="second__pick">
+        <select
+          id={`${base}-pick`}
+          className="select"
+          value={compare ?? ''}
+          onChange={(event) => {
+            const picked = event.target.value
+            setCompare(isTheme(picked) ? picked : null)
+          }}
+        >
+          <option value="">{t('second.none')}</option>
+          {groups.map(({ group, layers }) => (
+            <optgroup key={group} label={t(`groups.${group}.title`)}>
+              {layers.map((def) => (
+                <option key={def.id} value={def.id}>
+                  {t(`ind.${def.id}.name`)}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        {compare && (
+          <button type="button" className="button button--quiet button--icon" aria-label={t('second.remove')} onClick={() => setCompare(null)}>
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+              <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+            </svg>
+          </button>
+        )}
+      </div>
+      {compare && (
+        <>
+          <fieldset className="segmented">
+            <legend className="visually-hidden">{t('second.mixLabel')}</legend>
+            {MIXES.map((option) => (
+              <label key={option} className="segmented__option">
+                <input type="radio" name="mix" value={option} checked={mix === option} onChange={() => setMix(option)} />
+                <span>{t(`second.mix.${option}`)}</span>
+              </label>
+            ))}
+          </fieldset>
+          {compare === 'price' && <PriceTypeControl />}
+        </>
+      )}
+    </section>
   )
 }
 
@@ -312,8 +384,9 @@ export function ControlPanel() {
           {t('layers.close')}
         </button>
       </div>
-      <div role="tabpanel" id={`${base}-panel`} aria-labelledby={`${base}-tab-${tab}`} className="controls__body">
-        {tab === 'colour' ? <ThemeList /> : <FilterList />}
+      <div role="tabpanel" id={`${base}-panel`} aria-labelledby={`${base}-tab-${tab}`} className="controls__panel">
+        <div className="controls__body">{tab === 'colour' ? <ThemeList /> : <FilterList />}</div>
+        {tab === 'colour' && <SecondIndicator />}
       </div>
     </section>
   )

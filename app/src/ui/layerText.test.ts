@@ -2,7 +2,7 @@ import i18next from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { dictionaries } from '../i18n'
 import { type LayerDef, layerById, layerColors } from '../domain/layers'
-import { type Translate, filterValueText, formatLayerValue, legendRows } from './layerText'
+import { type Translate, filterValueText, formatLayerValue, legendRows, tierLabels } from './layerText'
 
 let t: Translate
 // French groups digits with a narrow no-break space; compare with plain spaces.
@@ -68,5 +68,25 @@ describe('details values', () => {
     expect(plain(formatLayerValue(t, def('violence'), 3.2, 'fr'))).toBe('3,2 pour 1 000 hab.')
     // Burglaries are counted against dwellings, offences against persons against residents.
     expect(plain(formatLayerValue(t, def('burglary'), 4.1, 'fr'))).toBe('4,1 pour 1 000 logements')
+  })
+})
+
+describe('tier labels of a combined layer', () => {
+  const tiers = (id: string) => Object.values(tierLabels(t, def(id), 'fr')).map((tier) => ({ label: plain(tier.label), short: plain(tier.short) }))
+
+  it('reuse the legend wording and units on the tier cuts', () => {
+    expect(tiers('price').map((tier) => tier.label)).toEqual(['moins de 1 500', '1 500 à 3 500', '3 500 et plus'])
+    expect(tiers('hospital').map((tier) => tier.label)).toEqual(['moins de 2 km', '2 à 10 km', '10 km et plus'])
+    expect(tiers('hospital').map((tier) => tier.short)).toEqual(['<2', '2', '10+'])
+    expect(tiers('cavities').map((tier) => tier.label)).toEqual(['0', '1 à 4', '5 et plus'])
+  })
+
+  it('name the class codes of each tier', () => {
+    expect(tiers('seismic')).toEqual([
+      { label: 'zone 1 à 2', short: '1–2' },
+      { label: 'zone 3', short: '3' },
+      { label: 'zone 4 à 5', short: '4–5' },
+    ])
+    expect(tiers('radon').map((tier) => tier.label)).toEqual(['catégorie 1', 'catégorie 2', 'catégorie 3'])
   })
 })

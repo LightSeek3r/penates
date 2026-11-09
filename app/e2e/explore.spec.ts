@@ -26,7 +26,7 @@ test('restores a selected commune from a shared link', async ({ page }) => {
   await page.goto(`/${LYON_3E}`)
   await expect(page.getByRole('heading', { name: /Lyon/ })).toBeVisible({ timeout: 20_000 })
   const details = page.getByRole('region', { name: 'Fiche du lieu' })
-  await expect(details.getByText('€/m²')).toBeVisible()
+  await expect(details.getByText('€/m²', { exact: true })).toBeVisible()
   await expect(details.getByText(/Ventes retenues/)).toBeVisible()
 })
 

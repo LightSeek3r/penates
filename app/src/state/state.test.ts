@@ -5,13 +5,13 @@ import { DEFAULT_VIEW, formatHash, parseHash } from './urlState'
 
 describe('url hash', () => {
   it('round-trips a state', () => {
-    const state = { lng: 4.8351, lat: 45.758, zoom: 9.5, type: 'app', selected: '69123', theme: 'hospital', filters: { gp: 5000, seismic: 3 } } as const
+    const state = { lng: 4.8351, lat: 45.758, zoom: 9.5, type: 'app', selected: '69123', theme: 'hospital', compare: null, mix: 'cross', filters: { gp: 5000, seismic: 3 } } as const
     expect(parseHash(formatHash(state), 'en')).toEqual({ ...state, lang: 'en', viewProvided: true })
   })
 
   it('falls back to defaults on an empty or hostile hash', () => {
     const parsed = parseHash('#z=abc&lat=999&lng=-500&t=evil&c=<script>&l=xx', 'fr')
-    expect(parsed).toEqual({ ...DEFAULT_VIEW, type: 'all', selected: null, lang: 'fr', theme: 'price', filters: {}, viewProvided: false })
+    expect(parsed).toEqual({ ...DEFAULT_VIEW, type: 'all', selected: null, lang: 'fr', theme: 'price', compare: null, mix: 'cross', filters: {}, viewProvided: false })
   })
 
   it('only treats a link as carrying a view when position and zoom are all present', () => {
@@ -35,9 +35,25 @@ describe('url hash', () => {
       type: 'all',
       selected: null,
       theme: 'flood',
+      compare: null,
+      mix: 'cross',
       filters: { flood: 1, altitude: [200, 800], sunshine: 2000, rent: [8, 14] },
     } as const
     expect(parseHash(formatHash(state), 'fr')).toEqual({ ...state, lang: 'fr', viewProvided: true })
+  })
+
+  it('round-trips a second indicator and how it is drawn', () => {
+    const state = { lng: 4.8, lat: 45.7, zoom: 9, type: 'all', selected: null, theme: 'price', compare: 'hospital', mix: 'marks', filters: { gp: 5000 } } as const
+    expect(formatHash(state)).toContain('th2=hospital&mix=marks')
+    expect(parseHash(formatHash(state), 'fr')).toEqual({ ...state, lang: 'fr', viewProvided: true })
+  })
+
+  it('writes no mix without a second indicator, and ignores a junk or redundant one', () => {
+    expect(formatHash({ ...parseHash('', 'fr'), mix: 'marks' })).not.toMatch(/th2|mix/)
+    expect(parseHash('#th2=nope&mix=blend', 'fr')).toMatchObject({ compare: null, mix: 'cross' })
+    expect(parseHash('#th=seismic&th2=seismic&mix=marks', 'fr')).toMatchObject({ theme: 'seismic', compare: null, mix: 'marks' })
+    expect(parseHash('#th2=price', 'fr').compare).toBeNull()
+    expect(parseHash('#th=gp&th2=price', 'fr')).toMatchObject({ theme: 'gp', compare: 'price', mix: 'cross' })
   })
 
   it('accepts Corsican commune codes', () => {
@@ -55,7 +71,7 @@ describe('language', () => {
   })
 
   it('never writes the language into the hash', () => {
-    expect(formatHash({ lng: 2, lat: 46, zoom: 5, type: 'all', selected: null, theme: 'price', filters: {} })).not.toContain('l=')
+    expect(formatHash({ lng: 2, lat: 46, zoom: 5, type: 'all', selected: null, theme: 'price', compare: null, mix: 'cross', filters: {} })).not.toContain('l=')
   })
 
   it('maps a language to its page path', () => {
@@ -96,6 +112,52 @@ describe('opt-in layers', () => {
     store.getState().setShowOptIn(false)
     expect(store.getState()).toMatchObject({ showOptIn: false, theme: 'price', filters: { gp: 5000 } })
     expect(saved).toEqual([true, false])
+  })
+})
+
+describe('second indicator', () => {
+  it('is refused when it is the theme, and removed with null', () => {
+    const store = createStore(parseHash('#th=hospital', 'fr'))
+    store.getState().setCompare('hospital')
+    expect(store.getState().compare).toBeNull()
+    store.getState().setCompare('price')
+    store.getState().setMix('marks')
+    expect(store.getState()).toMatchObject({ theme: 'hospital', compare: 'price', mix: 'marks' })
+    store.getState().setCompare(null)
+    expect(store.getState()).toMatchObject({ compare: null, mix: 'marks' })
+  })
+
+  it('swaps with the theme when the visitor colours the map by it', () => {
+    const store = createStore(parseHash('#th=price&th2=hospital&mix=cross', 'fr'))
+    store.getState().setTheme('hospital')
+    expect(store.getState()).toMatchObject({ theme: 'hospital', compare: 'price' })
+    store.getState().setTheme('seismic')
+    expect(store.getState()).toMatchObject({ theme: 'seismic', compare: 'price' })
+  })
+
+  it('stays opt-in: dropped from a link and refused until the visitor opts in, dropped again on opting out', () => {
+    expect(createStore(parseHash('#th2=violence&mix=marks', 'fr'), false).getState().compare).toBeNull()
+    expect(createStore(parseHash('#th2=violence&mix=marks', 'fr'), true).getState().compare).toBe('violence')
+    const store = createStore(parseHash('', 'fr'), false)
+    store.getState().setCompare('burglary')
+    expect(store.getState().compare).toBeNull()
+    store.getState().setShowOptIn(true)
+    store.getState().setCompare('burglary')
+    expect(store.getState().compare).toBe('burglary')
+    store.getState().setShowOptIn(false)
+    expect(store.getState().compare).toBeNull()
+  })
+
+  it('is dropped when the tiles lack it, or when the theme falls back onto it', () => {
+    const store = createStore(parseHash('#th=gp&th2=heat2050', 'fr'))
+    store.getState().setTileFields(new Set(['code', 'p_all', 'd_gp']))
+    expect(store.getState()).toMatchObject({ theme: 'gp', compare: null })
+    store.getState().setCompare('heat2050')
+    expect(store.getState().compare).toBeNull()
+
+    const fallback = createStore(parseHash('#th=heat2050&th2=price', 'fr'))
+    fallback.getState().setTileFields(new Set(['code', 'p_all']))
+    expect(fallback.getState()).toMatchObject({ theme: 'price', compare: null })
   })
 })
 

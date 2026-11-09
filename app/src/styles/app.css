@@ -784,6 +784,8 @@ ol {
 
 .legend {
   flex: none;
+  /* A tall legend (two indicators) scrolls rather than squeeze the layer list out of reach. */
+  max-height: calc(100% - min(17rem, 45%) - var(--space-3));
 }
 
 .controls__bar {
@@ -946,6 +948,53 @@ summary.group__head:hover {
   font-weight: 700;
 }
 
+/* Second indicator: stays under the scrolling theme list so it is always in reach. */
+.controls__panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.second {
+  display: grid;
+  flex: none;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.second__label {
+  color: var(--text-dim);
+  font-size: var(--text-xs);
+}
+
+.second__pick {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.second .segmented {
+  margin: 0;
+}
+
+.select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.select:hover {
+  background: var(--panel-raised);
+}
+
 .filters {
   display: grid;
   gap: var(--space-3);
@@ -1000,6 +1049,127 @@ summary.group__head:hover {
 .state--dimmed::before {
   background-color: var(--ground);
   border-color: var(--line-strong);
+}
+
+/* Cross key: 3 x 3 grid with the second indicator's tiers as rows (high on top), the theme's as columns. */
+.cross {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.cross__axis {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cross__axis--theme {
+  justify-content: flex-end;
+}
+
+.cross__arrow {
+  flex: none;
+  color: var(--text-dim);
+}
+
+.cross__grid {
+  width: 100%;
+  margin: var(--space-1) 0;
+  border-collapse: separate;
+  border-spacing: 2px;
+  table-layout: fixed;
+}
+
+.cross__grid td,
+.cross__grid th {
+  padding: 0;
+}
+
+.cross__tier {
+  color: var(--text-dim);
+  font-weight: 400;
+  line-height: 1.25;
+  text-align: right;
+  padding-right: var(--space-1);
+}
+
+.cross__grid tr > :first-child {
+  width: 40%;
+}
+
+.cross__tier--column {
+  padding: 2px 0 0;
+  text-align: center;
+  vertical-align: top;
+}
+
+.cross__cell {
+  display: block;
+  height: 22px;
+  border: 1px solid var(--line);
+}
+
+.cross__short {
+  display: none;
+}
+
+/* Marks key: the second indicator's three disc sizes. */
+.legend__second {
+  margin: var(--space-3) 0 var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.marks__step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.disc {
+  flex: none;
+}
+
+/* Same inks and widths as the map icons in map/patterns.ts. */
+.disc__core {
+  fill: var(--text);
+  stroke: var(--ground);
+  stroke-width: 1.5;
+}
+
+.disc__edge,
+.disc__ring {
+  fill: none;
+}
+
+.disc__edge {
+  stroke: var(--ground);
+  stroke-width: 3.6;
+}
+
+.disc__ring {
+  stroke: var(--text);
+  stroke-width: 1.6;
+}
+
+.marks__none {
+  flex: none;
+  width: 16px;
+  height: 12px;
+  border: 1px solid var(--line);
+  background-color: var(--no-price);
 }
 
 /* ---- details: other indicators ---- */
@@ -1085,4 +1255,74 @@ summary.group__head:hover {
 .credits a,
 .dialog a {
   color: var(--text);
+}
+
+/* Phones: the two-indicator keys fold into the legend strip. */
+@media (max-width: 719px) {
+  .stage__left .layers[data-open='true'] {
+    display: flex;
+  }
+
+  .legend {
+    max-height: none;
+  }
+
+  .cross {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      'grid second'
+      'grid theme';
+    align-items: center;
+    column-gap: var(--space-3);
+    margin-top: 0;
+  }
+
+  .cross__axis {
+    grid-area: second;
+    align-self: end;
+  }
+
+  .cross__axis--theme {
+    grid-area: theme;
+    align-self: start;
+    justify-content: flex-start;
+  }
+
+  .cross__grid {
+    grid-area: grid;
+    width: 156px;
+    margin: 0;
+  }
+
+  .cross__cell {
+    height: 12px;
+  }
+
+  .cross__long {
+    display: none;
+  }
+
+  .cross__short {
+    display: inline;
+    white-space: nowrap;
+  }
+
+  .legend__second {
+    margin: var(--space-1) 0 0;
+    padding-top: var(--space-1);
+    font-size: var(--text-xs);
+  }
+
+  .marks {
+    margin: 0;
+  }
+
+  .marks__step {
+    font-size: var(--text-xs);
+  }
+
+  .marks__none {
+    height: 10px;
+  }
 }

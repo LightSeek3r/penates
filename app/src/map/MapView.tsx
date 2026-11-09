@@ -41,6 +41,7 @@ function readTileFields(url: string, onFields: (fields: ReturnType<typeof tileFi
 }
 
 const COMMUNE_ZOOM = 6.5
+const MAX_ZOOM = 15
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
 const WIDE_SCREEN = '(min-width: 720px)'
 const METROPOLITAN_FRANCE: [[number, number], [number, number]] = [[-5.6, 41.0], [10.0, 51.3]]
@@ -95,7 +96,9 @@ export function MapView({ manifest }: MapViewProps) {
       style: buildStyle(tileUrl(manifest), initial.priceType, initial.lang),
       ...(initialState.viewProvided ? { center: [initialState.lng, initialState.lat], zoom: initialState.zoom } : nationalView()),
       minZoom: 3.5,
-      maxZoom: 15,
+      maxZoom: MAX_ZOOM,
+      // Overscaled tiles are not cut into smaller ones: each cut would place one more disc per commune it crosses.
+      zoomLevelsToOverscale: MAX_ZOOM,
       dragRotate: false,
       pitchWithRotate: false,
       attributionControl: { compact: true },
@@ -128,6 +131,8 @@ export function MapView({ manifest }: MapViewProps) {
           type: state.priceType,
           selected: state.selection ? String(state.selection.props.code ?? '') || null : null,
           theme: state.theme,
+          compare: state.compare,
+          mix: state.mix,
           filters: state.filters,
         }),
       )
@@ -182,7 +187,7 @@ export function MapView({ manifest }: MapViewProps) {
     }
 
     const unsubscribe = store.subscribe((state, previous) => {
-      const appearanceChanged = state.priceType !== previous.priceType || state.theme !== previous.theme || state.filters !== previous.filters
+      const appearanceChanged = (['priceType', 'theme', 'compare', 'mix', 'filters'] as const).some((key) => state[key] !== previous[key])
       if (appearanceChanged && map.isStyleLoaded()) applyAppearance(map, state)
       if (state.selection !== previous.selection) showSelection(state.selection)
       if (appearanceChanged || state.selection !== previous.selection) syncHash()

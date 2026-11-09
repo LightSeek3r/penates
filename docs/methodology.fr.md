@@ -185,6 +185,22 @@ Les lieux d'accueil enfants-parents et les relais petite enfance (D503, D504) n'
 
 Un filtre conserve les communes dont la valeur respecte la limite choisie : au plus une valeur (par exemple un hôpital à moins de 15 km), au moins une valeur (ensoleillement, fibre), ou entre deux valeurs (altitude, loyer). Les communes qui ne remplissent pas tous les filtres actifs sont grisées. Une commune sans valeur pour un critère actif ne le remplit pas : une donnée inconnue n'est jamais comptée comme satisfaite.
 
+## Deux indicateurs à la fois
+
+Sous la liste des couleurs, vous pouvez ajouter un second indicateur, montré de l'une de deux façons :
+
+- **Couleurs croisées.** Chaque indicateur est découpé en trois tranches (bas, moyen, haut) faites de classes entières de sa propre légende, par exemple moins de 1 500, de 1 500 à 3 500 et 3 500 €/m² ou plus pour le prix, moins de 2, de 2 à 10 et 10 km ou plus pour les distances, les zones 1 à 2, 3 et 4 à 5 pour la zone sismique. Chaque commune prend alors l'une de neuf couleurs, lue dans la grille 3 x 3 : les lignes donnent le second indicateur, les colonnes le premier. Elle répond à des questions comme « où le prix est-il bas et l'hôpital proche ».
+- **Disques.** Les couleurs gardent le premier indicateur, et un disque de trois tailles montre la tranche du second.
+
+Comment les lire, et leurs limites :
+
+- **Les tranches sont larges.** Deux communes d'une même tranche peuvent beaucoup différer (une commune à 1 600 et une à 3 400 €/m² sont dans la même tranche), et les couleurs croisées masquent cet écart. La fiche du lieu donne toujours les chiffres exacts de chaque indicateur.
+- **Pas de classement.** Les couleurs croisées montrent deux indicateurs côte à côte ; ce n'est pas une note et rien n'est pondéré.
+- **Une donnée absente reste absente.** Une commune à qui il manque l'une des deux valeurs est dessinée « pas de donnée » en couleurs croisées et n'a pas de disque : une inconnue n'est jamais montrée comme basse.
+- **Estimations fragiles.** En couleurs croisées, un hachurage signifie qu'au moins un des deux chiffres est fragile (prix sur moins de 10 ventes, loyer sur peu d'annonces) ; la fiche du lieu précise lequel. Une estimation fragile montrée en disque est un anneau ouvert.
+- **Les disques s'éclaircissent en vue large.** Là où les communes sont trop petites pour porter chacune un disque, les disques qui se chevauchent sont omis ; à partir du zoom 9, chaque commune qui a une valeur a son disque. Un disque absent en vue large ne veut donc pas dire une donnée absente.
+- Les filtres continuent de s'appliquer aux deux vues.
+
 ## Ce qu'aucun indicateur ne couvre
 
 - La **performance énergétique (DPE)** des logements, leur âge ou leur état.

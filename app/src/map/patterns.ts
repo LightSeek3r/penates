@@ -1,11 +1,18 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
 
+import { MARK_DIAMETERS, TIERS, markIcon } from '../domain/combine'
 import { HATCH_INK_DARK, HATCH_INK_LIGHT } from '../domain/priceLadder'
 
 const SIZE = 16
 const SCALE = 2
 
 type Painter = (ctx: CanvasRenderingContext2D) => void
+
+interface Image {
+  /** Square side in CSS pixels. */
+  size: number
+  paint: Painter
+}
 
 function diagonal(ctx: CanvasRenderingContext2D, ink: string, width: number) {
   ctx.strokeStyle = ink
@@ -42,10 +49,49 @@ const PATTERNS: Record<string, Painter> = {
   },
 }
 
-function render(paint: Painter): ImageData {
+const MARK_OUTLINE = 1.5
+
+/**
+ * Second-indicator disc: porcelain core inside a midnight outline, so one of the two inks always stands out from the
+ * fill below. A rough estimate is an open ring of the same two inks (porcelain edged with midnight), hollow in the
+ * middle so it never reads as a filled disc.
+ */
+function mark(diameter: number, open: boolean): Image {
+  const size = diameter + 2 * MARK_OUTLINE
+  return {
+    size,
+    paint: (ctx) => {
+      const centre = size / 2
+      const ring = (radius: number, ink: string, width: number) => {
+        ctx.beginPath()
+        ctx.arc(centre, centre, radius, 0, Math.PI * 2)
+        ctx.strokeStyle = ink
+        ctx.lineWidth = width
+        ctx.stroke()
+      }
+      if (open) {
+        ring(diameter / 2 - 1, HATCH_INK_DARK, 3.6)
+        ring(diameter / 2 - 1, HATCH_INK_LIGHT, 1.6)
+        return
+      }
+      ctx.beginPath()
+      ctx.arc(centre, centre, diameter / 2, 0, Math.PI * 2)
+      ctx.fillStyle = HATCH_INK_LIGHT
+      ctx.fill()
+      ring(diameter / 2, HATCH_INK_DARK, MARK_OUTLINE)
+    },
+  }
+}
+
+const IMAGES: Record<string, Image> = {
+  ...Object.fromEntries(Object.entries(PATTERNS).map(([id, paint]) => [id, { size: SIZE, paint }])),
+  ...Object.fromEntries(TIERS.flatMap((tier) => [false, true].map((open) => [markIcon(tier, open), mark(MARK_DIAMETERS[tier], open)]))),
+}
+
+function render({ size, paint }: Image): ImageData {
   const canvas = document.createElement('canvas')
-  canvas.width = SIZE * SCALE
-  canvas.height = SIZE * SCALE
+  canvas.width = Math.ceil(size * SCALE)
+  canvas.height = Math.ceil(size * SCALE)
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('2D canvas unavailable')
   ctx.scale(SCALE, SCALE)
@@ -55,7 +101,7 @@ function render(paint: Painter): ImageData {
 
 export function registerPatterns(map: MapLibreMap): void {
   map.setMissingStyleImageResolver((id) => {
-    const paint = PATTERNS[id]
-    if (paint && !map.hasImage(id)) map.addImage(id, render(paint), { pixelRatio: SCALE })
+    const image = IMAGES[id]
+    if (image && !map.hasImage(id)) map.addImage(id, render(image), { pixelRatio: SCALE })
   })
 }

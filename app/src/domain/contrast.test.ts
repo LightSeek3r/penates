@@ -1,19 +1,45 @@
 import { describe, expect, it } from 'vitest'
 import { contrast } from './colour'
+import { CROSS_COLORS, TIERS } from './combine'
 import { LADDERS, LAYERS, NO_DATA_COLOR, type LadderId, layerColors } from './layers'
 import { HATCH_INK_DARK, HATCH_INK_LIGHT, HATCH_LIGHT_BELOW, NO_PRICE_COLOR, PRICE_BREAKS, PRICE_COLORS, hatchInkFor, priceClass } from './priceLadder'
 import { hatchInkOn } from './themes'
 
-/** OKLCH chroma and hue of a `#RRGGBB` colour (Björn Ottosson's OKLab). */
-function oklch(hex: string): { chroma: number; hue: number } {
+type Rgb = readonly [number, number, number]
+
+const linearRgb = (hex: string): Rgb => {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+  return [r, g, b]
+}
+
+/** OKLab of a linear RGB colour (Björn Ottosson). */
+function oklab([r, g, b]: Rgb): Rgb {
   const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
   const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
   const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
-  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
-  const bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s]
+}
+
+/** OKLCH chroma and hue of a `#RRGGBB` colour. */
+function oklch(hex: string): { chroma: number; hue: number } {
+  const [, a, bb] = oklab(linearRgb(hex))
   return { chroma: Math.hypot(a, bb), hue: ((Math.atan2(bb, a) * 180) / Math.PI + 360) % 360 }
 }
+
+// Full dichromacy (severity 1) from Machado, Oliveira and Fernandes (2009), applied to linear RGB.
+const DICHROMACY: Record<string, readonly Rgb[]> = {
+  protanopia: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+  deuteranopia: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.01182, 0.04294, 0.968881]],
+  tritanopia: [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.3039]],
+}
+
+function simulate(hex: string, matrix: readonly Rgb[]): Rgb {
+  const rgb = linearRgb(hex)
+  const [r, g, b] = matrix.map((row) => Math.min(1, Math.max(0, row[0] * rgb[0] + row[1] * rgb[1] + row[2] * rgb[2])))
+  return [r, g, b]
+}
+
+const distance = (a: Rgb, b: Rgb) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
 
 /** Mean hue of the clearly coloured steps of a ladder (the near-white ends carry almost no hue). */
 function ladderHue(colours: readonly string[]): number {
@@ -88,5 +114,52 @@ describe('indicator ladders stay distinct and legible', () => {
 
   it('keeps every layer colour distinct from the no-data ground', () => {
     for (const def of LAYERS) for (const fill of layerColors(def)) expect(fill.toLowerCase()).not.toBe(NO_DATA_COLOR.toLowerCase())
+  })
+})
+
+describe('cross palette stays readable', () => {
+  const cells = TIERS.flatMap((second) => TIERS.map((theme) => ({ theme, second, colour: CROSS_COLORS[second][theme] })))
+  const AMBER = '#F2A81D'
+
+  it('keeps every cell apart from the no-data ground and hatchable at 3:1', () => {
+    for (const { colour } of cells) {
+      expect(contrast(colour, NO_DATA_COLOR), colour).toBeGreaterThanOrEqual(1.5)
+      expect(contrast(colour, hatchInkOn(colour)), colour).toBeGreaterThanOrEqual(3)
+    }
+  })
+
+  it('reads by lightness alone along the diagonal and between grid neighbours', () => {
+    for (const tier of [1, 2] as const) expect(contrast(CROSS_COLORS[tier][tier], CROSS_COLORS[tier - 1][tier - 1])).toBeGreaterThanOrEqual(2)
+    for (const a of cells) {
+      for (const b of cells) {
+        if (Math.abs(a.theme - b.theme) + Math.abs(a.second - b.second) === 1) expect(contrast(a.colour, b.colour), `${a.colour} / ${b.colour}`).toBeGreaterThanOrEqual(1.4)
+      }
+    }
+  })
+
+  // 0.08 in OKLab is several times the just-noticeable difference (about 0.02), so cells stay apart as map fills.
+  it.each([['normal vision', null] as const, ...Object.entries(DICHROMACY)])('keeps all nine cells distinct with %s', (_name, matrix) => {
+    const seen = cells.map(({ colour }) => oklab(matrix ? simulate(colour, matrix) : linearRgb(colour)))
+    for (let i = 0; i < seen.length; i += 1) {
+      for (let j = i + 1; j < seen.length; j += 1) expect(distance(seen[i], seen[j]), `${cells[i].colour} / ${cells[j].colour}`).toBeGreaterThanOrEqual(0.08)
+    }
+  })
+
+  it('borrows neither the price ladder nor selection amber', () => {
+    const priceHue = ladderHue(PRICE_COLORS)
+    for (const { colour } of cells) {
+      const { chroma, hue } = oklch(colour)
+      if (chroma < 0.03) continue
+      expect(hueGap(hue, priceHue), colour).toBeGreaterThanOrEqual(40)
+      expect(hueGap(hue, oklch(AMBER).hue), colour).toBeGreaterThanOrEqual(40)
+    }
+    expect(cells.filter(({ colour }) => oklch(colour).chroma < 0.03).map(({ theme, second }) => [theme, second])).toEqual([[0, 0], [1, 1], [2, 2]])
+  })
+})
+
+describe('second-indicator discs stand out from any fill', () => {
+  it('keep one of their two inks at 3:1 on every colour a commune can take', () => {
+    const fills = [...Object.values(LADDERS).flat(), ...CROSS_COLORS.flat(), NO_DATA_COLOR, HATCH_INK_DARK]
+    for (const fill of fills) expect(Math.max(contrast(fill, HATCH_INK_LIGHT), contrast(fill, HATCH_INK_DARK)), fill).toBeGreaterThanOrEqual(3)
   })
 })

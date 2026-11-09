@@ -30,6 +30,17 @@
     "filtersTab": "Filters",
     "colourBy": "Colour the map by"
   },
+  "second": {
+    "title": "Second indicator",
+    "pick": "Add a second indicator",
+    "none": "None",
+    "mixLabel": "Show it as",
+    "mix": {
+      "cross": "Crossed colours",
+      "marks": "Discs"
+    },
+    "remove": "Remove the second indicator"
+  },
   "legend": {
     "title": "Median price, €/m²",
     "under": "under {{value}}",
@@ -43,7 +54,15 @@
     "noData": "No data",
     "dimmed": "Outside the criteria",
     "priceOnlyNote": "Textures describe the reliability of the price.",
-    "doubt": "Hatched: rough estimate (few listings)"
+    "doubt": "Hatched: rough estimate (few listings)",
+    "crossTitle": "{{theme}} and {{second}}",
+    "crossCaption": "Colour of each pair of tiers: rows give {{second}}, columns give {{theme}}",
+    "crossRough": "Hatched: at least one figure is a rough estimate",
+    "crossNoData": "No data for one of the two",
+    "marksRough": "Open ring: rough estimate",
+    "marksNone": "No disc: no data",
+    "marksThinned": "Zoomed out, discs are thinned so they do not overlap: zoom in to see them all.",
+    "tiersNote": "Three tiers per indicator, from its own legend classes; the place details give exact figures."
   },
   "inspector": {
     "title": "Place details",

@@ -1,4 +1,5 @@
 import type { useTranslation } from 'react-i18next'
+import { type Tier, tiersOf } from '../domain/combine'
 import type { FilterValue } from '../domain/filters'
 import { type LayerDef, displayValue } from '../domain/layers'
 import type { Lang } from '../state/urlState'
@@ -55,6 +56,30 @@ export function legendRows(t: Translate, def: LayerDef, colours: readonly string
     const short = from === null ? (scale.integer && to === 1 ? '0' : `<${compact(to ?? 0)}`) : to === null ? `${compact(from)}+` : compact(from)
     return { key: color, color, label, short }
   })
+}
+
+export interface TierLabel {
+  label: string
+  short: string
+}
+
+/**
+ * Wording of the three tiers of a combined layer, low first, in the legend's own phrasing: "under 1,500", "2 to
+ * 10 km", "zone 1 to 2".
+ */
+export function tierLabels(t: Translate, def: LayerDef, lang: Lang): Record<Tier, TierLabel> {
+  const split = tiersOf(def)
+  if (split.kind === 'steps') {
+    const scale = { ...def.scale, kind: 'steps', breaks: split.cuts } as const
+    const [low, middle, high] = legendRows(t, { ...def, scale }, ['low', 'middle', 'high'], lang)
+    return { 0: low, 1: middle, 2: high }
+  }
+  const label = (codes: readonly number[]): TierLabel => {
+    const first = t(`ind.${def.id}.short`, { value: codes[0] })
+    const last = codes.at(-1) ?? codes[0]
+    return codes.length === 1 ? { label: first, short: String(codes[0]) } : { label: t('legend.range', { from: first, to: last }), short: `${codes[0]}–${last}` }
+  }
+  return { 0: label(split.codes[0]), 1: label(split.codes[1]), 2: label(split.codes[2]) }
 }
 
 /** Read-out next to a filter control, e.g. "jusqu'à 10 km", "au moins 2 000 h/an", "200 à 800 m". */

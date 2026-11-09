@@ -89,6 +89,11 @@ export interface LayerDef {
   readonly doubt?: { readonly property: string; readonly below: number }
   /** Price rows leave the unit to the legend title. */
   readonly rowUnit?: boolean
+  /**
+   * First class index of the middle and of the high tier when the layer is combined with another (see `tiersOf`);
+   * without it the classes are split into three runs of near-equal length.
+   */
+  readonly tiers?: readonly [number, number]
 }
 
 const DISTANCE_BREAKS = [1000, 2000, 5000, 10000, 20000] as const
@@ -169,6 +174,8 @@ export const LAYERS = [
     unit: 'count',
     scale: { kind: 'steps', breaks: [1, 2, 5, 10, 25], integer: true },
     filter: { kind: 'max', min: 0, max: 20, step: 1 },
+    // None known, a few, five or more: an even split would mix "none known" with "one".
+    tiers: [1, 3],
   },
   {
     id: 'altitude',
@@ -347,7 +354,7 @@ export function layersByGroup(layers: readonly LayerDef[]): ReadonlyArray<{ grou
   })
 }
 
-function classCount(def: LayerDef): number {
+export function classCount(def: LayerDef): number {
   return def.scale.kind === 'steps' ? def.scale.breaks.length + 1 : def.scale.values.length
 }
 

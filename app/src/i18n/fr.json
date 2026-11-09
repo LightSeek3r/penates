@@ -30,6 +30,17 @@
     "filtersTab": "Filtres",
     "colourBy": "Colorier la carte selon"
   },
+  "second": {
+    "title": "Second indicateur",
+    "pick": "Ajouter un second indicateur",
+    "none": "Aucun",
+    "mixLabel": "Le montrer en",
+    "mix": {
+      "cross": "Couleurs croisées",
+      "marks": "Disques"
+    },
+    "remove": "Retirer le second indicateur"
+  },
   "legend": {
     "title": "Prix médian, €/m²",
     "under": "moins de {{value}}",
@@ -43,7 +54,15 @@
     "noData": "Pas de donnée",
     "dimmed": "Hors critères",
     "priceOnlyNote": "Les textures décrivent la fiabilité du prix.",
-    "doubt": "Hachuré : estimation fragile (peu d'annonces)"
+    "doubt": "Hachuré : estimation fragile (peu d'annonces)",
+    "crossTitle": "{{theme}} et {{second}}",
+    "crossCaption": "Couleur de chaque paire de tranches : les lignes donnent {{second}}, les colonnes {{theme}}",
+    "crossRough": "Hachuré : au moins un chiffre est fragile",
+    "crossNoData": "Pas de donnée pour l'un des deux",
+    "marksRough": "Anneau ouvert : estimation fragile",
+    "marksNone": "Pas de disque : pas de donnée",
+    "marksThinned": "En vue large, les disques sont éclaircis pour ne pas se chevaucher : zoomez pour tous les voir.",
+    "tiersNote": "Trois tranches par indicateur, d'après ses propres classes ; la fiche du lieu donne les chiffres exacts."
   },
   "inspector": {
     "title": "Fiche du lieu",
