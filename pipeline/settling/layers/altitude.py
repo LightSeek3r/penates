@@ -13,8 +13,9 @@ values are measured on RGE ALTI (bare-ground terrain model, NGF altitudes) throu
   polygon, read from the WMS-R raster service as float32 (`WMS_URL`, `x-bil;bits=32`). The service
   resamples RGE ALTI to the requested 25 m grid, so single summits and narrow gorges are slightly
   flattened (Mont Blanc reads 4,775 m instead of 4,806 m): `rel` is a slight underestimate, a hilliness
-  hint rather than a surveyed figure. The ADMIN EXPRESS COG-CARTO polygons are generalised, so pixels
-  along a commune border can belong to a neighbour.
+  hint rather than a surveyed figure. Pixels contaminated by gaps in the model are dropped
+  (`mask_gap_pits`). The ADMIN EXPRESS COG-CARTO polygons are generalised, so pixels along a commune
+  border can belong to a neighbour.
 
 Altimetry API behaviour measured on 2026-11-06 (only the limits of 5,000 points and 5 requests/second/IP
 are documented): requests of up to 30 points return exactly the value of a single-point query wherever
@@ -22,8 +23,11 @@ the points are (600 comparisons, 0 differences), but larger requests spread over
 kilometres are answered from a coarser level of the model (tens of metres off in the Alps, and spurious
 negative altitudes inland). Chef-lieu points therefore go `POINTS_PER_REQUEST` at a time.
 
-Results are cached per department under `raw/altitude/`, so a national run is paid once per boundary
-edition. A previous result can be given with `--layer-file altitude=PATH` (same CSV columns as the cache).
+A national measurement takes over an hour on these services, which fail intermittently, so the build
+does not run it: `compute` reads the committed table `data/altitude-<boundaries edition date>.csv`
+(`python -m settling.layers.altitude [--refresh]` regenerates it, departments cached under
+`raw/altitude/`) and calls the services only for communes the table lacks. `--layer-file altitude=PATH`
+gives another table of the same format.
 """
 
 from __future__ import annotations
@@ -34,6 +38,7 @@ import logging
 import math
 import threading
 import time
+import warnings
 from collections import Counter
 from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor
@@ -61,8 +66,9 @@ WMS_URL = "https://data.geopf.fr/wms-r/wms"
 WMS_LAYER = "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES"  # "Modèle Numérique de Terrain issu du RGEALTI"
 WMS_FORMAT = "image/x-bil;bits=32"  # little-endian float32, row 0 at the top (verified against the API)
 RASTER_RES_M = 25
-RASTER_TILE_PX = 2500  # the WMS caps WIDTH and HEIGHT at 5010; 5000 px tiles drew gateway timeouts (504)
-# Seen 2026-11-06: a valid GetMap answered 400 once, then 200 when repeated; so 400 is retried for the WMS.
+# Plus a 1 px margin; the WMS caps WIDTH and HEIGHT at 5010, but 5000 px tiles drew gateway timeouts (504).
+RASTER_TILE_PX = 2500
+# Seen 2026-11-06: valid GetMaps intermittently answered 400, then 200 when repeated; so the WMS retries 400.
 WMS_TRANSIENT_STATUSES = frozenset({400, 429})
 RGE_ALTI_DATASET = "https://www.data.gouv.fr/datasets/rge-alti-r"
 LICENCE = "Licence Ouverte / Etalab 2.0"
@@ -70,15 +76,18 @@ LICENCE_URL = "https://www.etalab.gouv.fr/licence-ouverte-open-licence"
 
 MIN_REQUEST_INTERVAL_S = 0.25  # across all workers; documented limit: 5 requests per second per IP
 WORKERS = 3
-RETRY_DELAYS_S = (5, 20, 60)
+# Seen 2026-11-06: instant 400/502 from some back ends, random per request, sometimes for minutes; many
+# attempts with growing gaps get through where a few long waits did not.
+RETRY_DELAYS_S = (2, 5, 10, 20, 30, 60, 60, 120, 120)
 TIMEOUT_S = 300
 # Both services answer -99999 outside the model (sea) and the WMS blends it into edge pixels (-99997.6..);
 # France's lowest ground is about -3 m (open-pit quarries go lower), Mont Blanc 4,806 m.
 PLAUSIBLE_Z = (-100.0, 4900.0)
 MIN_PIXELS_FOR_RELIEF = 16  # 1 ha at 25 m
+GAP_PIT_M = 100.0  # see mask_gap_pits
 
 # Part of the cache path: results computed another way must not be reused.
-METHOD_VERSION = f"chef-lieu-api{POINTS_PER_REQUEST}-wms{RASTER_RES_M}m-v3"
+METHOD_VERSION = f"chef-lieu-api{POINTS_PER_REQUEST}-wms{RASTER_RES_M}m-pits{GAP_PIT_M:g}-v4"
 
 CHEF_LIEU_LAYERS = {
     "chef_lieu_de_commune": "code_insee_de_la_commune",
@@ -101,7 +110,7 @@ class Summary:
     z_alt: float | None
     z_min: float | None  # None when fewer than MIN_PIXELS_FOR_RELIEF pixels had a value
     z_max: float | None
-    pixels: int  # raster pixels inside the commune with a terrain value
+    pixels: int | None  # raster pixels inside the commune with a value; None when read from the table
     queried_on: str
 
 
@@ -164,6 +173,8 @@ def _with_retries(
 
 def _expect(response: requests.Response, content_type: str, url: str) -> None:
     actual = response.headers.get("Content-Type", "")
+    if response.status_code >= 500:
+        response.raise_for_status()  # the service itself failed (its gateway errors are HTML pages too)
     if response.status_code == 403 or actual.startswith("text/html"):
         raise SourceError(
             f"{url}: HTTP {response.status_code} ({actual}). A proxy may be blocking the service; "
@@ -251,7 +262,43 @@ def tiles_covering(bounds: tuple[float, float, float, float], tile_px: int = RAS
 def fetch_tile(
     session: requests.Session, tile: Tile, throttle: Throttle, sleep: Callable[[float], None] = time.sleep
 ) -> np.ndarray:
-    """(height, width) terrain altitudes of the tile's pixels, NaN where the model has no value."""
+    """(height, width) terrain altitudes of the tile's pixels, NaN where the model has no value or the
+    pixel is contaminated by a gap; fetched with a one-pixel margin so edge pixels have their neighbours."""
+    margin = Tile(tile.left - RASTER_RES_M, tile.top + RASTER_RES_M, tile.width + 2, tile.height + 2)
+    return mask_gap_pits(_fetch_raster(session, margin, throttle, sleep))[1:-1, 1:-1]
+
+
+def mask_gap_pits(z: np.ndarray) -> np.ndarray:
+    """NaN for pixels more than GAP_PIT_M below the median of their 8 neighbours.
+
+    The WMS averages the 1 m model into 25 m pixels, nodata (-99999) included: one nodata metre in a
+    pixel lowers it by about 160 m, which can still look like a plausible altitude (seen inland, e.g.
+    -62 m among 180 m neighbours at Nohant-Vic). Real terrain cannot put a 25 m pixel 100 m below the
+    median of its neighbours, so this only removes such artefacts. Border pixels are left as they are.
+    """
+    z = z.copy()
+    height, width = z.shape
+    if height < 3 or width < 3:
+        return z
+    centre = z[1:-1, 1:-1]
+    shifts = [(dr, dc) for dr in (-1, 0, 1) for dc in (-1, 0, 1) if (dr, dc) != (0, 0)]
+    neighbours = np.stack([z[1 + dr:height - 1 + dr, 1 + dc:width - 1 + dc] for dr, dc in shifts])
+    with np.errstate(invalid="ignore"):
+        highest = np.fmax.reduce(neighbours, axis=0)
+        candidates = np.argwhere(centre < highest - GAP_PIT_M)  # cheap pre-filter: below the highest neighbour
+    if len(candidates):
+        rows, cols = candidates[:, 0], candidates[:, 1]
+        with np.errstate(all="ignore"), warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)  # all-NaN neighbourhoods
+            median = np.nanmedian(neighbours[:, rows, cols], axis=0)
+        pits = centre[rows, cols] < median - GAP_PIT_M
+        centre[rows[pits], cols[pits]] = np.nan
+    return z
+
+
+def _fetch_raster(
+    session: requests.Session, tile: Tile, throttle: Throttle, sleep: Callable[[float], None]
+) -> np.ndarray:
     params = {
         "SERVICE": "WMS",
         "VERSION": "1.3.0",
@@ -430,52 +477,172 @@ def fetch_chef_lieux(session: requests.Session, raw: Path) -> tuple[str, dict[st
     return edition.edition_id, paths
 
 
-def measured_by_department(ctx: LayerContext) -> tuple[dict[str, Summary], list[Path], dict]:
+def measured_by_department(
+    ctx: LayerContext, indices: list[int] | None = None, refresh: bool = False
+) -> tuple[dict[str, Summary], str]:
+    """Measure the communes at `indices` (all by default) on the IGN services, one department at a time.
+
+    Whole departments are cached under raw/altitude/<edition>/<method>/<dep>.csv and reused unless
+    `refresh`; a subset (communes missing from the committed table) is measured without cache."""
     edition_id, chef_lieu_paths = fetch_chef_lieux(ctx.session, ctx.raw)
     chef_lieux = read_chef_lieux(chef_lieu_paths)
     cache_dir = ctx.raw / "altitude" / edition_id / METHOD_VERSION
+    whole = indices is None
     by_dep: dict[str, list[int]] = {}
-    for i, code in enumerate(ctx.codes):
-        by_dep.setdefault(department_of(code), []).append(i)
+    for i in range(len(ctx.codes)) if indices is None else indices:
+        by_dep.setdefault(department_of(ctx.codes[i]), []).append(i)
     summaries: dict[str, Summary] = {}
-    files = []
-    for dep, indices in sorted(by_dep.items()):
+    for dep, members in sorted(by_dep.items()):
         path = cache_dir / f"{dep}.csv"
-        cached = read_summaries(path) if path.exists() else {}
-        if any(ctx.codes[i] not in cached for i in indices):
+        cached = read_summaries(path) if whole and path.exists() and not refresh else {}
+        if any(ctx.codes[i] not in cached for i in members):
             started = time.perf_counter()
             measured = measure(
                 ctx.session,
-                [ctx.codes[i] for i in indices],
-                [ctx.communes[i].geometry for i in indices],
+                [ctx.codes[i] for i in members],
+                [ctx.communes[i].geometry for i in members],
                 chef_lieux,
-                ctx.origins[indices],
+                ctx.origins[members],
                 datetime.now(UTC).date().isoformat(),
             )
-            write_summaries(path, measured)
+            if whole:
+                write_summaries(path, measured)
             cached = {s.code: s for s in measured}
-            log.info("altitude: department %s measured (%d communes) in %.0fs", dep, len(indices), time.perf_counter() - started)
+            log.info("altitude: department %s measured (%d communes) in %.0fs", dep, len(members), time.perf_counter() - started)
         summaries |= cached
-        files.append(path)
-    reference = {
-        "edition_id": edition_id,
-        "layers": list(CHEF_LIEU_LAYERS),
-        "url": f"https://data.geopf.fr/telechargement/resource/ADMIN-EXPRESS-COG-CARTO-PE/{edition_id}",
+    return summaries, edition_id
+
+
+# --- committed table ----------------------------------------------------------------------------------------
+
+# The national result, committed so the release build does not spend an hour on a flaky service:
+# data/altitude-<boundaries edition date>.csv, regenerated with `python -m settling.layers.altitude --refresh`.
+TABLE_DIR = Path(__file__).resolve().parent / "data"
+TABLE_COLUMNS = ("code_insee", "z_alt", "z_min", "z_max", "alt_from")
+TABLE_ALT_FROM = {FROM_CHEF_LIEU: "c", FROM_INNER_POINT: "i"}
+MIN_TABLE_SHARE = 0.999  # of the tile communes; less means the table belongs to another boundaries edition
+
+
+@dataclass(frozen=True)
+class Table:
+    path: Path
+    meta: dict[str, str]  # from the '# key: value' header lines
+    summaries: dict[str, Summary]
+
+
+def committed_table_path() -> Path | None:
+    """The newest committed table (file names sort by boundaries edition date)."""
+    tables = sorted(TABLE_DIR.glob("altitude-*.csv"))
+    return tables[-1] if tables else None
+
+
+def write_table(path: Path, summaries: Iterable[Summary], meta: dict[str, str]) -> None:
+    """Deterministic: header lines in the given order, rows sorted by code; altitude to 0.01 m, range in m."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    partial = path.with_name(path.name + ".part")
+    with partial.open("w", encoding="utf-8", newline="") as f:
+        for key, value in meta.items():
+            f.write(f"# {key}: {value}\n")
+        writer = csv.writer(f, lineterminator="\n")
+        writer.writerow(TABLE_COLUMNS)
+        for s in sorted(summaries, key=lambda s: s.code):
+            known = s.z_min is not None and s.z_max is not None
+            z_min, z_max = (round(s.z_min), round(s.z_max)) if known else ("", "")
+            writer.writerow([s.code, _fmt(s.z_alt), z_min, z_max, TABLE_ALT_FROM.get(s.alt_from or "", "")])
+    partial.replace(path)
+
+
+def read_table(path: Path) -> Table:
+    meta: dict[str, str] = {}
+    body: list[str] = []
+    with path.open(encoding="utf-8", newline="") as f:
+        for line in f:
+            if line.startswith("#"):
+                key, _, value = line[1:].partition(":")
+                meta[key.strip()] = value.strip()
+            else:
+                body.append(line)
+    rows = csv.DictReader(body)
+    missing = set(TABLE_COLUMNS) - set(rows.fieldnames or [])
+    if missing:
+        raise SourceError(f"{path}: missing columns {sorted(missing)}, expected {list(TABLE_COLUMNS)}")
+    alt_from = {short: long for long, short in TABLE_ALT_FROM.items()}
+    summaries = {
+        row["code_insee"]: Summary(
+            code=row["code_insee"],
+            alt_from=alt_from.get(row["alt_from"]),
+            z_alt=_parse(row["z_alt"]),
+            z_min=_parse(row["z_min"]),
+            z_max=_parse(row["z_max"]),
+            pixels=None,
+            queried_on=meta.get("queried_on", ""),
+        )
+        for row in rows
+        if row["code_insee"]
     }
-    return summaries, files, reference
+    return Table(path, meta, summaries)
+
+
+def chef_lieu_altitudes(path: Path | None = None) -> dict[str, float]:
+    """INSEE code -> exact RGE ALTI ground altitude (m, NGF) at the commune's chef-lieu, or at the
+    `ctx.origins` point for a commune without one (alt_from 'i'), from the committed table."""
+    path = path or committed_table_path()
+    if path is None:
+        return {}
+    return {code: s.z_alt for code, s in read_table(path).summaries.items() if s.z_alt is not None}
+
+
+def from_former_communes(code: str, former: list[str], summaries: dict[str, Summary]) -> Summary | None:
+    """Relief of a commune nouvelle missing from the table, as the union of its former communes' ranges
+    (exact when they tile it); its altitude stays unknown, no chef-lieu value can be taken from them."""
+    ranges = [summaries[old] for old in former if old in summaries and summaries[old].z_min is not None]
+    if not former or len(ranges) != len(former):
+        return None
+    low = min(s.z_min for s in ranges if s.z_min is not None)
+    high = max(s.z_max for s in ranges if s.z_max is not None)
+    return Summary(code, None, None, low, high, None, ranges[0].queried_on)
+
+
+def _fill_missing(ctx: LayerContext, summaries: dict[str, Summary], missing: list[str]) -> dict[str, str]:
+    """Measure communes absent from the table on the IGN services; if that fails, take the relief of their
+    former communes. Returns code -> how it was filled ('api', 'former_communes' or 'none')."""
+    log.warning("altitude: %d communes not in the table, measuring them: %s", len(missing), missing[:20])
+    index = {code: i for i, code in enumerate(ctx.codes)}
+    try:
+        measured, _ = measured_by_department(ctx, [index[code] for code in missing])
+    except (SourceError, requests.RequestException) as error:
+        log.warning("altitude: IGN services failed (%s); falling back to former communes", error)
+        measured = {}
+    summaries |= measured
+    former: dict[str, list[str]] = {}
+    for old, new in ctx.merged_codes.items():
+        former.setdefault(new, []).append(old)
+    filled = {}
+    for code in missing:
+        union = None if code in measured else from_former_communes(code, sorted(former.get(code, [])), summaries)
+        if code in measured:
+            filled[code] = "api"
+        elif union is not None:
+            summaries[code], filled[code] = union, "former_communes"
+        else:
+            filled[code] = "none"
+    return filled
 
 
 # --- layer --------------------------------------------------------------------------------------------------
 
 
 def compute(ctx: LayerContext) -> LayerResult:
-    override = ctx.overrides.get("altitude")
-    if override is not None:
-        summaries, files, reference = read_summaries(override), [override], {"note": "given with --layer-file"}
-    else:
-        summaries, files, reference = measured_by_department(ctx)
+    """Values from the committed table (or --layer-file altitude=PATH, same format); the IGN services are
+    called only for communes the table lacks."""
+    path = ctx.overrides.get("altitude") or committed_table_path()
+    if path is None:
+        raise SourceError(f"no altitude table in {TABLE_DIR}; run python -m settling.layers.altitude --refresh")
+    table = read_table(path)
+    summaries = dict(table.summaries)
+    missing = [code for code in ctx.codes if code not in summaries]
+    filled = _fill_missing(ctx, summaries, missing) if missing else {}
     properties = to_properties(ctx.codes, summaries)
-    dates = sorted({summaries[c].queried_on for c in ctx.codes if c in summaries})
     source = {
         "name": "IGN RGE ALTI (Géoplateforme altimetry API and WMS-R)",
         "alt": {"api": ALTI_API, "resource": ALTI_RESOURCE, "points_per_request": POINTS_PER_REQUEST},
@@ -483,12 +650,18 @@ def compute(ctx: LayerContext) -> LayerResult:
         "dataset": RGE_ALTI_DATASET,
         "licence": LICENCE,
         "licence_url": LICENCE_URL,
-        "queried_on": dates[0] if len(dates) == 1 else dates,
-        "reference_points": reference,
-        "method": METHOD_VERSION,
-        "sha256": _sha256(files),
+        "table": path.name,
+        "queried_on": table.meta.get("queried_on"),
+        "reference_points": table.meta.get("boundaries"),
+        "method": table.meta.get("method"),
+        "sha256": _sha256([path]),
     }
-    return LayerResult(properties, source, _report(ctx.codes, summaries, properties))
+    report = _report(ctx.codes, summaries, properties) | {
+        "table_rows": len(table.summaries),
+        "not_in_table": dict(sorted(Counter(filled.values()).items())),
+        "not_in_table_codes": sorted(filled)[:50],
+    }
+    return LayerResult(properties, source, report)
 
 
 def _sha256(files: list[Path]) -> str:
@@ -533,8 +706,25 @@ RELIEF_CHECKS: dict[str, tuple[str, int, int]] = {
 }
 
 
+def table_problems(communes: dict[str, dict], path: Path | None = None) -> list[str]:
+    """The committed table must cover the tile communes: else it belongs to another boundaries edition."""
+    path = path or committed_table_path()
+    if path is None:
+        return [f"no committed table in {TABLE_DIR}"]
+    if not communes:
+        return []
+    rows = read_table(path).summaries
+    present = sum(code in rows for code in communes)
+    if present / len(communes) < MIN_TABLE_SHARE:
+        return [
+            f"{path.name} covers {present}/{len(communes)} tile communes (< {MIN_TABLE_SHARE:.1%}); "
+            "regenerate it for the current boundaries: python -m settling.layers.altitude --refresh"
+        ]
+    return []
+
+
 def gate(communes: dict[str, dict]) -> list[str]:
-    problems = []
+    problems = table_problems(communes)
     checks = [(code, name, prop, low, high) for code, (name, prop, low, high) in SPOT_CHECKS.items()]
     checks += [(code, name, "rel", low, high) for code, (name, low, high) in RELIEF_CHECKS.items()]
     for code, name, prop, low, high in checks:
@@ -559,3 +749,55 @@ LAYER = Layer(
     min_coverage={"alt": 0.999, "rel": 0.999},
     gate=gate,
 )
+
+
+# --- regenerating the committed table -----------------------------------------------------------------------
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Measure every metropolitan commune on the IGN services and write data/altitude-<edition date>.csv."""
+    import argparse
+
+    import truststore
+
+    from settling import proximity
+    from settling.boundaries import load_boundaries
+    from settling.sources import fetch_admin_express
+
+    repo = Path(__file__).resolve().parents[3]
+    parser = argparse.ArgumentParser(prog="python -m settling.layers.altitude", description=main.__doc__)
+    parser.add_argument("--refresh", action="store_true", help="re-measure every department, ignoring the raw cache")
+    parser.add_argument("--raw", type=Path, default=repo / "data" / "raw", help="download cache directory")
+    parser.add_argument("--out", type=Path, help="output file (default: the committed table of the edition)")
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
+    truststore.inject_into_ssl()  # TLS-inspecting proxies install their root CA in the OS store
+    session = requests.Session()
+    session.headers["User-Agent"] = "settling-map-pipeline"
+    edition, paths = fetch_admin_express(session, args.raw)
+    boundaries = load_boundaries(paths, None)  # metropolitan France and Corsica
+    ctx = LayerContext(
+        session=session,
+        raw=args.raw,
+        communes=boundaries.communes,
+        merged_codes=boundaries.merged_codes,
+        origins=proximity.representative_points_l93([a.geometry for a in boundaries.communes]),
+    )
+    summaries, edition_id = measured_by_department(ctx, refresh=args.refresh)
+    dates = sorted({s.queried_on for s in summaries.values()})
+    meta = {
+        "source": f"IGN RGE ALTI: alt = altimetry API {ALTI_API} ({ALTI_RESOURCE}) at the chef-lieu, "
+                  f"z_min/z_max = WMS-R {WMS_URL} {WMS_LAYER} at {RASTER_RES_M} m",
+        "licence": f"{LICENCE} ({LICENCE_URL}); {RGE_ALTI_DATASET}",
+        "boundaries": edition_id,
+        "queried_on": dates[0] if len(dates) == 1 else f"{dates[0]}..{dates[-1]}",
+        "method": METHOD_VERSION,
+        "columns": "code_insee; z_alt m at the chef-lieu (alt_from c) or the inner point (i); z_min, z_max m",
+    }
+    out = args.out or TABLE_DIR / f"altitude-{edition.edition_date}.csv"
+    write_table(out, summaries.values(), meta)
+    log.info("wrote %s: %d communes, %d bytes", out, len(summaries), out.stat().st_size)
+
+
+if __name__ == "__main__":
+    main()

@@ -148,7 +148,7 @@ def test_a_wms_error_document_or_a_short_raster_is_a_source_error() -> None:
             response.content = response.content[:-4]
             return response
 
-    with pytest.raises(SourceError, match="expected 48 bytes"):
+    with pytest.raises(SourceError, match="expected 120 bytes"):
         altitude.fetch_tile(Short(), tile, _throttle())
 
 
@@ -163,6 +163,29 @@ def test_a_transient_wms_400_is_retried_but_an_api_400_is_not() -> None:
     assert altitude.fetch_tile(Flaky(failures=[400]), tile, _throttle(), sleep=_no_sleep).shape == (3, 4)
     with pytest.raises(RuntimeError, match="400"):
         altitude.query_elevations(FakeGeoplateforme(failures=[400]), np.array([[2.0, 45.0]]), sleep=_no_sleep)
+
+
+def test_pixels_contaminated_by_a_gap_are_masked_but_a_cliff_is_kept() -> None:
+    # read live at Nohant-Vic (36143): a gap in the model blended into its 25 m neighbours
+    gap = np.array([
+        [178.9, 178.9, 179.7, 180.1, 180.6],
+        [179.2, 179.2, 180.1, 180.7, 181.5],
+        [179.8, 179.8, -62.4, -162.2, 182.5],
+        [179.8, -62.4, -62.4, -162.2, 182.5],
+        [180.1, 181.1, 181.1, 182.6, 184.2],
+    ])
+    masked = altitude.mask_gap_pits(altitude._plausible(gap))
+    assert np.isnan(masked[2, 2]) and np.isnan(masked[3, 1]) and np.isnan(masked[3, 2])
+    assert np.nanmin(masked) == pytest.approx(178.9)
+    cliff = np.array([[400.0, 400.0, 400.0, 400.0], [400.0, 400.0, 400.0, 400.0], [250.0, 250.0, 250.0, 250.0],
+                      [100.0, 100.0, 100.0, 100.0]])  # 300 m in 50 m: steep, but real
+    assert np.array_equal(altitude.mask_gap_pits(cliff), cliff)
+
+
+def test_tiles_are_fetched_with_a_one_pixel_margin() -> None:
+    api = FakeGeoplateforme()
+    altitude.fetch_tile(api, Tile(left=800_000, top=6_600_000, width=4, height=3), _throttle())
+    assert api.tiles == [(f"{800_000 - RES},{6_600_000 - 4 * RES},{800_000 + 5 * RES},{6_600_000 + RES}", 6, 5)]
 
 
 def test_relief_combines_the_tiles_a_commune_overlaps() -> None:
@@ -240,15 +263,118 @@ def test_a_csv_without_the_expected_columns_is_refused(tmp_path: Path) -> None:
         altitude.read_summaries(path)
 
 
+# --- committed table ----------------------------------------------------------------------------------------
+
+META = {"source": "IGN RGE ALTI", "boundaries": "ADMIN-EXPRESS-COG-CARTO-PE_4-0__GEOPARQUET_WGS84G_FRA_2026-01-01",
+        "queried_on": DAY}
+TABLE_ROWS = [
+    Summary("23096", "chef_lieu", 455.27, 340.4, 674.6, 39000, DAY),
+    Summary("01002", "chef_lieu", 300.0, 280.0, 350.0, 900, DAY),
+    Summary("01003", "chef_lieu", 310.0, 290.0, 420.0, 900, DAY),
+    Summary("55050", "inner_point", 297.58, None, None, 5, DAY),
+]
+
+
+@pytest.fixture
+def table_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    monkeypatch.setattr(altitude, "TABLE_DIR", tmp_path)
+    altitude.write_table(tmp_path / "altitude-2026-01-01.csv", TABLE_ROWS, META)
+    return tmp_path
+
+
+def test_table_is_deterministic_with_its_header_and_round_trips(table_dir: Path, tmp_path: Path) -> None:
+    path = altitude.committed_table_path()
+    again = tmp_path / "again" / "altitude-2026-01-01.csv"
+    altitude.write_table(again, reversed(TABLE_ROWS), META)
+    assert path.read_bytes() == again.read_bytes()
+    assert path.read_text(encoding="utf-8").splitlines()[:5] == [
+        "# source: IGN RGE ALTI",
+        f"# boundaries: {META['boundaries']}",
+        f"# queried_on: {DAY}",
+        "code_insee,z_alt,z_min,z_max,alt_from",
+        "01002,300.00,280,350,c",
+    ]
+    table = altitude.read_table(path)
+    assert table.meta == META
+    assert table.summaries["23096"] == Summary("23096", "chef_lieu", 455.27, 340.0, 675.0, None, DAY)
+    assert table.summaries["55050"] == Summary("55050", "inner_point", 297.58, None, None, None, DAY)
+
+
+def test_the_newest_committed_table_is_used(table_dir: Path) -> None:
+    altitude.write_table(table_dir / "altitude-2027-01-01.csv", TABLE_ROWS[:1], META)
+    assert altitude.committed_table_path().name == "altitude-2027-01-01.csv"
+
+
+def test_chef_lieu_altitudes_come_from_the_table(table_dir: Path) -> None:
+    assert altitude.chef_lieu_altitudes() == {"01002": 300.0, "01003": 310.0, "23096": 455.27, "55050": 297.58}
+
+
+class Context:
+    """The parts of LayerContext that compute uses."""
+
+    def __init__(self, codes: list[str], merged_codes: dict[str, str]) -> None:
+        self.codes, self.merged_codes, self.overrides = codes, merged_codes, {}
+
+
+def test_compute_reads_the_table_and_measures_only_missing_communes(
+    table_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    asked: list[list[int]] = []
+
+    def measured(ctx, indices, refresh=False):
+        asked.append(indices)
+        return {"38999": Summary("38999", "chef_lieu", 1200.4, 1000.0, 1900.0, 300, DAY)}, "edition"
+
+    monkeypatch.setattr(altitude, "measured_by_department", measured)
+    result = altitude.compute(Context(["23096", "55050", "38999"], {}))
+    assert asked == [[2]]
+    assert result.properties == {
+        "23096": {"alt": 455, "rel": 335}, "55050": {"alt": 298}, "38999": {"alt": 1200, "rel": 900}
+    }
+    assert result.report["not_in_table"] == {"api": 1}
+    assert result.source["table"] == "altitude-2026-01-01.csv" and result.source["queried_on"] == DAY
+
+
+def test_a_commune_nouvelle_takes_its_former_communes_relief_when_the_services_fail(
+    table_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def failing(ctx, indices, refresh=False):
+        raise SourceError("down")
+
+    monkeypatch.setattr(altitude, "measured_by_department", failing)
+    result = altitude.compute(Context(["01001", "77777"], {"01002": "01001", "01003": "01001"}))
+    assert result.properties == {"01001": {"rel": 140}}  # 280..420 m; no chef-lieu altitude to take
+    assert result.report["not_in_table"] == {"former_communes": 1, "none": 1}
+
+
+def test_former_communes_need_every_one_of_them_with_a_range() -> None:
+    summaries = {s.code: s for s in TABLE_ROWS}
+    assert altitude.from_former_communes("01001", ["01002", "01003"], summaries).z_max == 420.0
+    assert altitude.from_former_communes("01001", ["01002", "01009"], summaries) is None
+    assert altitude.from_former_communes("01001", [], summaries) is None
+
+
 # --- gate ---------------------------------------------------------------------------------------------------
 
 
-def test_gate_checks_only_communes_in_the_build() -> None:
-    assert altitude.gate({"69382": {"alt": 168, "rel": 12}}) == []
-    assert altitude.gate({"74056": {"alt": 1036, "rel": 3500}, "75104": {"alt": 120, "rel": 5}}) == [
-        "Paris 4e (75104) alt=120, expected 25..50"
+def test_gate_checks_only_communes_in_the_build(table_dir: Path) -> None:
+    assert altitude.gate({"23096": {"alt": 455, "rel": 335}}) == []
+    assert altitude.gate({"23096": {"alt": 600, "rel": 335}, "01002": {"alt": 300, "rel": 70}}) == [
+        "Guéret (23096) alt=600, expected 380..500"
     ]
-    assert altitude.gate({"59183": {"alt": 3}}) == ["Dunkerque (59183) has no rel"]
+    assert altitude.gate({"23096": {"rel": 335}}) == ["Guéret (23096) has no alt"]
+
+
+def test_gate_flags_a_table_of_another_boundaries_edition(table_dir: Path) -> None:
+    communes = {code: {} for code in ["23096", "01002", "01003", "55050"]}
+    assert altitude.table_problems(communes) == []
+    communes["99999"] = {}
+    assert "covers 4/5 tile communes" in altitude.table_problems(communes)[0]
+
+
+def test_gate_without_a_committed_table(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(altitude, "TABLE_DIR", tmp_path)
+    assert altitude.table_problems({"23096": {}}) == [f"no committed table in {tmp_path}"]
 
 
 def test_layer_is_discovered_with_ranges_and_coverage_for_each_field() -> None:
