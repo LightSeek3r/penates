@@ -273,6 +273,36 @@ def test_a_rocky_shore_below_the_shore_floor_and_contaminated_narrow_strips_are_
     assert np.isnan(altitude.mask_gap_contamination(np.pad([[5.0]], 2, constant_values=GAP))).all()
 
 
+def test_a_resampled_copy_of_a_rejected_shore_pixel_is_masked_too() -> None:
+    # Saint-Valery-en-Caux (76655): -20 m twice on a 0 m shore under a cliff (API -2 m); the lower copy
+    # is not next to a certain gap and the cliff leaves no clean plane, only its value betrays it
+    raw = np.array([
+        [GAP] * 13,
+        [-83369.9, -82999.8, -84632.6, -87088.4, -89100.5, GAP, GAP, GAP, GAP, GAP, GAP, GAP, GAP],
+        [-83369.9, -82999.8, -84632.6, -87088.4, -89100.5, -91754.0, -93385.6, -95600.1, -97173.3, -98397.6,
+         -89565.6, -69995.2, -50334.8],
+        [0.4, 0.4, 0.2, 0.0, -0.2, -0.3, -20.0, -263.8, -899.9, -1839.1, -172.7, -0.1, -0.0],
+        [1.4, 1.4, 1.3, 0.0, -0.2, -0.3, -20.0, -263.8, -899.9, -1839.1, -172.7, -0.1, -0.0],
+        [1.4, 1.4, 1.3, 1.0, 0.5, 0.2, 0.5, 0.4, 0.4, 0.7, 1.0, 1.1, 1.5],
+        [6.6, 5.0, 4.2, 3.8, 3.4, 3.2, 3.3, 3.7, 4.5, 10.4, 27.1, 37.0, 43.1],
+        [69.9, 5.0, 4.2, 3.8, 3.4, 3.2, 3.3, 3.7, 4.5, 10.4, 27.1, 37.0, 43.1],
+        [69.9, 69.0, 65.9, 58.7, 56.0, 55.2, 56.7, 61.8, 55.1, 64.4, 69.2, 68.7, 68.2],
+    ], dtype="<f4")  # float32 as the WMS sends it: copies are bit-identical
+    masked = altitude.mask_gap_contamination(raw)
+    assert np.isnan(masked[3:5, 6]).all()
+    assert np.nanmin(masked) == pytest.approx(-0.3)
+
+
+def test_flat_ground_equal_to_its_neighbours_is_kept_and_copies_do_not_chain() -> None:
+    foreshore = np.vstack([np.full((2, 10), GAP), np.full((8, 10), -4.5)]).astype("<f4")  # Paimpol: flat at -4.5 m
+    assert not np.isnan(altitude.mask_gap_contamination(foreshore)[2:]).any()
+    # a flat basin floor at -12 m: the row next to the sea falls below the shore floor, its copies with it,
+    # but copies of copies are not taken, so the rest of the flat stays
+    dock = np.vstack([np.full((2, 10), GAP), np.full((8, 10), -12.0)]).astype("<f4")
+    masked = altitude.mask_gap_contamination(dock)
+    assert np.isnan(masked[2:4]).all() and not np.isnan(masked[4:]).any()
+
+
 def test_steep_real_terrain_and_deep_quarries_are_kept() -> None:
     cliff = np.repeat([[400.0], [400.0], [250.0], [100.0], [100.0]], 6, axis=1)  # 300 m in 50 m, inland
     assert np.array_equal(altitude.mask_gap_contamination(cliff), cliff)

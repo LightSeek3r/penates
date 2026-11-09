@@ -111,7 +111,7 @@ CERTAIN_GAP_Z = -1000.0  # at least 1% gap in the pixel
 TILE_MARGIN_PX = 2 * SURFACE_RADIUS_PX
 
 # Part of the cache path: results computed another way must not be reused.
-METHOD_VERSION = f"chef-lieu-api{POINTS_PER_REQUEST}-wms{RASTER_RES_M}m-edge-v5"
+METHOD_VERSION = f"chef-lieu-api{POINTS_PER_REQUEST}-wms{RASTER_RES_M}m-edge-v6"
 
 CHEF_LIEU_LAYERS = {
     "chef_lieu_de_commune": "code_insee_de_la_commune",
@@ -315,16 +315,28 @@ def mask_gap_contamination(raw: np.ndarray) -> np.ndarray:
       pixel, which keeps contaminated twins (edges 2 px thick) out of the reference. In strips too narrow
       for a plane (jetties, islets), a pixel is rejected with no valid neighbour or THIN_DROP_M below its
       highest one.
-    Measured on 101 communes against the API on 2026-11-09: commune minima within 3 m of the
-    API-verified value in 100 (Piana stays 5 m low), z_max unchanged; 272 of the 273 pixels more than 3 m
-    below the verified minimum are dropped. 0.05% of the pixels are dropped, about half of them legit steep
-    coast next to the sea, locally indistinguishable from contamination; that moved no commune minimum up.
+    - copies: the resampler repeats samples (30% of valid pixels are bit-identical to the pixel above,
+      5% to the one beside), so a pixel bit-identical to a neighbouring seed is the same contaminated
+      sample, rejected even where its own window gives no clean support (Saint-Valery-en-Caux: -20 m
+      twice on a 0 m shore under a cliff, the copy no longer next to a certain gap). Only copies of seeds:
+      copying edge rejections dropped 12% more pixels, including the twin of a legit 0.5 m shore pixel at
+      Tomino that the edge test had taken on a rocky coast, and fixed nothing more; copies of copies
+      would empty flats (water surfaces: about 1% of valid pixels sit in runs of 3 equal values).
+    Measured on 146 communes against the API on 2026-11-09 (including the 62 with a minimum below -10 m
+    nationally): commune minima within 1.5 m of the API-verified value in 142, the rest are Ajaccio and
+    Piana (3 and 5 m low, rocky coast) and two where the check is off (Lumio: the API blends at the gap's
+    edge too; Bouguenais: its quarry floor is below the check's -100 m); z_max unchanged;
+    290 of the 291 pixels more than 3 m below the verified minimum are dropped. 0.03% of the pixels are
+    dropped, about half of them legit steep coast next to the sea, locally indistinguishable from
+    contamination; that moved no commune minimum up by more than 1 m.
     """
-    z = _plausible(raw.astype(float))
+    exact = raw.astype(float)
+    z = _plausible(exact)
     next_to_gap = ndimage.binary_dilation(raw < CERTAIN_GAP_Z, _EIGHT)
     with np.errstate(invalid="ignore"):
         z[next_to_gap & (z < SHORE_FLOOR_M)] = np.nan
-    rejected = np.isnan(z) | _interior_holes(z)
+    seeds = np.isnan(z) | _interior_holes(z)
+    rejected = seeds.copy()
     while True:
         near_rejected = ndimage.binary_dilation(rejected, _EIGHT)
         rows, cols = np.nonzero(near_rejected & ~rejected)
@@ -340,7 +352,10 @@ def mask_gap_contamination(raw: np.ndarray) -> np.ndarray:
         highest = _highest_neighbour(np.where(rejected, np.nan, z), rows, cols)
         # NaN highest (no valid neighbour) compares False, so the negation rejects it
         thin = ~fitted & ~(values >= highest - THIN_DROP_M)
-        new = below_surface | thin
+        judged = below_surface | thin
+        same_value = _gather(exact, rows, cols, _NEIGHBOURS) == exact[rows, cols]
+        copy = (same_value & (_gather(seeds.astype(float), rows, cols, _NEIGHBOURS) == 1)).any(axis=0)
+        new = judged | copy
         if not new.any():
             break
         rejected[rows[new], cols[new]] = True
@@ -808,8 +823,9 @@ SPOT_CHECKS: dict[str, tuple[str, str, int, int]] = {
     "23096": ("Guéret", "alt", 380, 500),
 }
 # Relief: the Mont Blanc massif must show thousands of metres, central Paris and Dunkirk almost none.
-# Then gap contamination (mask_gap_contamination) on a quay, a coast and fields, read 2026-11-09 against the
-# altimetry API (the method v4 gave 234, 113 and 111), and a real quarry 79 m below sea level that must stay.
+# Then gap contamination (mask_gap_contamination) on a quay, a coast, fields and a copied shore pixel, read
+# 2026-11-09 against the altimetry API (method v4 gave 234, 113 and 111, v5 98 at Saint-Valery-en-Caux), and
+# a real quarry 79 m below sea level that must stay.
 RELIEF_CHECKS: dict[str, tuple[str, int, int]] = {
     "74056": ("Chamonix-Mont-Blanc", 2500, 3900),
     "75104": ("Paris 4e", 0, 30),
@@ -817,6 +833,7 @@ RELIEF_CHECKS: dict[str, tuple[str, int, int]] = {
     "76595": ("Saint-Jouin-Bruneval", 125, 160),
     "17369": ("Saint-Martin-de-Ré", 15, 35),
     "03003": ("Ainay-le-Château", 55, 80),
+    "76655": ("Saint-Valery-en-Caux", 70, 90),
     "44064": ("Gorges", 115, 140),
 }
 
