@@ -14,7 +14,7 @@ import { formatHash } from '../state/urlState'
 import { registerPatterns } from './patterns'
 import { SheetScale, attachSheetFrame } from './sheetFrame'
 import { applyAppearance } from './appearance'
-import { LAYER_IDS, SELECTION_LAYERS, buildStyle } from './style'
+import { COMMUNES_FROM_TILE_ZOOM, LAYER_IDS, SELECTION_LAYERS, buildStyle } from './style'
 
 let protocol: Protocol | null = null
 function registerProtocol(): Protocol {
@@ -65,7 +65,8 @@ function resolveCommune(map: MapLibreMap, code: string): Record<string, unknown>
 }
 
 // With no view in the URL, show all of metropolitan France (Corsica included) whatever the screen shape,
-// keeping clear of the side panels on wide screens and of the legend strip on phones.
+// keeping clear of the side panels on wide screens and of the legend strip on phones. The sheet margin leaves a phone
+// map narrower than the screen, so the fit alone lands just under COMMUNES_FROM_TILE_ZOOM; see keepCommunesVisible.
 function nationalView() {
   const wide = matchMedia(WIDE_SCREEN).matches
   return {
@@ -74,6 +75,13 @@ function nationalView() {
       ? { padding: { top: 16, bottom: 16, left: 320, right: 340 } }
       : { padding: { top: 8, bottom: 96, left: 8, right: 8 } },
   }
+}
+
+// Every theme but the price ones draws the communes layer only, which has no tiles below COMMUNES_FROM_TILE_ZOOM.
+// On a 360 px phone the exact fit needs zoom 3.85; staying at 4 keeps the whole country in view with Corsica and
+// Ushant touching the edges.
+function keepCommunesVisible(map: MapLibreMap) {
+  if (map.getZoom() < COMMUNES_FROM_TILE_ZOOM) map.setZoom(COMMUNES_FROM_TILE_ZOOM)
 }
 
 export interface MapViewProps {
@@ -106,6 +114,7 @@ export function MapView({ manifest }: MapViewProps) {
       pixelRatio: Math.min(window.devicePixelRatio || 1, matchMedia(WIDE_SCREEN).matches ? 3 : 2),
       hash: false,
     })
+    if (!initialState.viewProvided) keepCommunesVisible(map)
     // The compact attribution opens by default once the sources name themselves, covering the map on phones and
     // shifting the controls above it; marking it compact while still empty keeps it closed from the first frame.
     // Users can still open it.
