@@ -148,7 +148,8 @@ def test_a_wms_error_document_or_a_short_raster_is_a_source_error() -> None:
             response.content = response.content[:-4]
             return response
 
-    with pytest.raises(SourceError, match="expected 120 bytes"):
+    m = altitude.TILE_MARGIN_PX
+    with pytest.raises(SourceError, match=f"expected {(4 + 2 * m) * (3 + 2 * m) * 4} bytes"):
         altitude.fetch_tile(Short(), tile, _throttle())
 
 
@@ -165,27 +166,124 @@ def test_a_transient_wms_400_is_retried_but_an_api_400_is_not() -> None:
         altitude.query_elevations(FakeGeoplateforme(failures=[400]), np.array([[2.0, 45.0]]), sleep=_no_sleep)
 
 
-def test_pixels_contaminated_by_a_gap_are_masked_but_a_cliff_is_kept() -> None:
-    # read live at Nohant-Vic (36143): a gap in the model blended into its 25 m neighbours
-    gap = np.array([
-        [178.9, 178.9, 179.7, 180.1, 180.6],
-        [179.2, 179.2, 180.1, 180.7, 181.5],
-        [179.8, 179.8, -62.4, -162.2, 182.5],
-        [179.8, -62.4, -62.4, -162.2, 182.5],
-        [180.1, 181.1, 181.1, 182.6, 184.2],
+# Raw WMS values read on 2026-11-09; "truth" is the altimetry API at the pixel centres.
+GAP = -99999.0
+
+
+def _masked_away(raw: np.ndarray, masked: np.ndarray) -> np.ndarray:
+    """Pixels with a plausible value that the mask dropped."""
+    return ~np.isnan(altitude._plausible(raw)) & np.isnan(masked)
+
+
+def test_a_contaminated_coastline_twice_as_thick_is_masked_and_the_flat_shore_kept() -> None:
+    # Talais (33521), Gironde estuary: shore at -1 m (API -1.2 at the -93.2 pixels)
+    coast = np.array([
+        [-0.9, -507.5, -52355.0, -99895.1, GAP, GAP, GAP],
+        [-0.9, -0.9, -52.9, -49459.0, -99942.5, GAP, GAP],
+        [-0.9, -1.0, -1.0, -93.2, -99942.5, GAP, GAP],
+        [-1.0, -1.0, -1.0, -93.2, -65218.9, GAP, GAP],
+        [-1.1, -1.2, -1.2, -1.2, -13394.2, -97949.2, GAP],
+        [-1.0, -1.1, -1.1, -1.2, -13394.2, -97949.2, GAP],
+        [-1.0, -1.1, -1.2, -1.2, -1.2, -57632.0, GAP],
     ])
-    masked = altitude.mask_gap_pits(altitude._plausible(gap))
-    assert np.isnan(masked[2, 2]) and np.isnan(masked[3, 1]) and np.isnan(masked[3, 2])
-    assert np.nanmin(masked) == pytest.approx(178.9)
-    cliff = np.array([[400.0, 400.0, 400.0, 400.0], [400.0, 400.0, 400.0, 400.0], [250.0, 250.0, 250.0, 250.0],
-                      [100.0, 100.0, 100.0, 100.0]])  # 300 m in 50 m: steep, but real
-    assert np.array_equal(altitude.mask_gap_pits(cliff), cliff)
+    raw = np.pad(coast, ((2, 2), (6, 0)), mode="edge")  # more of the same shore inland
+    masked = altitude.mask_gap_contamination(raw)
+    assert np.nanmin(masked) == pytest.approx(-1.2)
+    dropped = raw[_masked_away(raw, masked)]
+    assert sorted(dropped.tolist()) == [-93.2, -93.2, -52.9]
 
 
-def test_tiles_are_fetched_with_a_one_pixel_margin() -> None:
+def test_a_contaminated_seam_ramping_down_across_fields_is_masked() -> None:
+    # Bannay (18020): one row of the model's seam blends a gap into 144 m fields (API 144 m all along)
+    raw = np.full((9, 14), 144.5) + np.add.outer(np.arange(9), np.arange(14)) * 0.05
+    raw[4] = [144.5, 144.5, 144.5, 111.0, 93.6, 59.5, 25.7, -7.9, -41.7, -75.7, -109.2, -142.7, -176.1, -209.5]
+    masked = altitude.mask_gap_contamination(raw)
+    assert np.nanmin(masked) == pytest.approx(144.5)
+    assert np.isnan(masked[4, 3:]).all() and _masked_away(raw, masked).sum() == 7
+
+
+def test_a_hole_inside_valid_ground_is_masked_but_the_shore_below_is_kept() -> None:
+    # Roscanvel (29238): a 2 x 2 px hole on a 63 m plateau (API 64 m), real shore at 0 m to the west
+    raw = np.array([
+        [0.1, 1.4, 10.0, 30.4, 45.6, 60.7, 63.5, 64.2, 65.2],
+        [16.4, 21.9, 27.2, 36.4, 45.6, 59.9, 66.2, 64.2, 65.2],
+        [44.1, 21.9, 27.2, 36.4, 45.6, 59.9, 66.2, 67.5, 64.0],
+        [51.0, 51.0, 51.0, 52.9, 56.3, 61.9, 64.3, 65.9, 64.6],
+        [57.6, 59.7, 62.0, 63.3, -13.0, 1.0, 64.3, 65.9, 64.6],
+        [15.8, 59.7, 62.0, 63.3, -13.0, 1.0, 64.5, 65.3, 65.8],
+        [15.8, 34.6, 56.3, 61.7, 7.2, 7.1, 63.5, 65.4, 66.2],
+        [-0.1, 2.2, 23.7, 54.1, 60.9, 63.2, 63.5, 65.4, 66.2],
+        [-0.1, 2.2, 23.7, 54.1, 60.9, 63.2, 63.9, 64.8, 66.3],
+    ])
+    masked = altitude.mask_gap_contamination(raw)
+    hole = np.zeros(raw.shape, dtype=bool)
+    hole[4:7, 4:6] = True
+    assert np.array_equal(_masked_away(raw, masked), hole)
+    assert np.nanmin(masked) == pytest.approx(-0.1)
+
+
+def test_a_rocky_shore_below_the_shore_floor_and_contaminated_narrow_strips_are_masked() -> None:
+    # Piana (2A212): -34 m on a steep coast (API 0 to 1 m), too rough for the surface test alone
+    piana = np.array([
+        [GAP, GAP, GAP, -73628.7, -3634.5, -16178.9, 9.0, 9.0, 46.3],
+        [GAP, GAP, GAP, -64663.6, -34.0, 21.1, 21.1, 35.0, 73.7],
+        [GAP, GAP, GAP, -64663.6, -34.0, 21.1, 21.1, 35.0, 73.7],
+        [-99924.1, -80139.9, -35592.7, -730.4, 28.8, 28.8, 46.3, 64.4, 81.7],
+        [-99924.1, -80139.9, -35592.7, 41.6, 58.8, 58.8, 70.6, 86.0, 114.9],
+    ])
+    assert np.nanmin(altitude.mask_gap_contamination(piana)) == pytest.approx(9.0)
+    # Saint-Jouin-Bruneval (76595): a breakwater 1 px wide at 8 to 10 m, one pixel reading -89.8
+    jetty = np.full((7, 7), GAP)
+    for i, z in enumerate([9.1, 8.4, -89.8, 9.3, 8.1, 8.7, 9.5]):
+        jetty[i, 6 - i] = z
+    masked = altitude.mask_gap_contamination(jetty)
+    assert np.isnan(masked[2, 4]) and np.nanmin(masked) == pytest.approx(8.1)
+    # too narrow for a plane, above the shore floor: an islet 1 px wide at 25 m, one pixel 22 m low
+    islet = np.full((5, 9), GAP)
+    islet[2, 2:7] = [25.0, 24.0, 3.0, 24.5, 25.5]
+    assert np.nanmin(altitude.mask_gap_contamination(islet)) == 24.0
+    assert np.isnan(altitude.mask_gap_contamination(np.pad([[5.0]], 2, constant_values=GAP))).all()
+
+
+def test_steep_real_terrain_and_deep_quarries_are_kept() -> None:
+    cliff = np.repeat([[400.0], [400.0], [250.0], [100.0], [100.0]], 6, axis=1)  # 300 m in 50 m, inland
+    assert np.array_equal(altitude.mask_gap_contamination(cliff), cliff)
+    shore = np.where(np.arange(12) < 3, GAP, (np.arange(12) - 3) * 8.0) * np.ones((9, 1))  # 8 m per pixel into the sea
+    assert np.nanmin(altitude.mask_gap_contamination(shore)) == 0.0
+    distance = np.hypot(*np.mgrid[-14:15, -14:15])
+    quarry = np.clip(-79.0 + 20.0 * (distance - 3), -79.0, 40.0)  # Gorges (44064): pit floor at -79 m
+    assert np.array_equal(altitude.mask_gap_contamination(quarry), quarry)
+    # Bouguenais (44020): a floor at -118 m reads as no value, its walls next to it must stay
+    deeper = np.clip(-118.0 + 20.0 * (distance - 3), -118.0, 40.0)
+    masked = altitude.mask_gap_contamination(deeper)
+    assert np.nanmin(masked) == pytest.approx(-98.0) and _masked_away(deeper, masked).sum() <= 4
+
+
+def test_a_tile_sees_the_gap_beyond_its_edge() -> None:
+    class ContaminatedShore(FakeGeoplateforme):
+        """Contamination two pixels thick east of the sea, as along real coasts."""
+
+        def get(self, url: str, params: dict, timeout: int) -> FakeResponse:
+            response = super().get(url, params, timeout)
+            minx, _, maxx, _ = (float(v) for v in params["BBOX"].split(","))
+            xs = minx + (np.arange(params["WIDTH"]) + 0.5) * (maxx - minx) / params["WIDTH"]
+            z = np.frombuffer(response.content, dtype="<f4").reshape(params["HEIGHT"], params["WIDTH"]).copy()
+            z[:, (xs > SEA_WEST_OF_X) & (xs < SEA_WEST_OF_X + 2 * RES)] = -60.0
+            response.content = z.tobytes()
+            return response
+
+    # the sea and the first contaminated column are west of the tile: a 1 px margin would see no gap
+    tile = Tile(left=SEA_WEST_OF_X + RES, top=6_600_000, width=5, height=4)
+    z = altitude.fetch_tile(ContaminatedShore(), tile, _throttle())
+    assert np.isnan(z[:, 0]).all() and not np.isnan(z[:, 1:]).any()
+
+
+def test_tiles_are_fetched_with_a_margin() -> None:
     api = FakeGeoplateforme()
     altitude.fetch_tile(api, Tile(left=800_000, top=6_600_000, width=4, height=3), _throttle())
-    assert api.tiles == [(f"{800_000 - RES},{6_600_000 - 4 * RES},{800_000 + 5 * RES},{6_600_000 + RES}", 6, 5)]
+    m = altitude.TILE_MARGIN_PX
+    bbox = f"{800_000 - m * RES},{6_600_000 - (3 + m) * RES},{800_000 + (4 + m) * RES},{6_600_000 + m * RES}"
+    assert api.tiles == [(bbox, 4 + 2 * m, 3 + 2 * m)]
 
 
 def test_relief_combines_the_tiles_a_commune_overlaps() -> None:

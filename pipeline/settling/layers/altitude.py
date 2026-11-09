@@ -14,8 +14,20 @@ values are measured on RGE ALTI (bare-ground terrain model, NGF altitudes) throu
   resamples RGE ALTI to the requested 25 m grid, so single summits and narrow gorges are slightly
   flattened (Mont Blanc reads 4,775 m instead of 4,806 m): `rel` is a slight underestimate, a hilliness
   hint rather than a surveyed figure. Pixels contaminated by gaps in the model are dropped
-  (`mask_gap_pits`). The ADMIN EXPRESS COG-CARTO polygons are generalised, so pixels along a commune
-  border can belong to a neighbour.
+  (`mask_gap_contamination`). The ADMIN EXPRESS COG-CARTO polygons are generalised, so pixels along a
+  commune border can belong to a neighbour.
+
+WMS-R gap contamination, measured on 2026-11-09 against the altimetry API at the pixels of 101 communes
+(coasts, estuaries, borders, quarries, mountains): the service resamples a 5 m level of the model (even
+1 m requests repeat 5 m blocks) in which the -99999 of "no value" was averaged in. Fully gap pixels read
+below -100 m and are dropped as implausible, but a pixel that holds a sliver of gap reads z - 99999 * w
+for some weight w, any value between the ground and -100 m: -94 m on 10 m high quays, a row of
+-76..-176 m across 144 m fields along a seam of the model, 63 m too low in a 2 x 2 px hole on a plateau.
+It only ever lowers a pixel; it sits on the edge of gap areas (coasts, the national border, seams, up to
+2 px thick where the resampling duplicates rows, ramping down over a few pixels), or in small holes inside
+valid ground. The API answers the model's value at a point (blended too only right at a gap's edge). Deep
+quarries are real values (API agrees): Gorges -79 m, Bouguenais -98 m (its floor reaches -118 m, below
+PLAUSIBLE_Z), so no absolute floor can be applied inland.
 
 Altimetry API behaviour measured on 2026-11-06 (only the limits of 5,000 points and 5 requests/second/IP
 are documented): requests of up to 30 points return exactly the value of a single-point query wherever
@@ -51,6 +63,7 @@ import pyarrow.parquet as pq
 import requests
 import shapely
 from pyproj import Transformer
+from scipy import ndimage
 from shapely.geometry.base import BaseGeometry
 
 from settling.boundaries import department_of
@@ -66,7 +79,7 @@ WMS_URL = "https://data.geopf.fr/wms-r/wms"
 WMS_LAYER = "ELEVATION.ELEVATIONGRIDCOVERAGE.HIGHRES"  # "Modèle Numérique de Terrain issu du RGEALTI"
 WMS_FORMAT = "image/x-bil;bits=32"  # little-endian float32, row 0 at the top (verified against the API)
 RASTER_RES_M = 25
-# Plus a 1 px margin; the WMS caps WIDTH and HEIGHT at 5010, but 5000 px tiles drew gateway timeouts (504).
+# Plus TILE_MARGIN_PX; the WMS caps WIDTH and HEIGHT at 5010, but 5000 px tiles drew gateway timeouts (504).
 RASTER_TILE_PX = 2500
 # Seen 2026-11-06: valid GetMaps intermittently answered 400, then 200 when repeated; so the WMS retries 400.
 WMS_TRANSIENT_STATUSES = frozenset({400, 429})
@@ -81,13 +94,24 @@ WORKERS = 3
 RETRY_DELAYS_S = (2, 5, 10, 20, 30, 60, 60, 120, 120)
 TIMEOUT_S = 300
 # Both services answer -99999 outside the model (sea) and the WMS blends it into edge pixels (-99997.6..);
-# France's lowest ground is about -3 m (open-pit quarries go lower), Mont Blanc 4,806 m.
+# France's lowest ground is about -3 m (open-pit quarries go lower, -118 m at Bouguenais), Mont Blanc 4,806 m.
 PLAUSIBLE_Z = (-100.0, 4900.0)
 MIN_PIXELS_FOR_RELIEF = 16  # 1 ha at 25 m
-GAP_PIT_M = 100.0  # see mask_gap_pits
+# Gap contamination, see mask_gap_contamination.
+SURFACE_RADIUS_PX = 4  # the local surface is fitted over 9 x 9 px (225 m)
+MIN_SURFACE_SUPPORT = 6  # pixels for a plane fit
+EDGE_DROP_M = 5.0
+EDGE_ROUGHNESS = 2.0  # x the rms of the plane fit
+PIT_DROP_M = 50.0
+PIT_ROUGHNESS = 3.0
+THIN_DROP_M = 20.0
+SHORE_FLOOR_M = -10.0  # lowest ground next to a gap: foreshore at Dunkirk -8.5 m
+CERTAIN_GAP_Z = -1000.0  # at least 1% gap in the pixel
+# Each side, so that pixels near a tile edge see the gaps and surface beyond it.
+TILE_MARGIN_PX = 2 * SURFACE_RADIUS_PX
 
 # Part of the cache path: results computed another way must not be reused.
-METHOD_VERSION = f"chef-lieu-api{POINTS_PER_REQUEST}-wms{RASTER_RES_M}m-pits{GAP_PIT_M:g}-v4"
+METHOD_VERSION = f"chef-lieu-api{POINTS_PER_REQUEST}-wms{RASTER_RES_M}m-edge-v5"
 
 CHEF_LIEU_LAYERS = {
     "chef_lieu_de_commune": "code_insee_de_la_commune",
@@ -263,37 +287,121 @@ def fetch_tile(
     session: requests.Session, tile: Tile, throttle: Throttle, sleep: Callable[[float], None] = time.sleep
 ) -> np.ndarray:
     """(height, width) terrain altitudes of the tile's pixels, NaN where the model has no value or the
-    pixel is contaminated by a gap; fetched with a one-pixel margin so edge pixels have their neighbours."""
-    margin = Tile(tile.left - RASTER_RES_M, tile.top + RASTER_RES_M, tile.width + 2, tile.height + 2)
-    return mask_gap_pits(_fetch_raster(session, margin, throttle, sleep))[1:-1, 1:-1]
+    pixel is contaminated by a gap; fetched with a TILE_MARGIN_PX margin so that pixels near the tile
+    edge are judged with the gaps and ground beyond it."""
+    m = TILE_MARGIN_PX
+    margin = Tile(tile.left - m * RASTER_RES_M, tile.top + m * RASTER_RES_M, tile.width + 2 * m, tile.height + 2 * m)
+    return mask_gap_contamination(_fetch_raster(session, margin, throttle, sleep))[m:-m, m:-m]
 
 
-def mask_gap_pits(z: np.ndarray) -> np.ndarray:
-    """NaN for pixels more than GAP_PIT_M below the median of their 8 neighbours.
+def mask_gap_contamination(raw: np.ndarray) -> np.ndarray:
+    """Raw WMS values with NaN where the model has no value (implausible) or the pixel may hold a gap.
 
-    The WMS averages the 1 m model into 25 m pixels, nodata (-99999) included: one nodata metre in a
-    pixel lowers it by about 160 m, which can still look like a plausible altitude (seen inland, e.g.
-    -62 m among 180 m neighbours at Nohant-Vic). Real terrain cannot put a 25 m pixel 100 m below the
-    median of its neighbours, so this only removes such artefacts. Border pixels are left as they are.
+    Gap contamination (module docstring) only lowers a pixel, by any amount, and comes from a gap in or
+    next to its footprint. So a pixel is judged against ground around it that no gap can have lowered,
+    and only where a gap can be:
+    - seeds: pixels without a plausible value; pixels below SHORE_FLOOR_M next to a certain gap (below
+      CERTAIN_GAP_Z; no ground next to the sea or the border lies that low, while a quarry floor below
+      PLAUSIBLE_Z reads just under -100 m, so its walls are not taken for a shore); interior holes:
+      pixels lower than every pixel 2 to 4 px away and more than max(PIT_DROP_M, PIT_ROUGHNESS x rms)
+      below the plane through those pixels. A natural closed hollow under 75 m across that deep is rare
+      (avens); a real quarry floor at Chailloué reads 27 m below such a plane, and 30 m already cut into it.
+    - edges, repeatedly until none is added: a pixel next to a rejected one is rejected when it lies more
+      than max(EDGE_DROP_M, EDGE_ROUGHNESS x rms) below the least-squares plane through the clean pixels
+      of its 9 x 9 window on the side away from the rejected ones: the slope extrapolated from clean
+      ground, so a shore at the foot of a slope, or the wall of a pit around a rejected floor, stays
+      (a plane across both sides of a hollow would pass above it). Clean means touching no rejected
+      pixel, which keeps contaminated twins (edges 2 px thick) out of the reference. In strips too narrow
+      for a plane (jetties, islets), a pixel is rejected with no valid neighbour or THIN_DROP_M below its
+      highest one.
+    Measured on 101 communes against the API on 2026-11-09: commune minima within 3 m of the
+    API-verified value in 100 (Piana stays 5 m low), z_max unchanged; 272 of the 273 pixels more than 3 m
+    below the verified minimum are dropped. 0.05% of the pixels are dropped, about half of them legit steep
+    coast next to the sea, locally indistinguishable from contamination; that moved no commune minimum up.
     """
-    z = z.copy()
-    height, width = z.shape
-    if height < 3 or width < 3:
-        return z
-    centre = z[1:-1, 1:-1]
-    shifts = [(dr, dc) for dr in (-1, 0, 1) for dc in (-1, 0, 1) if (dr, dc) != (0, 0)]
-    neighbours = np.stack([z[1 + dr:height - 1 + dr, 1 + dc:width - 1 + dc] for dr, dc in shifts])
+    z = _plausible(raw.astype(float))
+    next_to_gap = ndimage.binary_dilation(raw < CERTAIN_GAP_Z, _EIGHT)
     with np.errstate(invalid="ignore"):
-        highest = np.fmax.reduce(neighbours, axis=0)
-        candidates = np.argwhere(centre < highest - GAP_PIT_M)  # cheap pre-filter: below the highest neighbour
-    if len(candidates):
-        rows, cols = candidates[:, 0], candidates[:, 1]
-        with np.errstate(all="ignore"), warnings.catch_warnings():
-            warnings.simplefilter("ignore", RuntimeWarning)  # all-NaN neighbourhoods
-            median = np.nanmedian(neighbours[:, rows, cols], axis=0)
-        pits = centre[rows, cols] < median - GAP_PIT_M
-        centre[rows[pits], cols[pits]] = np.nan
-    return z
+        z[next_to_gap & (z < SHORE_FLOOR_M)] = np.nan
+    rejected = np.isnan(z) | _interior_holes(z)
+    while True:
+        near_rejected = ndimage.binary_dilation(rejected, _EIGHT)
+        rows, cols = np.nonzero(near_rejected & ~rejected)
+        if not len(rows):
+            break
+        # outside the array counts as rejected: the tile margin
+        rejected_around = np.nan_to_num(_gather(rejected.astype(float), rows, cols, _NEIGHBOURS), nan=1.0)
+        towards_rejected = rejected_around.T @ _NEIGHBOURS
+        away_side = _WINDOW @ towards_rejected.T <= 0
+        surface, rms, fitted = _plane_at(np.where(near_rejected, np.nan, z), rows, cols, away_side)
+        values = z[rows, cols]
+        below_surface = fitted & (values < surface - np.maximum(EDGE_DROP_M, EDGE_ROUGHNESS * rms))
+        highest = _highest_neighbour(np.where(rejected, np.nan, z), rows, cols)
+        # NaN highest (no valid neighbour) compares False, so the negation rejects it
+        thin = ~fitted & ~(values >= highest - THIN_DROP_M)
+        new = below_surface | thin
+        if not new.any():
+            break
+        rejected[rows[new], cols[new]] = True
+    return np.where(rejected, np.nan, z)
+
+
+def _interior_holes(z: np.ndarray) -> np.ndarray:
+    radius = SURFACE_RADIUS_PX
+    ring = np.ones((2 * radius + 1, 2 * radius + 1), dtype=bool)
+    ring[radius - 1:radius + 2, radius - 1:radius + 2] = False
+    valid = ~np.isnan(z)
+    lowest_around = ndimage.minimum_filter(np.where(valid, z, np.inf), footprint=ring, mode="constant", cval=np.inf)
+    rows, cols = np.nonzero(valid & (z < lowest_around))
+    holes = np.zeros(z.shape, dtype=bool)
+    if len(rows):
+        in_ring = (np.abs(_WINDOW).max(axis=1) > 1)[:, None]
+        surface, rms, fitted = _plane_at(z, rows, cols, in_ring)
+        hole = fitted & (z[rows, cols] < surface - np.maximum(PIT_DROP_M, PIT_ROUGHNESS * rms))
+        holes[rows[hole], cols[hole]] = True
+    return holes
+
+
+def _offsets(radius: int) -> np.ndarray:
+    span = range(-radius, radius + 1)
+    return np.array([(dr, dc) for dr in span for dc in span if (dr, dc) != (0, 0)])
+
+
+_EIGHT = np.ones((3, 3), dtype=bool)
+_NEIGHBOURS = _offsets(1)
+_WINDOW = _offsets(SURFACE_RADIUS_PX)
+
+
+def _plane_at(
+    z: np.ndarray, rows: np.ndarray, cols: np.ndarray, use: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Least-squares plane through the non-NaN pixels of the _WINDOW around each (row, col) for which
+    `use` (len(_WINDOW), 1 or len(rows)) holds: (plane at the pixel, rms residual, fit possible)."""
+    values = _gather(z, rows, cols, _WINDOW)
+    weight = ~np.isnan(values) & use
+    values = np.where(weight, values, 0.0)
+    design = np.column_stack([np.ones(len(_WINDOW)), _WINDOW])
+    normal = np.einsum("kn,ki,kj->nij", weight, design, design)
+    count = weight.sum(axis=0)
+    fitted = (count >= MIN_SURFACE_SUPPORT) & (np.abs(np.linalg.det(normal)) > 1e-6)  # not all on one line
+    coef = np.zeros((len(rows), 3))
+    coef[fitted] = np.linalg.solve(normal[fitted], (values.T @ design)[fitted][..., None])[..., 0]
+    residual = np.where(weight, values - design @ coef.T, 0.0)
+    rms = np.sqrt((residual**2).sum(axis=0) / np.maximum(count - 3, 1))
+    return coef[:, 0], rms, fitted
+
+
+def _highest_neighbour(z: np.ndarray, rows: np.ndarray, cols: np.ndarray) -> np.ndarray:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)  # all-NaN neighbourhoods
+        return np.nanmax(_gather(z, rows, cols, _NEIGHBOURS), axis=0)
+
+
+def _gather(z: np.ndarray, rows: np.ndarray, cols: np.ndarray, offsets: np.ndarray) -> np.ndarray:
+    """(len(offsets), len(rows)) values of z at each (row, col) + offset, NaN outside the array."""
+    pad = int(np.abs(offsets).max())
+    padded = np.pad(z, pad, constant_values=np.nan)
+    return padded[rows[None, :] + pad + offsets[:, :1], cols[None, :] + pad + offsets[:, 1:]]
 
 
 def _fetch_raster(
@@ -318,7 +426,7 @@ def _fetch_raster(
     expected = tile.width * tile.height * 4
     if len(response.content) != expected:
         raise SourceError(f"{WMS_URL}: expected {expected} bytes for {tile}, got {len(response.content)}")
-    return _plausible(np.frombuffer(response.content, dtype="<f4").reshape(tile.height, tile.width))
+    return np.frombuffer(response.content, dtype="<f4").reshape(tile.height, tile.width)
 
 
 class RangeAccumulator:
@@ -699,10 +807,16 @@ SPOT_CHECKS: dict[str, tuple[str, str, int, int]] = {
     "23096": ("Guéret", "alt", 380, 500),
 }
 # Relief: the Mont Blanc massif must show thousands of metres, central Paris and Dunkirk almost none.
+# Then gap contamination (mask_gap_contamination) on a quay, a coast and fields, read 2026-11-09 against the
+# altimetry API (the method v4 gave 234, 113 and 111), and a real quarry 79 m below sea level that must stay.
 RELIEF_CHECKS: dict[str, tuple[str, int, int]] = {
     "74056": ("Chamonix-Mont-Blanc", 2500, 3900),
     "75104": ("Paris 4e", 0, 30),
     "59183": ("Dunkerque", 0, 60),
+    "76595": ("Saint-Jouin-Bruneval", 125, 160),
+    "17369": ("Saint-Martin-de-Ré", 15, 35),
+    "03003": ("Ainay-le-Château", 55, 80),
+    "44064": ("Gorges", 115, 140),
 }
 
 
