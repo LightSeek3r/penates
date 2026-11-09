@@ -182,7 +182,8 @@ def _with_retries(
         throttle.wait()
         try:
             response = send()
-        except requests.ConnectionError:
+        except (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError):
+            # A body cut short (ChunkedEncodingError) is raised by get() itself and is neither of the other two.
             if delay is None:
                 raise
             sleep(delay)

@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import requests
 from shapely.geometry import box
 
 from settling.layers import altitude
@@ -151,6 +152,33 @@ def test_a_wms_error_document_or_a_short_raster_is_a_source_error() -> None:
     m = altitude.TILE_MARGIN_PX
     with pytest.raises(SourceError, match=f"expected {(4 + 2 * m) * (3 + 2 * m) * 4} bytes"):
         altitude.fetch_tile(Short(), tile, _throttle())
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        requests.exceptions.ChunkedEncodingError("IncompleteRead"),
+        requests.exceptions.ReadTimeout("read timed out"),
+        requests.exceptions.ConnectionError("reset"),
+    ],
+    ids=lambda error: type(error).__name__,
+)
+def test_a_cut_or_timed_out_download_is_retried_then_raised(error: Exception) -> None:
+    class Dropping(FakeGeoplateforme):
+        def __init__(self, drops: int) -> None:
+            super().__init__()
+            self.drops = drops
+
+        def get(self, url: str, params: dict, timeout: int) -> FakeResponse:
+            if self.drops:
+                self.drops -= 1
+                raise error
+            return super().get(url, params, timeout)
+
+    tile = Tile(left=800_000, top=6_600_000, width=4, height=3)
+    assert altitude.fetch_tile(Dropping(drops=2), tile, _throttle(), sleep=_no_sleep).shape == (3, 4)
+    with pytest.raises(type(error)):
+        altitude.fetch_tile(Dropping(drops=len(altitude.RETRY_DELAYS_S) + 1), tile, _throttle(), sleep=_no_sleep)
 
 
 def test_a_transient_wms_400_is_retried_but_an_api_400_is_not() -> None:
