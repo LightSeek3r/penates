@@ -43,6 +43,7 @@ from settling.sources import (
     fetch_dvf,
     fetch_seismic_zones,
     resolve_bpe_release,
+    retrying_session,
 )
 from settling.tiles import TileFeature, TileLayer, build_tiles, to_web_mercator, write_pmtiles
 
@@ -72,7 +73,7 @@ def main(argv: list[str] | None = None) -> None:
     timings: dict[str, float] = {}
     # Use the OS trust store: TLS-inspecting corporate proxies install their root CA there, not in certifi.
     truststore.inject_into_ssl()
-    session = requests.Session()
+    session = retrying_session()
     session.headers["User-Agent"] = USER_AGENT
 
     with _timed("fetch", timings):

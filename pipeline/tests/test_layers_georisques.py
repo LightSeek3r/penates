@@ -241,7 +241,7 @@ class FakeSession:
         self.routes = routes
         self.requested: list[str] = []
 
-    def get(self, url: str, params: dict | None = None, stream: bool = False, timeout: int = 0) -> FakeResponse:
+    def get(self, url: str, params: dict | None = None, stream: bool = False, timeout: int = 0, headers: dict | None = None) -> FakeResponse:
         self.requested.append(url)
         return FakeResponse(*self.routes.get(url, GATEWAY_404))
 

@@ -38,6 +38,7 @@ from shapely.geometry.base import BaseGeometry
 from settling.boundaries import Area, department_of, locate
 from settling.layers import Layer, LayerContext, LayerResult
 from settling.seismic import plm_parent
+from settling.sources import SourceError, download
 
 NAME = "georisques"
 TIMEOUT_S = 120
@@ -388,22 +389,10 @@ class Fetched:
 
 def fetch(session: requests.Session, url: str, dest: Path, expected_sha1: str | None = None) -> Fetched:
     """Download once to `dest` (a file already there, e.g. saved by hand behind a proxy, is used as is)."""
-    if not dest.exists():
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        partial = dest.with_name(dest.name + ".part")
-        sha1 = hashlib.sha1()
-        try:
-            with session.get(url, stream=True, timeout=TIMEOUT_S) as response:
-                _raise_for_status(response, url, dest)
-                with partial.open("wb") as out:
-                    for chunk in response.iter_content(CHUNK_BYTES):
-                        out.write(chunk)
-                        sha1.update(chunk)
-        except requests.RequestException as error:
-            raise GeorisquesError(f"{url}: {error}. Download it by other means and save it as {dest}.") from error
-        if expected_sha1 and sha1.hexdigest() != expected_sha1:
-            raise GeorisquesError(f"{url}: sha1 {sha1.hexdigest()} does not match published {expected_sha1}")
-        partial.replace(dest)
+    try:
+        download(session, url, dest, expected_size=None, expected_sha1=expected_sha1, override_flag=f"a copy saved as {dest}")
+    except (SourceError, requests.RequestException) as error:
+        raise GeorisquesError(f"{url}: {error}. Download it by other means and save it as {dest}.") from error
     return Fetched(dest, url, _sha256(dest))
 
 

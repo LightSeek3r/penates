@@ -18,6 +18,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from settling.seismic import parse_zone, read_zone_csv, write_zone_csv
 
@@ -52,6 +54,23 @@ DOWNLOAD_RETRY_DELAYS_S = (5, 15, 45, 120, 300)
 _INTERRUPTIONS = (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError)
 
 log = logging.getLogger(__name__)
+
+
+def retrying_session(backoff_factor: float = 2.0) -> requests.Session:
+    """A session that retries GETs the server dropped (seen 2026-11-10: files.georisques.fr closed a connection
+    without answering and failed a 30-minute build) or answered 429/5xx, waiting 0, 2, 4, 8... seconds.
+    A body cut short mid-transfer is not covered here: see `download`."""
+    retry = Retry(
+        total=5,
+        backoff_factor=backoff_factor,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset({"GET", "HEAD"}),
+        raise_on_status=False,  # callers read the status of the last answer themselves
+    )
+    session = requests.Session()
+    for scheme in ("https://", "http://"):
+        session.mount(scheme, HTTPAdapter(max_retries=retry))
+    return session
 
 
 class SourceError(RuntimeError):
