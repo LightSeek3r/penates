@@ -8,8 +8,11 @@ from __future__ import annotations
 
 import hashlib
 import html
+import logging
 import re
+import time
 import xml.etree.ElementTree as ET
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -44,6 +47,11 @@ ATOM = "{http://www.w3.org/2005/Atom}"
 GPF_DL = "{https://data.geopf.fr/annexes/ressources/xsd/gpf_dl.xsd}"
 TIMEOUT_S = 60
 CHUNK_BYTES = 1 << 20
+# Seen 2026-11-10: the 610 MB DVF file was cut at 380 MB on a CI runner. Waits between attempts, in seconds.
+DOWNLOAD_RETRY_DELAYS_S = (5, 15, 45, 120, 300)
+_INTERRUPTIONS = (requests.ConnectionError, requests.Timeout, requests.exceptions.ChunkedEncodingError)
+
+log = logging.getLogger(__name__)
 
 
 class SourceError(RuntimeError):
@@ -194,25 +202,56 @@ def download(
     expected_size: int | None,
     expected_sha1: str | None = None,
     override_flag: str = "--dvf-file",
+    sleep: Callable[[float], None] = time.sleep,
 ) -> None:
-    """Download to `dest` once; a cached file is trusted if its size matches."""
+    """Download to `dest` once; a cached file is trusted if its size matches.
+
+    A transfer that is cut short or times out is retried with growing waits, continuing from the bytes already
+    received when the server honours a Range request. A partial file left by an earlier run is never continued: the
+    file it belonged to may have changed.
+    """
     if dest.exists() and (expected_size is None or dest.stat().st_size == expected_size):
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
     partial = dest.with_name(dest.name + ".part")
-    sha1 = hashlib.sha1()
-    with session.get(url, stream=True, timeout=TIMEOUT_S) as response:
-        _raise_for_blocked(response, url, override_flag)
-        with partial.open("wb") as out:
-            for chunk in response.iter_content(CHUNK_BYTES):
-                out.write(chunk)
-                sha1.update(chunk)
+    partial.unlink(missing_ok=True)
+    for delay in (*DOWNLOAD_RETRY_DELAYS_S, None):
+        try:
+            _fetch_into(session, url, partial, override_flag)
+            break
+        except _INTERRUPTIONS as error:
+            if delay is None:
+                raise
+            log.warning("download of %s interrupted (%s); retrying in %ds", url, type(error).__name__, delay)
+            sleep(delay)
     size = partial.stat().st_size
     if expected_size is not None and size != expected_size:
         raise SourceError(f"{url}: got {size} bytes, expected {expected_size}")
-    if expected_sha1 is not None and sha1.hexdigest() != expected_sha1:
-        raise SourceError(f"{url}: sha1 {sha1.hexdigest()} does not match published {expected_sha1}")
+    if expected_sha1 is not None and (actual := _sha1_of(partial)) != expected_sha1:
+        raise SourceError(f"{url}: sha1 {actual} does not match published {expected_sha1}")
     partial.replace(dest)
+
+
+def _fetch_into(session: requests.Session, url: str, partial: Path, override_flag: str) -> None:
+    """Append what is missing of `url` to `partial`, or rewrite it whole if the server ignores the Range request."""
+    received = partial.stat().st_size if partial.exists() else 0
+    headers = {"Range": f"bytes={received}-"} if received else {}
+    with session.get(url, stream=True, timeout=TIMEOUT_S, headers=headers) as response:
+        if response.status_code == 416:  # nothing left to send at that offset: the partial is not a prefix of the file
+            partial.unlink()
+            raise requests.ConnectionError(f"{url}: range not satisfiable at byte {received}")
+        _raise_for_blocked(response, url, override_flag)
+        with partial.open("ab" if response.status_code == 206 else "wb") as out:
+            for chunk in response.iter_content(CHUNK_BYTES):
+                out.write(chunk)
+
+
+def _sha1_of(path: Path) -> str:
+    digest = hashlib.sha1()
+    with path.open("rb") as f:
+        while chunk := f.read(CHUNK_BYTES):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _raise_for_blocked(response: requests.Response, url: str, override_flag: str) -> None:
