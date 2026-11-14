@@ -12,6 +12,7 @@ import {
   type OverlaySources,
   RISK_LINES,
   RISK_OVERLAYS,
+  RISK_FROM_ZOOM,
   RISK_STYLE,
   SEISMIC_LEVELS,
   formatOverlays,
@@ -234,5 +235,19 @@ describe('places read from a tile feature', () => {
     expect(readPlaceFeature(null, 0, 0)).toBeNull()
     expect(readPlaceFeature({ k: 'pri', n: '', c: 0, a: 0 }, 1, 2)).toMatchObject({ name: null, count: 1, approximate: false })
     expect(readPlaceFeature({ k: 'pri', n: 12, c: '4', a: true }, 1, 2)).toMatchObject({ name: null, count: 1, approximate: false })
+  })
+})
+
+describe('RISK_FROM_ZOOM', () => {
+  it('names only known risks, with a zoom the tiles hold', () => {
+    for (const [id, zoom] of Object.entries(RISK_FROM_ZOOM)) {
+      expect(RISK_OVERLAYS, id).toContain(id)
+      expect(zoom, id).toBeGreaterThanOrEqual(3)
+      expect(zoom, id).toBeLessThanOrEqual(10)
+    }
+  })
+
+  it('keeps the two scattered risks out of the country view and every other one in it', () => {
+    expect(RISK_FROM_ZOOM).toEqual({ clay: 7, cavities: 7 })
   })
 })

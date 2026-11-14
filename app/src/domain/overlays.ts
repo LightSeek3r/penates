@@ -118,6 +118,13 @@ export interface RiskStyle {
  * the ink or its casing keeps 3:1 on every price class and the no-data ground (overlays.test.ts), apart from one
  * another under colour-vision deficiencies, and clear of selection amber, error scarlet and the price blues.
  */
+/**
+ * Zoom a risk's lines start at when the country view would read as noise: clay and cavities are scattered over many
+ * small groups of communes, so every group would be drawn at once (seen on the live site, 2026-11-14). Absent: from the
+ * lowest zoom the archive holds.
+ */
+export const RISK_FROM_ZOOM: Partial<Record<RiskOverlayId, number>> = { clay: 7, cavities: 7 }
+
 export const RISK_STYLE: Record<RiskOverlayId, RiskStyle> = {
   // Lilac, as the seismic colour theme was; the only solid line, heavier with the zone.
   seismic: { ink: '#B99EFE', widths: [1.2, 1.9, 2.7, 3.5] },

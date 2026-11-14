@@ -1,6 +1,6 @@
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSourceSpecification, LayerSpecification, StyleSpecification } from 'maplibre-gl'
 import { markIcon } from '../domain/combine'
-import { RISK_OVERLAYS, RISK_STYLE, type RiskOverlayId, riskLevels } from '../domain/overlays'
+import { RISK_FROM_ZOOM, RISK_OVERLAYS, RISK_STYLE, type RiskOverlayId, riskLevels } from '../domain/overlays'
 import type { PriceType } from '../domain/place'
 import { HATCH_LIGHT_BELOW, priceFillExpression } from '../domain/priceLadder'
 // Fetched and parsed by MapLibre's worker rather than bundled: 128 KB less JavaScript to parse on the main thread.
@@ -222,7 +222,8 @@ const riskSource = (id: RiskOverlayId): { 'source-layer': string; filter?: Filte
 function riskLayers(id: RiskOverlayId): LayerSpecification[] {
   const [casingId, inkId] = riskLayerIds(id)
   const { ink, dash } = RISK_STYLE[id]
-  const common = { source: OVERLAYS_SOURCE, ...riskSource(id) }
+  const from = RISK_FROM_ZOOM[id]
+  const common = { source: OVERLAYS_SOURCE, ...riskSource(id), ...(from === undefined ? {} : { minzoom: from }) }
   const layout = { visibility: 'none', 'line-join': 'round' } as const
   // The casing stays solid under a dashed ink: dashes then read as one ink on midnight, whatever the width of the line.
   return [

@@ -468,7 +468,7 @@
     },
     "clay": {
       "name": "Clay shrink-swell",
-      "about": "Lines where clay exposure rises to low (class 1), medium (2) or high (3), from the value of each commune (BRGM, 2026 map). A line follows commune borders, so a commune at the edge may be only partly affected. It is a sign that a soil study is worth doing before building, not the state of your land."
+      "about": "Lines where clay exposure rises to low (class 1), medium (2) or high (3), from the value of each commune (BRGM, 2026 map). A line follows commune borders, so a commune at the edge may be only partly affected. It is a sign that a soil study is worth doing before building, not the state of your land. Drawn from zoom 7: in the country view the scattered communes would only read as noise."
     },
     "radon": {
       "name": "Radon",
@@ -476,7 +476,7 @@
     },
     "cavities": {
       "name": "Underground cavities",
-      "about": "Lines where the number of cavities the BRGM inventory records in a commune rises to 1, 5 or 25. A line follows commune borders, so a commune at the edge may be only partly affected. The inventory is incomplete: no line means none recorded, not none present."
+      "about": "Lines where the number of cavities the BRGM inventory records in a commune rises to 1, 5 or 25. A line follows commune borders, so a commune at the edge may be only partly affected. The inventory is incomplete: no line means none recorded, not none present. Drawn from zoom 7: in the country view the scattered communes would only read as noise."
     },
     "hos": {
       "name": "Hospitals and clinics",

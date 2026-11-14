@@ -468,7 +468,7 @@
     },
     "clay": {
       "name": "Retrait-gonflement des argiles",
-      "about": "Lignes là où l'exposition aux argiles passe à faible (classe 1), moyenne (2) ou forte (3), d'après la valeur de chaque commune (BRGM, carte 2026). Une ligne suit les limites des communes : une commune au bord peut n'être touchée qu'en partie. C'est le signe qu'une étude de sol vaut la peine avant de construire, pas l'état de votre terrain."
+      "about": "Lignes là où l'exposition aux argiles passe à faible (classe 1), moyenne (2) ou forte (3), d'après la valeur de chaque commune (BRGM, carte 2026). Une ligne suit les limites des communes : une commune au bord peut n'être touchée qu'en partie. C'est le signe qu'une étude de sol vaut la peine avant de construire, pas l'état de votre terrain. Tracées à partir du zoom 7 : à l'échelle du pays, les communes dispersées ne feraient que du bruit."
     },
     "radon": {
       "name": "Radon",
@@ -476,7 +476,7 @@
     },
     "cavities": {
       "name": "Cavités souterraines",
-      "about": "Lignes là où le nombre de cavités que l'inventaire du BRGM recense dans une commune passe à 1, à 5 ou à 25. Une ligne suit les limites des communes : une commune au bord peut n'être touchée qu'en partie. L'inventaire est incomplet : sans ligne, aucune n'est recensée, ce qui ne veut pas dire aucune."
+      "about": "Lignes là où le nombre de cavités que l'inventaire du BRGM recense dans une commune passe à 1, à 5 ou à 25. Une ligne suit les limites des communes : une commune au bord peut n'être touchée qu'en partie. L'inventaire est incomplet : sans ligne, aucune n'est recensée, ce qui ne veut pas dire aucune. Tracées à partir du zoom 7 : à l'échelle du pays, les communes dispersées ne feraient que du bruit."
     },
     "hos": {
       "name": "Hôpitaux et cliniques",

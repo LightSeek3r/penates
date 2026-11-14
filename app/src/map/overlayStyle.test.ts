@@ -1,7 +1,7 @@
 import { type StylePropertySpecification, createExpression, featureFilter, latest, validateStyleMin } from '@maplibre/maplibre-gl-style-spec'
 import type { LayerSpecification, Map as MapLibreMap, StyleSpecification } from 'maplibre-gl'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PLACE_KINDS, RISK_LINES, RISK_OVERLAYS, RISK_STYLE, SEISMIC_LEVELS, type OverlayId, type PlaceKindId, riskLevels } from '../domain/overlays'
+import { PLACE_KINDS, RISK_FROM_ZOOM, RISK_LINES, RISK_OVERLAYS, RISK_STYLE, SEISMIC_LEVELS, type OverlayId, type PlaceKindId, riskLevels } from '../domain/overlays'
 import { HATCH_INK_DARK } from '../domain/priceLadder'
 import { applyOverlays } from './appearance'
 import { GROUND, PLACE_LAYERS, PLACE_SELECTION, SELECTION_LAYERS, buildStyle, overlayLayers, placeSelectionData, riskLayerIds } from './style'
@@ -105,11 +105,13 @@ describe('overlay layers in the style', () => {
     for (const layer of style.layers.filter((entry) => entry.id.startsWith('overlay-'))) expect(layer, layer.id).toMatchObject({ source: 'overlays' })
   })
 
-  it('draw a risk line at every zoom the tiles hold it, and fully opaque', () => {
+  it('draw a risk line from the zoom set for it (every zoom the tiles hold when none), never past the last, and fully opaque', () => {
     const style = styleWith(ARCHIVE)
     for (const id of RISK_OVERLAYS) {
       for (const layerId of riskLayerIds(id)) {
-        expect(layerOf(style, layerId), layerId).not.toHaveProperty('minzoom')
+        const from = RISK_FROM_ZOOM[id]
+        if (from === undefined) expect(layerOf(style, layerId), layerId).not.toHaveProperty('minzoom')
+        else expect(layerOf(style, layerId), layerId).toHaveProperty('minzoom', from)
         expect(layerOf(style, layerId), layerId).not.toHaveProperty('maxzoom')
         expect(paintOf(layerOf(style, layerId))['line-opacity'], layerId).toBeUndefined()
       }
