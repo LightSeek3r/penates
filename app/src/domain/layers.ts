@@ -1,3 +1,4 @@
+import type { OverlayId } from './overlays'
 import type { PriceType } from './place'
 import { NO_PRICE_COLOR, PRICE_BREAKS, PRICE_COLORS } from './priceLadder'
 
@@ -94,12 +95,17 @@ export interface LayerDef {
    * without it the classes are split into three runs of near-equal length.
    */
   readonly tiers?: readonly [number, number]
+  /**
+   * Set on a layer that is no longer a colour theme or second indicator: the map shows it as this overlay instead.
+   * It stays a filter and a row of the details panel.
+   */
+  readonly overlay?: OverlayId
 }
 
 const DISTANCE_BREAKS = [1000, 2000, 5000, 10000, 20000] as const
 const DISTANCE_FILTER = { kind: 'max', min: 1000, max: 30000, step: 1000 } as const
 
-const distance = <Id extends string>(id: Id, property: string) =>
+const distance = <Id extends string, Overlay extends OverlayId>(id: Id, property: string, overlay: Overlay) =>
   ({
     id,
     property,
@@ -111,6 +117,7 @@ const distance = <Id extends string>(id: Id, property: string) =>
     decimals: 1,
     scale: { kind: 'steps', breaks: DISTANCE_BREAKS },
     filter: DISTANCE_FILTER,
+    overlay,
   }) as const
 
 export const LAYERS = [
@@ -134,6 +141,7 @@ export const LAYERS = [
     unit: 'class',
     scale: { kind: 'classes', values: [1, 2, 3, 4, 5] },
     filter: { kind: 'max', min: 1, max: 5, step: 1 },
+    overlay: 'seismic',
   },
   {
     id: 'flood',
@@ -144,6 +152,7 @@ export const LAYERS = [
     unit: 'class',
     scale: { kind: 'classes', values: [0, 1, 2, 3] },
     filter: { kind: 'max', min: 0, max: 3, step: 1 },
+    overlay: 'flood',
   },
   {
     id: 'clay',
@@ -154,6 +163,7 @@ export const LAYERS = [
     unit: 'class',
     scale: { kind: 'classes', values: [0, 1, 2, 3] },
     filter: { kind: 'max', min: 0, max: 3, step: 1 },
+    overlay: 'clay',
   },
   {
     id: 'radon',
@@ -164,6 +174,7 @@ export const LAYERS = [
     unit: 'class',
     scale: { kind: 'classes', values: [1, 2, 3] },
     filter: { kind: 'max', min: 1, max: 3, step: 1 },
+    overlay: 'radon',
   },
   {
     id: 'cavities',
@@ -176,6 +187,7 @@ export const LAYERS = [
     filter: { kind: 'max', min: 0, max: 20, step: 1 },
     // None known, a few, five or more: an even split would mix "none known" with "one".
     tiers: [1, 3],
+    overlay: 'cavities',
   },
   {
     id: 'altitude',
@@ -227,19 +239,19 @@ export const LAYERS = [
     scale: { kind: 'steps', breaks: [2, 5, 10, 20, 30] },
     filter: { kind: 'max', min: 0, max: 80, step: 1 },
   },
-  distance('hospital', 'd_hos'),
-  distance('gp', 'd_gp'),
-  distance('pharmacy', 'd_pha'),
-  distance('dentist', 'd_den'),
-  distance('creche', 'd_cre'),
-  distance('school', 'd_sch'),
-  distance('college', 'd_col'),
-  distance('lycee', 'd_lyc'),
-  distance('supermarket', 'd_sup'),
-  distance('bakery', 'd_bak'),
-  distance('post', 'd_pos'),
-  distance('pool', 'd_pool'),
-  distance('station', 'd_gar'),
+  distance('hospital', 'd_hos', 'hos'),
+  distance('gp', 'd_gp', 'gp'),
+  distance('pharmacy', 'd_pha', 'pha'),
+  distance('dentist', 'd_den', 'den'),
+  distance('creche', 'd_cre', 'cre'),
+  distance('school', 'd_sch', 'pri'),
+  distance('college', 'd_col', 'col'),
+  distance('lycee', 'd_lyc', 'lyc'),
+  distance('supermarket', 'd_sup', 'sup'),
+  distance('bakery', 'd_bak', 'bak'),
+  distance('post', 'd_pos', 'pos'),
+  distance('pool', 'd_pool', 'pool'),
+  distance('station', 'd_gar', 'sta'),
   {
     id: 'fibre',
     property: 'fb',
@@ -302,6 +314,8 @@ export const LAYERS = [
 export type LayerId = (typeof LAYERS)[number]['id']
 export type FilterableLayer = Extract<(typeof LAYERS)[number], { filter: unknown }>
 export type FilterKey = FilterableLayer['id']
+/** Layers that can still colour the map: those that have not become an overlay. */
+export type ColourLayerId = Exclude<(typeof LAYERS)[number], { readonly overlay: OverlayId }>['id']
 
 /** Not a theme: km to the nearest weather station the climate values are interpolated from, shown as a doubt hint. */
 export const STATION_DISTANCE_PROPERTY = 'cd'
@@ -334,6 +348,16 @@ export function isAvailable(def: LayerDef, fields: TileFields): boolean {
  */
 export function visibleLayers(showOptIn: boolean, fields: TileFields = null): readonly LayerDef[] {
   return LAYERS.filter((def: LayerDef) => (showOptIn || !def.optIn) && isAvailable(def, fields))
+}
+
+export const isColourLayer = (def: LayerDef): boolean => def.overlay === undefined
+
+/**
+ * Layers that can colour the map or be a second indicator: `visibleLayers` without those that became overlays.
+ * Filters and the details panel keep using `visibleLayers`.
+ */
+export function colourLayers(showOptIn: boolean, fields: TileFields = null): readonly LayerDef[] {
+  return visibleLayers(showOptIn, fields).filter(isColourLayer)
 }
 
 /** Field names of one vector layer in PMTiles / TileJSON metadata, or null when the metadata does not list them. */

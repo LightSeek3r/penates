@@ -77,16 +77,18 @@ describe('tiers of every catalogue layer', () => {
 
 describe('cross fill', () => {
   it('colours each pair of tiers with its own cell of the palette', () => {
-    expect(fillOf('price', 'hospital', { p_all: 900, d_hos: 500 })).toBe(rgba(CROSS_COLORS[0][0]))
-    expect(fillOf('price', 'hospital', { p_all: 4000, d_hos: 500 })).toBe(rgba(CROSS_COLORS[0][2]))
-    expect(fillOf('price', 'hospital', { p_all: 900, d_hos: 25_000 })).toBe(rgba(CROSS_COLORS[2][0]))
+    expect(fillOf('price', 'altitude', { p_all: 900, alt: 100 })).toBe(rgba(CROSS_COLORS[0][0]))
+    expect(fillOf('price', 'altitude', { p_all: 4000, alt: 100 })).toBe(rgba(CROSS_COLORS[0][2]))
+    expect(fillOf('price', 'altitude', { p_all: 900, alt: 1500 })).toBe(rgba(CROSS_COLORS[2][0]))
+    expect(fillOf('altitude', 'price', { alt: 500, p_all: 2000 })).toBe(rgba(CROSS_COLORS[1][1]))
+    // Class scales no longer colour the map, but the palette still reads them (the seismic zones are the sample).
     expect(fillOf('seismic', 'price', { sz: 3, p_all: 2000 })).toBe(rgba(CROSS_COLORS[1][1]))
   })
 
   it('never draws an absent value or an unknown class as a tier', () => {
     const noData = rgba(NO_DATA_COLOR)
-    expect(fillOf('price', 'hospital', { d_hos: 500 })).toBe(noData)
-    expect(fillOf('price', 'hospital', { p_all: 900 })).toBe(noData)
+    expect(fillOf('price', 'altitude', { alt: 100 })).toBe(noData)
+    expect(fillOf('price', 'altitude', { p_all: 900 })).toBe(noData)
     expect(fillOf('seismic', 'price', { sz: 9, p_all: 2000 })).toBe(noData)
     expect(fillOf('price', 'seismic', { p_all: 2000, sz: 9 })).toBe(noData)
   })
@@ -102,7 +104,7 @@ describe('cross fill', () => {
     // A commune drawn as no data carries no hatch: there is no colour to doubt.
     expect(passes(filters.light, { rtq: 1, p_all: 900, c_all: 1 })).toBe(false)
     expect(passes(filters.dark, { rtq: 1, p_all: 900, c_all: 1 })).toBe(false)
-    expect(crossDoubtFilters(def('hospital'), def('seismic'), 'all')).toBeNull()
+    expect(crossDoubtFilters(def('altitude'), def('sunshine'), 'all')).toBeNull()
   })
 })
 
@@ -110,16 +112,16 @@ describe('marks', () => {
   const icon = (id: string, properties: Record<string, unknown>) => evaluate(marksIconExpression(def(id), 'all'), latest.layout_symbol['icon-image'], properties)
 
   it('size by tier and open the ring of a rough estimate', () => {
-    expect(String(icon('hospital', { d_hos: 500 }))).toBe(markIcon(0, false))
-    expect(String(icon('hospital', { d_hos: 15_000 }))).toBe(markIcon(2, false))
+    expect(String(icon('altitude', { alt: 100 }))).toBe(markIcon(0, false))
+    expect(String(icon('altitude', { alt: 1500 }))).toBe(markIcon(2, false))
     expect(String(icon('price', { p_all: 2000, c_all: 1 }))).toBe(markIcon(1, true))
     expect(String(icon('price', { p_all: 2000, c_all: 3 }))).toBe(markIcon(1, false))
     expect(String(icon('rent', { rt: 16, rtq: 1 }))).toBe(markIcon(2, true))
   })
 
   it('leave a commune with no value, or an unknown class, without a symbol', () => {
-    expect(passes(marksFilter(def('hospital'), 'all'), { d_hos: 500 })).toBe(true)
-    expect(passes(marksFilter(def('hospital'), 'all'), { d_gp: 500 })).toBe(false)
+    expect(passes(marksFilter(def('altitude'), 'all'), { alt: 500 })).toBe(true)
+    expect(passes(marksFilter(def('altitude'), 'all'), { sun: 2000 })).toBe(false)
     expect(passes(marksFilter(def('seismic'), 'all'), { sz: 9 })).toBe(false)
     expect(passes(marksFilter(def('price'), 'mai'), { p_all: 2000 })).toBe(false)
   })

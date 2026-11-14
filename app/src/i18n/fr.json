@@ -27,6 +27,7 @@
       "app": "Appartements"
     },
     "colourTab": "Couleur",
+    "overlaysTab": "Calques",
     "filtersTab": "Filtres",
     "colourBy": "Colorier la carte selon"
   },
@@ -62,7 +63,11 @@
     "marksRough": "Anneau ouvert : estimation fragile",
     "marksNone": "Pas de disque : pas de donnée",
     "marksThinned": "En vue large, les disques sont éclaircis pour ne pas se chevaucher : zoomez pour tous les voir.",
-    "tiersNote": "Trois tranches par indicateur, d'après ses propres classes ; la fiche du lieu donne les chiffres exacts."
+    "tiersNote": "Trois tranches par indicateur, d'après ses propres classes ; la fiche du lieu donne les chiffres exacts.",
+    "overlays": "Calques ({{count}})",
+    "seismicLevel": "Passage en zone {{value}}",
+    "knownCavities": "Cavités recensées : {{range}}",
+    "riskMeaning": "Une ligne marque le passage de la valeur de la commune au niveau indiqué. La donnée est communale : la ligne suit donc les limites des communes, et une commune au bord peut n'être touchée qu'en partie. Une commune sans donnée n'est jamais comptée comme un niveau plus bas."
   },
   "inspector": {
     "title": "Fiche du lieu",
@@ -127,7 +132,7 @@
       "osm": "Fond de carte : © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap"
     },
     "privacy": "Aucun compte, aucun cookie. Seuls des totaux anonymes d'utilisation sont comptés (voir ci-dessous). Les tuiles de carte sont chargées depuis OpenFreeMap et Cloudflare.",
-    "methodExtra": "Les autres indicateurs (risques, altitude, climat, distances, fibre, loyer, taxe foncière, délinquance sur demande) sont des valeurs par commune tirées de données publiques ; une donnée inconnue reste vide, jamais 0. Les risques ne décrivent pas votre parcelle et ne remplacent pas l'état des risques (ERRIAL). Le climat est interpolé depuis les stations voisines. Les distances vont à vol d'oiseau d'un point de la commune à l'équipement le plus proche de la base permanente des équipements de l'Insee : ce ne sont pas des temps de trajet. Le loyer est un loyer d'annonce et le taux de taxe foncière n'est pas le montant de l'impôt.",
+    "methodExtra": "Les autres indicateurs (risques, altitude, climat, distances, fibre, loyer, taxe foncière, délinquance sur demande) sont des valeurs par commune tirées de données publiques ; une donnée inconnue reste vide, jamais 0. Les risques ne décrivent pas votre parcelle et ne remplacent pas l'état des risques (ERRIAL). Le climat est interpolé depuis les stations voisines. Les distances vont à vol d'oiseau d'un point de la commune à l'équipement le plus proche de la base permanente des équipements de l'Insee : ce ne sont pas des temps de trajet. Le loyer est un loyer d'annonce et le taux de taxe foncière n'est pas le montant de l'impôt. Les calques placent les équipements de la même base à leur propre position (noms seulement pour les établissements comme les écoles, hôpitaux et gares, jamais pour les médecins ou les commerces) et tracent les limites des zones sismiques d'après la zone de chaque commune.",
     "pages": "Pages de documentation",
     "methodPage": "Méthode détaillée",
     "sourcesPage": "Sources et licences",
@@ -433,5 +438,136 @@
   "optIn": {
     "label": "Afficher la délinquance enregistrée",
     "note": "Désactivé par défaut. Ce choix reste dans ce navigateur et n'est jamais transmis."
+  },
+  "overlays": {
+    "intro": "Des lignes pour les risques et des points pour les lieux, par-dessus n'importe quelle couleur. Affichez-en autant que vous voulez.",
+    "none": "Aucun calque n'est disponible dans les données chargées pour l'instant. Les couleurs et les filtres fonctionnent toujours.",
+    "clear": "Retirer les calques",
+    "onCount_one": "{{count}} affiché",
+    "onCount_other": "{{count}} affichés",
+    "groups": {
+      "risk": "Risques naturels",
+      "health": "Santé",
+      "education": "Éducation",
+      "daily": "Vie quotidienne",
+      "leisure": "Loisirs"
+    },
+    "notes": {
+      "risk": "Indicatif, et ne remplace jamais l'état des risques officiel (ERRIAL). Chaque risque est une valeur par commune : ses lignes suivent donc les limites des communes. L'absence de ligne ne prouve pas l'absence de risque : la donnée peut manquer.",
+      "places": "Base permanente des équipements de l'Insee (BPE 2025). Les points apparaissent en zoomant. Un point dit approximatif peut être décalé de quelques centaines de mètres. Les noms sont donnés pour les écoles, hôpitaux, gares et établissements comparables, jamais pour les médecins, pharmacies ou commerces."
+    }
+  },
+  "ov": {
+    "seismic": {
+      "name": "Limites des zones sismiques",
+      "about": "Lignes où la zone sismique réglementaire passe à 2, 3 ou 4, tracées d'après la zone de chaque commune (Géorisques). La zone fixe des règles de construction ; ce n'est pas une prévision et elle ne dit rien de votre parcelle."
+    },
+    "flood": {
+      "name": "Inondation : démarches de l'État",
+      "about": "Lignes là où les démarches de l'État contre l'inondation passent à l'étape 1 (atlas des zones inondables ou dossier départemental), 2 (plan de prévention prescrit) ou 3 (approuvé), d'après la valeur de chaque commune (Géorisques, GASPAR). Une ligne suit les limites des communes, pas la zone inondable, et une commune au bord peut n'être touchée qu'en partie. Sans ligne, aucune démarche n'est recensée, ce qui ne veut pas dire aucun risque."
+    },
+    "clay": {
+      "name": "Retrait-gonflement des argiles",
+      "about": "Lignes là où l'exposition aux argiles passe à faible (classe 1), moyenne (2) ou forte (3), d'après la valeur de chaque commune (BRGM, carte 2026). Une ligne suit les limites des communes : une commune au bord peut n'être touchée qu'en partie. C'est le signe qu'une étude de sol vaut la peine avant de construire, pas l'état de votre terrain."
+    },
+    "radon": {
+      "name": "Radon",
+      "about": "Lignes là où la catégorie radon passe à 2 (potentiel faible mais géologie aggravante) ou 3 (potentiel significatif), d'après la valeur de chaque commune (ASNR, ex-IRSN). La catégorie 1 n'est pas tracée. Une ligne suit les limites des communes : une commune au bord peut n'être touchée qu'en partie. Seule une mesure dans le logement donne l'exposition réelle."
+    },
+    "cavities": {
+      "name": "Cavités souterraines",
+      "about": "Lignes là où le nombre de cavités que l'inventaire du BRGM recense dans une commune passe à 1, à 5 ou à 25. Une ligne suit les limites des communes : une commune au bord peut n'être touchée qu'en partie. L'inventaire est incomplet : sans ligne, aucune n'est recensée, ce qui ne veut pas dire aucune."
+    },
+    "hos": {
+      "name": "Hôpitaux et cliniques",
+      "one": "Hôpital ou clinique",
+      "about": "Établissements de court séjour, publics ou privés. Cela ne dit pas s'il y a des urgences."
+    },
+    "gp": {
+      "name": "Médecins généralistes",
+      "one": "Médecin généraliste",
+      "about": "Cabinets de médecine générale. Cela ne dit pas s'ils prennent de nouveaux patients ; aucun nom n'est affiché."
+    },
+    "pha": {
+      "name": "Pharmacies",
+      "one": "Pharmacie",
+      "about": "Pharmacies, médecins propharmaciens compris. Aucun nom n'est affiché."
+    },
+    "den": {
+      "name": "Chirurgiens-dentistes",
+      "one": "Chirurgien-dentiste",
+      "about": "Cabinets dentaires. Aucun nom n'est affiché."
+    },
+    "cre": {
+      "name": "Crèches",
+      "one": "Crèche",
+      "about": "Établissements d'accueil du jeune enfant et micro-crèches. Cela ne dit pas s'il reste une place ; aucun nom n'est affiché."
+    },
+    "mat": {
+      "name": "Écoles maternelles",
+      "one": "École maternelle",
+      "about": "Écoles maternelles publiques et privées."
+    },
+    "pri": {
+      "name": "Écoles élémentaires et primaires",
+      "one": "École élémentaire ou primaire",
+      "about": "Écoles élémentaires et primaires, publiques et privées."
+    },
+    "col": {
+      "name": "Collèges",
+      "one": "Collège",
+      "about": "Collèges publics et privés."
+    },
+    "lyc": {
+      "name": "Lycées",
+      "one": "Lycée",
+      "about": "Lycées généraux, technologiques, professionnels et agricoles, publics et privés."
+    },
+    "uni": {
+      "name": "Universités et grandes écoles",
+      "one": "Université ou grande école",
+      "about": "Sites universitaires et écoles d'enseignement supérieur (ingénieurs, commerce, agronomie)."
+    },
+    "sup": {
+      "name": "Supermarchés",
+      "one": "Supermarché",
+      "about": "Supermarchés et hypermarchés. Aucun nom d'enseigne n'est affiché."
+    },
+    "bak": {
+      "name": "Boulangeries",
+      "one": "Boulangerie",
+      "about": "Boulangeries. Aucun nom n'est affiché."
+    },
+    "pos": {
+      "name": "Bureaux et relais de poste",
+      "one": "Bureau ou relais de poste",
+      "about": "Bureaux de poste, relais poste chez un commerçant et agences postales communales."
+    },
+    "sta": {
+      "name": "Gares",
+      "one": "Gare",
+      "about": "Gares de voyageurs SNCF. Cela ne dit pas combien de trains s'y arrêtent."
+    },
+    "pool": {
+      "name": "Piscines",
+      "one": "Piscine",
+      "about": "Bassins couverts et découverts. La source ne distingue pas les piscines publiques des privées, comme celles des salles de sport : vérifiez qu'elle est ouverte au public."
+    },
+    "cin": {
+      "name": "Cinémas",
+      "one": "Cinéma",
+      "about": "Cinémas."
+    },
+    "lib": {
+      "name": "Bibliothèques",
+      "one": "Bibliothèque",
+      "about": "Bibliothèques et médiathèques publiques."
+    }
+  },
+  "card": {
+    "close": "Fermer la fiche du lieu",
+    "count": "{{value}} de ce type à cette adresse",
+    "approximate": "Position approximative : elle peut être décalée de quelques centaines de mètres.",
+    "source": "Source : Insee, base permanente des équipements (BPE 2025)."
   }
 }

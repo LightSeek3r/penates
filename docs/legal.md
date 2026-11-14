@@ -1,6 +1,6 @@
 # Legal notice and privacy
 
-Last updated: November 6, 2026. This covers settling-map (settling.unit42.fr). The legal notice of the main domain is at [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
+Last updated: November 13, 2026. This covers settling-map (settling.unit42.fr). The legal notice of the main domain is at [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
 
 ## Publisher
 
@@ -14,7 +14,7 @@ The site is hosted by [Cloudflare, Inc.](https://www.cloudflare.com), 101 Townse
 
 ## Data and credits
 
-The data used, its licences and the credits to display are detailed on the [Sources and licences](/en/sources/) page. How the figures are computed is explained on the [Method](/en/methodology/) page. The prices shown are aggregates by commune; no individual sale is published.
+The data used, its licences and the credits to display are detailed on the [Sources and licences](/en/sources/) page. How the figures are computed is explained on the [Method](/en/methodology/) page. The prices shown are aggregates by commune; no individual sale is published. The places overlay is different: it shows facilities from INSEE's permanent facilities base (BPE) one by one, at the position INSEE publishes. A dot for a general practitioner or a dentist can therefore mark one person's practice; its name is never shown, and only schools, hospitals and clinics, universities, stations, post offices, swimming pools, cinemas and libraries carry the establishment's name (the source cannot tell a public swimming pool from a private club's). Rows INSEE publishes in partial diffusion are left out, and nothing else of a facility (address, SIRET number) is published.
 
 ## Intellectual property
 
@@ -36,7 +36,7 @@ Using the map also sends technical data to the following services, as with any w
 - **OpenFreeMap** provides the basemap (tiles and fonts): it receives your IP address and the map area you view.
 - **The French government's Geo API** (geo.api.gouv.fr) receives the text you type in the commune search box (from two characters) to suggest communes.
 
-What follows the # sign in the address (map position, selected commune, theme, filters) stays in your browser: it is not sent to servers. It is included in links you choose to share.
+What follows the # sign in the address (map position, selected commune, theme, overlays, filters) stays in your browser: it is not sent to servers. It is included in links you choose to share.
 
 **Legal basis**: legitimate interest in providing and securing the site (GDPR art. 6(1)(f)). **Retention**: according to the retention policies of Cloudflare, OpenFreeMap and the Geo API; settling-map keeps nothing itself.
 

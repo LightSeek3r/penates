@@ -135,6 +135,16 @@ ol {
   background: var(--panel-raised);
 }
 
+.button:disabled {
+  border-color: var(--line);
+  color: var(--text-dim);
+  cursor: default;
+}
+
+.button:disabled:hover {
+  background: transparent;
+}
+
 .button--quiet {
   border-color: transparent;
 }
@@ -738,10 +748,11 @@ ol {
     top: auto;
     right: var(--space-2);
     left: var(--space-2);
-    bottom: 96px;
+    /* Just above the legend strip, whose height Legend.tsx publishes (84px is the strip with the price ladder alone). */
+    bottom: calc(var(--legend-height, 84px) + var(--space-3));
     width: auto;
     /* With every indicator listed the details can outgrow the screen, so the sheet scrolls. */
-    max-height: 60vh;
+    max-height: min(60vh, calc(100% - var(--legend-height, 84px) - var(--space-5)));
   }
 
   .inspector {
@@ -761,7 +772,7 @@ ol {
 /* Short viewports (landscape phones) cannot fit the whole sheet, so it scrolls. */
 @media (max-width: 719px) and (max-height: 699px) {
   .stage__right {
-    max-height: 50vh;
+    max-height: min(50vh, calc(100% - var(--legend-height, 84px) - var(--space-5)));
   }
 }
 
@@ -804,9 +815,10 @@ ol {
 .tab {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  /* Three tabs, two of them with a count, fit the 288px rail. */
+  gap: var(--space-1);
   min-height: 40px;
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   border: 1px solid transparent;
   border-radius: var(--radius);
   background: transparent;
@@ -1324,5 +1336,172 @@ summary.group__head:hover {
 
   .marks__none {
     height: 10px;
+  }
+}
+
+/* ---- overlays: risk lines and place dots over the colour ---- */
+
+.ov-symbol {
+  flex: none;
+}
+
+.overlay__rows {
+  display: grid;
+}
+
+.theme.overlay {
+  min-height: 40px;
+}
+
+.overlay__note {
+  color: var(--text-dim);
+  font-size: var(--text-xs);
+}
+
+.overlay__foot {
+  flex: none;
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.overlay__foot .button {
+  width: 100%;
+}
+
+.ov-key {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.ov-key__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 40px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  list-style: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.ov-key__head::-webkit-details-marker {
+  display: none;
+}
+
+.ov-key__head:hover {
+  background: var(--panel-raised);
+}
+
+.ov-key[open] .group__chevron {
+  transform: rotate(180deg);
+}
+
+.ov-key__list,
+.ov-key__levels {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.ov-key__list {
+  gap: var(--space-2);
+}
+
+/* Line samples face the first line of a label that wraps. */
+.ov-key__levels .ov-key__row {
+  align-items: flex-start;
+}
+
+.ov-key__levels .ov-symbol {
+  margin-top: 4px;
+}
+
+.ov-key__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ov-key__risk {
+  display: block;
+}
+
+.ov-key__levels {
+  margin-top: var(--space-1);
+  padding-left: var(--space-2);
+}
+
+/* ---- place card: a dot picked on the map, above the details ---- */
+
+.placecard {
+  flex: none;
+}
+
+.placecard__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.placecard__name {
+  font-size: var(--text-md);
+  line-height: 1.3;
+}
+
+.placecard__facts {
+  display: grid;
+  gap: 2px;
+  font-size: var(--text-sm);
+}
+
+@media (pointer: coarse) {
+  .theme.overlay,
+  .ov-key__head {
+    min-height: var(--target);
+  }
+}
+
+/* Phones: the overlay key folds into a chip in the legend strip; open, it is the only sheet over the map. */
+@media (max-width: 719px) {
+  .ov-key {
+    margin-top: var(--space-1);
+    border-top: 0;
+  }
+
+  .ov-key__head {
+    display: inline-flex;
+    min-height: var(--target);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-size: var(--text-xs);
+  }
+
+  /* The head keeps its height and the body scrolls, so the open key as a whole stays within 40 % of the screen. */
+  .ov-key__body {
+    max-height: calc(40vh - var(--target));
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .ov-key__list {
+    padding: var(--space-2) 0 var(--space-1);
+    font-size: var(--text-xs);
+  }
+
+  .ov-key__levels {
+    font-size: var(--text-xs);
+  }
+
+  .stage:has(.ov-key[open]) .stage__right {
+    display: none;
+  }
+
+  /* A picked dot takes the place of the details sheet until it is closed. */
+  .stage__right:has(.placecard) .inspector {
+    display: none;
   }
 }

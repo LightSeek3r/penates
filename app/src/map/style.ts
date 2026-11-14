@@ -1,5 +1,6 @@
 import type { ExpressionSpecification, FilterSpecification, GeoJSONSourceSpecification, LayerSpecification, StyleSpecification } from 'maplibre-gl'
 import { markIcon } from '../domain/combine'
+import { RISK_OVERLAYS, RISK_STYLE, type RiskOverlayId, riskLevels } from '../domain/overlays'
 import type { PriceType } from '../domain/place'
 import { HATCH_LIGHT_BELOW, priceFillExpression } from '../domain/priceLadder'
 // Fetched and parsed by MapLibre's worker rather than bundled: 128 KB less JavaScript to parse on the main thread.
@@ -73,6 +74,18 @@ export const SELECTION_LAYERS = {
   department: ['departments-selected-tint', 'departments-selected-casing', 'departments-selected'],
 } as const
 
+/** Source of the overlays archive; it exists only when the archive does. */
+export const OVERLAYS_SOURCE = 'overlays'
+/** Dots up to zoom 12, pictogram badges from there; both read the `places` layer and show the kinds that are on. */
+export const PLACE_LAYERS = { dot: 'overlay-places-dot', glyph: 'overlay-places-glyph' } as const
+const PLACE_GLYPH_FROM = 12
+/** The casing and the ink of one risk overlay, in drawing order. */
+export const riskLayerIds = (id: RiskOverlayId) => [`overlay-${id}-casing`, `overlay-${id}`] as const
+// RISK_STYLE widths are for zoom 8; lines are thinner when the whole country is in view and heavier once zoomed in.
+const WIDTH_BY_ZOOM = [[4, 0.6], [8, 1], [12, 1.4]] as const
+// Midnight shows 1px on each side of the ink, which is what keeps a light line readable on the light price classes.
+const CASING_EXTRA = 2
+
 const NOTES: GeoJSONSourceSpecification['data'] = {
   type: 'FeatureCollection',
   features: [
@@ -100,7 +113,7 @@ function outlineLayers(sourceLayer: string, kind: keyof typeof SELECTION_LAYERS,
   ]
 }
 
-function dataLayers(type: PriceType): LayerSpecification[] {
+function dataLayers(type: PriceType, withArchive: boolean): LayerSpecification[] {
   const fill = priceFillExpression(type)
   const filters = patternFilters(type)
   const common = { source: 'data' } as const
@@ -180,9 +193,100 @@ function dataLayers(type: PriceType): LayerSpecification[] {
       paint: { 'line-color': PORCELAIN, 'line-opacity': ['interpolate', ['linear'], ['zoom'], 7, 0.45, 9, 0.15], 'line-width': 0.7 },
     },
     ...MARK_LAYERS.map((id): LayerSpecification => markLayer(id, id === MARK_LAYERS[1])),
+    // Over the boundaries and the discs, under the outline of the selected place, the kilometre grid, roads and names.
+    ...(withArchive ? overlayLayers() : []),
     // After the discs, so a disc never covers the outline of the selected place.
     ...outlineLayers('departments', 'department', { max: FADE_TO }),
     ...outlineLayers('communes', 'commune', { min: FADE_FROM }),
+    // Last, so the ring is never covered by an outline or a tint.
+    ...(withArchive ? placeSelectionLayers() : []),
+  ]
+}
+
+/** Line width through the zoom stops; `base` gives the expression of the width at zoom 8 scaled by the stop's factor. */
+function lineWidth(base: (scale: number) => readonly unknown[]): ExpressionSpecification {
+  return ['interpolate', ['linear'], ['zoom'], ...WIDTH_BY_ZOOM.flatMap(([zoom, scale]) => [zoom, base(scale)])] as unknown as ExpressionSpecification
+}
+
+/** Width by the level (`z`) a line rises to; `extra` widens the casing around the ink. */
+function riskWidth(id: RiskOverlayId, extra: number): ExpressionSpecification {
+  const { widths } = RISK_STYLE[id]
+  const at = (index: number, scale: number) => Math.round((widths[index] * scale + extra) * 100) / 100
+  return lineWidth((scale) => ['match', ['get', 'z'], ...riskLevels(id).flatMap((level, index) => [level, at(index, scale)]), at(0, scale)])
+}
+
+/** The seismic lines have a layer of their own; the four other risks share the `risk` layer, told apart by `r`. */
+const riskSource = (id: RiskOverlayId): { 'source-layer': string; filter?: FilterSpecification } =>
+  id === 'seismic' ? { 'source-layer': 'seismic' } : { 'source-layer': 'risk', filter: ['==', ['get', 'r'], id] }
+
+function riskLayers(id: RiskOverlayId): LayerSpecification[] {
+  const [casingId, inkId] = riskLayerIds(id)
+  const { ink, dash } = RISK_STYLE[id]
+  const common = { source: OVERLAYS_SOURCE, ...riskSource(id) }
+  const layout = { visibility: 'none', 'line-join': 'round' } as const
+  // The casing stays solid under a dashed ink: dashes then read as one ink on midnight, whatever the width of the line.
+  return [
+    { id: casingId, type: 'line', ...common, layout, paint: { 'line-color': GROUND, 'line-width': riskWidth(id, CASING_EXTRA) } },
+    { id: inkId, type: 'line', ...common, layout, paint: { 'line-color': ink, 'line-width': riskWidth(id, 0), ...(dash ? { 'line-dasharray': [...dash] } : {}) } },
+  ]
+}
+
+/**
+ * The ring around the place dot the visitor picked. Dots carry no feature id to filter on, so the ring has its own
+ * GeoJSON source that holds that one point (`placeSelectionData`) and is empty otherwise.
+ */
+export const PLACE_SELECTION = { source: 'place-selected', casing: 'place-selected-casing', ring: 'place-selected-ring' } as const
+
+export const placeSelectionData = (place: { lng: number; lat: number } | null) => ({
+  type: 'FeatureCollection' as const,
+  features: place ? [{ type: 'Feature' as const, properties: {}, geometry: { type: 'Point' as const, coordinates: [place.lng, place.lat] } }] : [],
+})
+
+// Radius of the ring's centre line, outside the dot's own casing (6px) and the badge's (13px) from the zoom it takes over.
+const RING_RADIUS = ['step', ['zoom'], 9.5, PLACE_GLYPH_FROM, 17.5] as ExpressionSpecification
+
+/** Midnight casing, then the amber ring: the selection idiom of the commune outline, so it reads on every fill. */
+function placeSelectionLayers(): LayerSpecification[] {
+  const common = { type: 'circle', source: PLACE_SELECTION.source } as const
+  const hollow = { 'circle-radius': RING_RADIUS, 'circle-color': GROUND, 'circle-opacity': 0 }
+  return [
+    { id: PLACE_SELECTION.casing, ...common, paint: { ...hollow, 'circle-stroke-color': GROUND, 'circle-stroke-width': 6 } },
+    { id: PLACE_SELECTION.ring, ...common, paint: { ...hollow, 'circle-stroke-color': AMBER, 'circle-stroke-width': 2.6 } },
+  ]
+}
+
+/** Keeps the dots of these kinds; an empty list keeps none. */
+export const placeKindsFilter = (kinds: readonly string[]): FilterSpecification => ['in', ['get', 'k'], ['literal', [...kinds]]]
+
+function placeLayer(id: string, imagePrefix: string, zoom: { minzoom?: number; maxzoom?: number }): LayerSpecification {
+  return {
+    id,
+    type: 'symbol',
+    source: OVERLAYS_SOURCE,
+    'source-layer': 'places',
+    ...zoom,
+    filter: placeKindsFilter([]),
+    layout: {
+      visibility: 'none',
+      'icon-image': ['concat', imagePrefix, ['get', 'k']],
+      // Dots of neighbouring places may overlap, and place names are drawn over them whatever they take.
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
+    },
+  }
+}
+
+/**
+ * Overlays, all hidden until switched on (`applyOverlays`): the lines of risks, then the dots of places. All of them
+ * read the overlays archive, so they exist only when the style has that source. Seismic lines go last among the risks,
+ * on top where several lines run along the same commune border.
+ */
+export function overlayLayers(): LayerSpecification[] {
+  return [
+    ...RISK_OVERLAYS.filter((id) => id !== 'seismic').flatMap(riskLayers),
+    ...riskLayers('seismic'),
+    placeLayer(PLACE_LAYERS.dot, 'place-dot-', { maxzoom: PLACE_GLYPH_FROM }),
+    placeLayer(PLACE_LAYERS.glyph, 'place-glyph-', { minzoom: PLACE_GLYPH_FROM }),
   ]
 }
 
@@ -204,7 +308,8 @@ function markLayer(id: string, everyCommune: boolean): LayerSpecification {
   }
 }
 
-export function buildStyle(tileUrl: string, type: PriceType, lang: Lang): StyleSpecification {
+/** `overlaysUrl` is the overlays archive; without it the style has no overlay source and no overlay layer. */
+export function buildStyle(tileUrl: string, type: PriceType, lang: Lang, overlaysUrl?: string): StyleSpecification {
   return {
     version: 8,
     glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
@@ -220,6 +325,12 @@ export function buildStyle(tileUrl: string, type: PriceType, lang: Lang): StyleS
         attribution: '© IGN · DGFiP/Etalab · Licence Ouverte v2.0',
       },
       marks: { type: 'vector', url: `pmtiles://${tileUrl}`, maxzoom: MARKS_TILE_ZOOM },
+      ...(overlaysUrl
+        ? {
+            [OVERLAYS_SOURCE]: { type: 'vector', url: `pmtiles://${overlaysUrl}`, attribution: '© INSEE · Géorisques · Licence Ouverte v2.0' },
+            [PLACE_SELECTION.source]: { type: 'geojson', data: placeSelectionData(null) },
+          }
+        : {}),
       kmgrid: { type: 'geojson', data: new URL(kmGridUrl, window.location.href).href },
       notes: { type: 'geojson', data: NOTES },
     },
@@ -242,7 +353,7 @@ export function buildStyle(tileUrl: string, type: PriceType, lang: Lang): StyleS
         minzoom: 8,
         paint: { 'line-color': COBALT, 'line-opacity': 0.55, 'line-width': 0.7 },
       },
-      ...dataLayers(type),
+      ...dataLayers(type, overlaysUrl !== undefined),
       {
         id: 'km-grid-100',
         type: 'line',

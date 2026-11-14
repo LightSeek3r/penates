@@ -48,7 +48,7 @@ async function legendColouredPixels(page: Page): Promise<number> {
 for (const phone of PHONES) {
   test(`the default view on a ${phone.name} phone is zoomed enough for a communes-only theme to paint`, async ({ page }) => {
     await page.setViewportSize({ width: phone.width, height: phone.height })
-    await page.goto('/#l=fr&th=seismic')
+    await page.goto('/#l=fr&th=altitude')
     await mapReady(page)
     expect(shownZoom(page)).toBeGreaterThanOrEqual(COMMUNES_FROM_TILE_ZOOM)
     await expect.poll(() => legendColouredPixels(page), { timeout: 20_000 }).toBeGreaterThan(MIN_PAINTED_CSS_PIXELS)

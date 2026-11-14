@@ -110,6 +110,7 @@ It refuses the listing-site look (banners, orange calls to action, agent cards),
 - Printed-sheet frame: neatline, Lambert-93 ticks, kilometre grid, alternating scale bar.
 - Flat tonal panels with hairline borders; no shadows.
 - Orange appears only as IGN-style road ink; amber is reserved for selection.
+- Overlays are overprinted, not filled: risks as cased lines, places as one pictogram per kind.
 
 ## Colors
 
@@ -148,6 +149,8 @@ A cold enamel ground with porcelain ink, one blue price ladder, and a small set 
 
 **The Texture Carries Doubt Rule.** Uncertainty is drawn as texture and each texture keeps at least 3:1 contrast against its fill: porcelain hatch on the three darkest classes, midnight hatch on the rest, dense porcelain dots for "no sale kept", a quiet porcelain cross-hatch for "outside the source".
 
+**The Overprint Rule.** Overlays sit on top of whichever colour is chosen and never change it. Risks are lines and places are pictograms; neither fills an area with hatch, dots or cross-hatch, so texture keeps meaning doubt and gaps on the colour layer alone (The Texture Carries Doubt Rule is unchanged).
+
 **The Second Voice Rule.** A second indicator speaks through the crossed palette or through discs, never through texture: hatch, dots and cross-hatch keep meaning doubt and gaps. In crossed colours the hatch means "at least one of the two figures is a rough estimate" (one fill cannot say which); a disc for a rough estimate is an open ring. A missing value is the no-data ground in crossed colours and no disc at all, never the low tier.
 
 ## Typography
@@ -173,9 +176,9 @@ A cold enamel ground with porcelain ink, one blue price ladder, and a small set 
 
 ## Layout
 
-The page is a top bar over a full-bleed sheet. The map fills a framed area inset by the sheet margin (28px on wide screens, 12px on phones); the margin carries the neatline and the Lambert-93 tick labels. Panels float inside the frame: layers and legend stacked on the left (288px), the details panel on the right (320px). The spacing rhythm is 4, 8, 12, 16, 24px.
+The page is a top bar over a full-bleed sheet. The map fills a framed area inset by the sheet margin (28px on wide screens, 12px on phones); the margin carries the neatline and the Lambert-93 tick labels. Panels float inside the frame: layers and legend stacked on the left (288px), the details panel on the right (320px). The layers panel has three tabs, Colour, Overlays and Filters, in that order; the place card of a picked dot stacks above the details panel in the right column, so neither covers the other. The spacing rhythm is 4, 8, 12, 16, 24px.
 
-Below 720px the panels become bottom sheets over the map: the layers sheet opens on demand and the details sheet steps aside while it is open, so two sheets never overlap. The legend stays visible as a compact strip with the price ladder and the reliability key. Map controls move to the top-right so they never cover the country. On first load the whole of metropolitan France, Corsica included, is fitted inside the free area.
+Below 720px the panels become bottom sheets over the map: the layers sheet opens on demand and the details sheet steps aside while it is open, so two sheets never overlap. The legend stays visible as a compact strip with the price ladder and the reliability key; when overlays are on, the strip gains an "Overlays (n)" chip that opens their key. The open key is itself a sheet: it closes the layers sheet and the details sheet steps aside for it. A picked dot's place card takes the details sheet's place until it is closed. Both sit just above the strip, whatever its height. Map controls move to the top-right so they never cover the country. On first load the whole of metropolitan France, Corsica included, is fitted inside the free area.
 
 Touch targets are 44px minimum; buttons and fields are 40px tall on desktop pointers.
 
@@ -211,9 +214,17 @@ Panels, buttons and fields share a 6px radius; reliability pips use 2px. The lan
 
 ### Panels and legend
 - **Style:** deep-panel ground, 16px padding, 6px radius, hairline border. The legend lists the seven price classes as swatches with labels, then a reliability key: plain (10 sales or more), hatch (fewer than 10), dots (no sale kept), cross-hatch (outside the source).
+- **Overlay key:** under the colour legend, a collapsible "Overlays (n)" heading (open on desktop, a chip on phones) with one row per overlay switched on: its pictogram badge and its name for places; for risks, one line sample per level, drawn at that level's weight, with its wording (seismic: into zone 2, 3, 4; flood, clay and radon: the class the line rises to, in the class names of the details panel; cavities: the known count, 1 and above, 5 and above, 25 and above). One sentence after the risks says what a line is: it marks where the commune-level value rises to the level shown, follows commune borders, may leave a commune at the edge only partly affected, and never counts a commune with no data as a lower level. On phones the open key is capped at 40 % of the screen height: its heading stays put and its body scrolls.
+
+### Overlays
+- **Panel:** the Overlays tab lists five collapsible families, natural risks, health, education, daily life and leisure, with the same group headings as the colour list (one tab stop when closed, one family open at a time) and a count badge for the overlays on. Each row is a native checkbox, its symbol and its name; a row that is on shows a short "what this is and is not" below it. Each family ends with its honest note (risks: indicative, one value per commune so lines follow commune borders, never the official ERRIAL, no line is not safety; places: INSEE facilities base, approximate dots, which kinds carry a name). "Clear overlays" is an outlined button, disabled when none is on. Nothing is on by default, and an overlay the loaded data lacks is not listed; with none at all, a sentence says so instead of an empty tab.
+- **Risk lines:** each risk has one ink and, where needed, a dash, drawn over a midnight casing so it reads on every colour of the price ladder and the crossed palette. Every risk is an isoline, never a tinted or textured area and never the outline of each commune in a class (two thirds of the communes qualify for some risks, which would be a mesh): one line where the value rises to a level, heavier as the level grows. Seismic zones rise to 2, 3 or 4 (solid); flood, clay and radon to a class (flood and clay 1 to 3, radon 2 and 3, since class 1 is "low potential"); cavities to 1, 5 and 25 known; each of the four with its own dash. The data is per commune, so a line follows commune borders and does not claim to be the edge of a hazard. Several lines can share a border: the seismic lines are drawn last, on top. Inks are never amber, scarlet or a blue of the price ladder. Source of truth: `RISK_STYLE` and `RISK_LINES` in `app/src/domain/overlays.ts`.
+- **Place pictograms:** one pictogram per kind, drawn midnight on its family ink inside a round badge, so the shape carries the meaning and colour only groups the family. The panel row, the legend key and the place card draw the map's badge from the same spec (`app/src/map/placeIcons.ts`) as SVG. Source of truth: `app/src/domain/placeGlyphs.ts`. Dots appear by zoom (large, rare kinds first), so the national view never turns into a cloud.
+- **Place card:** a small flat panel with the pictogram, the kind and, when the source gives one, the name; "N of this kind at this address" when several share a point; "Position approximate" when INSEE flags it; the source line; the drawn-cross close in a 44px target. Escape closes it and focus goes back to where it was.
+- **Selected place:** the dot or badge of the picked place carries the selection idiom of the commune outline, an amber ring over a midnight casing, wider than the dot below zoom 12 and than the badge from it. It goes when the card closes, and sits over every overlay and outline.
 
 ### Second indicator
-- **Picker:** at the foot of the Colour tab, outside its scroll: a native select styled as the search field (grouped by family, never offering the theme itself or an opt-in layer before opt-in), the quiet drawn-cross button to remove it, and the segmented control for crossed colours or discs.
+- **Picker:** at the foot of the Colour tab, outside its scroll: a native select styled as the search field (grouped by family, offering only the colour layers, never the theme itself or an opt-in layer before opt-in), the quiet drawn-cross button to remove it, and the segmented control for crossed colours or discs.
 - **Crossed key:** a 3 x 3 table, the second indicator's tiers as rows (high on top), the theme's as columns (high on the right), tier ranges in the legend's own wording and units, axis names with drawn arrows; on phones the grid shrinks to short labels beside the axis names.
 - **Disc key:** the three disc sizes with their tier ranges on one wrapping row, then "open ring: rough estimate" and "no disc: no data", then the note that discs are thinned when zoomed out.
 - **Map:** discs sit under the selection outline, so the selected place stays fully outlined; place names draw over them.
@@ -233,11 +244,15 @@ A neatline with kilometre ticks on four edges (100 km labelled, 10 km unlabelled
 - **Do** give every figure its sample size, period and a plain-language reliability sentence.
 - **Do** keep the interface and map lettering in one family, in sentence case.
 - **Do** keep amber for selection and focus only.
+- **Do** draw every risk overlay as a line on a midnight casing and every place as its own pictogram, so neither relies on colour alone.
+- **Do** keep the overlay key next to the colour legend and name every overlay that is on.
 
 ### Don't:
 - **Don't** show missing or thin data as a low-price colour.
 - **Don't** draw a second indicator as a texture, or a missing value as its smallest disc or lowest tier.
 - **Don't** use red or scarlet for risk, crime or any non-error state; risk layers stay calm.
+- **Don't** fill an overlay with hatch, dots or cross-hatch, or tint it with amber or a price blue.
+- **Don't** switch an overlay on by default, or read a missing line or dot as "no risk" or "no service".
 - **Don't** add drop shadows, gradients or glows to panels.
 - **Don't** let panels cover the neatline or two bottom sheets overlap on phones.
 - **Don't** style the page like a listing site: no banners, no orange calls to action, no agent-style cards.

@@ -3,16 +3,25 @@ import { communeTileFields, mapReady, openGroup, openLayersOnPhone } from './hel
 
 const LYON_3E = '#z=11&lat=45.76&lng=4.86&t=all&c=69383&l=fr'
 
-test('colours the map by seismic zone and swaps the legend', async ({ page }) => {
+test('colours the map by altitude and swaps the legend', async ({ page }) => {
   await page.goto('/#l=fr')
   await mapReady(page)
   await openLayersOnPhone(page)
+  await openGroup(page, 'Altitude et relief')
+  await page.getByRole('radio', { name: 'Altitude', exact: true }).check()
+  await expect(page.getByRole('region', { name: 'Altitude', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/th=altitude/)
+})
+
+test('risks and distances are no longer offered as colours, only as filters', async ({ page }) => {
+  await page.goto('/#l=fr')
+  await mapReady(page)
+  await openLayersOnPhone(page)
+  for (const name of ['Zone sismique', 'Inondation', 'Hôpital', 'Boulangerie']) await expect(page.getByRole('radio', { name, exact: true })).toHaveCount(0)
+  await expect(page.locator('option[value="seismic"], option[value="hospital"]')).toHaveCount(0)
+  await page.getByRole('tab', { name: /Filtres/ }).click()
   await openGroup(page, 'Risques')
-  await page.getByRole('radio', { name: 'Zone sismique' }).check()
-  await expect(page.getByRole('region', { name: 'Zone sismique' })).toBeVisible()
-  // Phones show the zone numbers only; the full wording is still in the page for screen readers.
-  await expect(page.getByText('Zone 3 : modérée')).toBeAttached()
-  await expect(page).toHaveURL(/th=seismic/)
+  await expect(page.getByRole('slider', { name: 'Zone sismique maximale' })).toBeVisible()
 })
 
 test('a filter is counted, shared in the link and can be reset', async ({ page }) => {
@@ -31,10 +40,10 @@ test('a filter is counted, shared in the link and can be reset', async ({ page }
 })
 
 test('restores theme and filters from a shared link', async ({ page }) => {
-  await page.goto('/#z=6&lat=46.6&lng=2.4&th=hospital&f=gp-5000.seismic-3&l=fr')
+  await page.goto('/#z=6&lat=46.6&lng=2.4&th=altitude&f=gp-5000.seismic-3&l=fr')
   await mapReady(page)
   await openLayersOnPhone(page)
-  await expect(page.getByRole('region', { name: /Distance au plus proche : hôpital/ })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Altitude', exact: true })).toBeVisible()
   await expect(page.getByRole('tab', { name: /Filtres/ })).toContainText('2')
 })
 
@@ -47,24 +56,22 @@ test('details list the seismic zone and distances of a commune', async ({ page }
   await expect(details.getByText(/vol d'oiseau/).first()).toBeVisible()
 })
 
-// Themes the tiles do not carry are not offered, so the test uses the flood stages when the data has them
+// Filters the tiles do not carry are not offered, so the test uses the flood stages when the data has them
 // and falls back to the seismic zone (present since the first release) otherwise.
-const FLOOD = { theme: 'flood', legend: "Inondation : démarches de l'État", radio: 'Inondation', slider: 'Inondation : étape maximale', value: 1, readout: 'étape 1 au plus', off: 3 }
-const SEISMIC = { theme: 'seismic', legend: 'Zone sismique', radio: 'Zone sismique', slider: 'Zone sismique maximale', value: 2, readout: 'zone 2 au plus', off: 5 }
+const FLOOD = { id: 'flood', slider: 'Inondation : étape maximale', value: 1, readout: 'étape 1 au plus', off: 3 }
+const SEISMIC = { id: 'seismic', slider: 'Zone sismique maximale', value: 2, readout: 'zone 2 au plus', off: 5 }
 
-test('a risk theme and its filter open from a link, and the filter counter follows the link', async ({ page }) => {
+test('a risk filter opens from a link, and the filter counter follows the link', async ({ page }) => {
   const fields = await communeTileFields()
   const risk = fields?.has('fl') ? FLOOD : SEISMIC
-  await page.goto(`/#z=6&lat=46.6&lng=2.4&th=${risk.theme}&l=fr`)
+  await page.goto('/#z=6&lat=46.6&lng=2.4&l=fr')
   await mapReady(page)
   await openLayersOnPhone(page)
-  await expect(page.getByRole('region', { name: risk.legend })).toBeVisible()
-  await expect(page.getByRole('radio', { name: risk.radio })).toBeChecked()
   const filtersTab = page.getByRole('tab', { name: /Filtres/ })
   await expect(filtersTab.locator('.badge')).toHaveCount(0)
 
   await page.goto('about:blank')
-  await page.goto(`/#z=6&lat=46.6&lng=2.4&th=${risk.theme}&f=${risk.theme}-${risk.value}.hospital-10000&l=fr`)
+  await page.goto(`/#z=6&lat=46.6&lng=2.4&f=${risk.id}-${risk.value}.hospital-10000&l=fr`)
   await mapReady(page)
   await openLayersOnPhone(page)
   await expect(filtersTab).toContainText('2')

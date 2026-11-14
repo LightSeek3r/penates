@@ -1,4 +1,4 @@
-import { Map as MapLibreMap, NavigationControl, addProtocol, setWorkerUrl, type MapGeoJSONFeature, type PointLike } from 'maplibre-gl'
+import { GeoJSONSource, Map as MapLibreMap, NavigationControl, addProtocol, setWorkerUrl, type MapGeoJSONFeature, type PointLike } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import './map.css'
@@ -6,15 +6,17 @@ import { PMTiles, Protocol } from 'pmtiles'
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { track } from '../analytics/track'
-import { tileUrl } from '../data/manifest'
+import { type OverlaysManifest, overlaysTileUrl, tileUrl } from '../data/manifest'
 import { tileFieldsOf } from '../domain/layers'
+import { type PlaceSelection, readPlaceFeature } from '../domain/overlays'
 import { initialState, useAppStore } from '../state/appStore'
 import type { Manifest } from '../state/store'
 import { formatHash } from '../state/urlState'
 import { registerPatterns } from './patterns'
+import { registerPlaceIcons } from './placeIcons'
 import { SheetScale, attachSheetFrame } from './sheetFrame'
-import { applyAppearance } from './appearance'
-import { COMMUNES_FROM_TILE_ZOOM, LAYER_IDS, SELECTION_LAYERS, buildStyle } from './style'
+import { applyAppearance, applyOverlays } from './appearance'
+import { COMMUNES_FROM_TILE_ZOOM, LAYER_IDS, PLACE_LAYERS, PLACE_SELECTION, SELECTION_LAYERS, buildStyle, placeSelectionData } from './style'
 
 let protocol: Protocol | null = null
 function registerProtocol(): Protocol {
@@ -59,6 +61,24 @@ function pickFeature(map: MapLibreMap, point: PointLike): Picked | null {
   return map.getZoom() >= COMMUNE_ZOOM ? (commune ?? department) : (department ?? commune)
 }
 
+// How far from the click a dot still counts as clicked; a fingertip is less exact than a pointer.
+const PICK_RADIUS = { fine: 10, coarse: 18 } as const
+
+/** The place dot or badge nearest to a point within a few pixels, whatever the commune beneath it. */
+function pickPlace(map: MapLibreMap, point: { x: number; y: number }): PlaceSelection | null {
+  const layers = Object.values(PLACE_LAYERS).filter((id) => map.getLayer(id))
+  if (layers.length === 0) return null
+  const radius = matchMedia('(pointer: coarse)').matches ? PICK_RADIUS.coarse : PICK_RADIUS.fine
+  const features = map.queryRenderedFeatures([[point.x - radius, point.y - radius], [point.x + radius, point.y + radius]], { layers })
+  const places = features.flatMap((feature) => {
+    const place = feature.geometry.type === 'Point' ? readPlaceFeature(feature.properties, feature.geometry.coordinates[0], feature.geometry.coordinates[1]) : null
+    if (!place) return []
+    const shown = map.project([place.lng, place.lat])
+    return [{ place, distance: Math.hypot(shown.x - point.x, shown.y - point.y) }]
+  })
+  return places.sort((a, b) => a.distance - b.distance)[0]?.place ?? null
+}
+
 function resolveCommune(map: MapLibreMap, code: string): Record<string, unknown> | null {
   const [feature] = map.querySourceFeatures('data', { sourceLayer: 'communes', filter: ['==', ['get', 'code'], code] })
   return feature ? { ...feature.properties } : null
@@ -86,9 +106,11 @@ function keepCommunesVisible(map: MapLibreMap) {
 
 export interface MapViewProps {
   manifest: Manifest
+  /** The overlays archive; null when there is none, so the map has no places and no seismic lines. */
+  overlays: OverlaysManifest | null
 }
 
-export function MapView({ manifest }: MapViewProps) {
+export function MapView({ manifest, overlays }: MapViewProps) {
   const { t } = useTranslation()
   const container = useRef<HTMLDivElement>(null)
 
@@ -101,7 +123,7 @@ export function MapView({ manifest }: MapViewProps) {
 
     const map = new MapLibreMap({
       container: element,
-      style: buildStyle(tileUrl(manifest), initial.priceType, initial.lang),
+      style: buildStyle(tileUrl(manifest), initial.priceType, initial.lang, overlays ? overlaysTileUrl(overlays) : undefined),
       ...(initialState.viewProvided ? { center: [initialState.lng, initialState.lat], zoom: initialState.zoom } : nationalView()),
       minZoom: 3.5,
       maxZoom: MAX_ZOOM,
@@ -125,6 +147,7 @@ export function MapView({ manifest }: MapViewProps) {
     map.addControl(new SheetScale(), 'bottom-right')
     const detachFrame = element.parentElement ? attachSheetFrame(map, element.parentElement) : () => undefined
     registerPatterns(map)
+    registerPlaceIcons(map)
     if (import.meta.env.DEV) (window as unknown as { __map: MapLibreMap }).__map = map
 
     const syncHash = () => {
@@ -143,6 +166,7 @@ export function MapView({ manifest }: MapViewProps) {
           compare: state.compare,
           mix: state.mix,
           filters: state.filters,
+          overlays: state.overlays,
         }),
       )
     }
@@ -152,6 +176,11 @@ export function MapView({ manifest }: MapViewProps) {
       for (const [kind, layers] of Object.entries(SELECTION_LAYERS)) {
         for (const id of layers) map.setFilter(id, ['==', ['get', 'code'], selection?.kind === kind ? code : ''])
       }
+    }
+
+    const showPlace = (place: ReturnType<typeof store.getState>['placeSelection']) => {
+      const ring = map.getSource(PLACE_SELECTION.source)
+      if (ring instanceof GeoJSONSource) ring.setData(placeSelectionData(place))
     }
 
     // Paris, Lyon and Marseille exist only as arrondissements in the tiles, so a search
@@ -165,8 +194,13 @@ export function MapView({ manifest }: MapViewProps) {
       if (picked) store.getState().select({ kind: picked.kind, props: { ...picked.feature.properties } })
     }
 
+    // Style changes are allowed once the style has loaded, tiles still arriving or not (`isStyleLoaded` also waits for
+    // them, and a theme chosen meanwhile would then never reach the map).
+    let styleLoaded = false
     map.on('load', () => {
+      styleLoaded = true
       applyAppearance(map, store.getState())
+      applyOverlays(map, store.getState().overlays)
       store.getState().setMapStatus('ready')
       map.once('idle', () => resolvePending(false))
       syncHash()
@@ -180,6 +214,12 @@ export function MapView({ manifest }: MapViewProps) {
     })
     map.on('moveend', syncHash)
     map.on('click', (event) => {
+      const place = pickPlace(map, event.point)
+      if (place) {
+        store.getState().selectPlace(place)
+        return
+      }
+      if (store.getState().placeSelection) store.getState().selectPlace(null)
       const picked = pickFeature(map, event.point)
       store.getState().select(picked ? { kind: picked.kind, props: { ...picked.feature.properties } } : null)
     })
@@ -190,16 +230,19 @@ export function MapView({ manifest }: MapViewProps) {
         if (hoverFrame || map.isMoving()) return
         hoverFrame = requestAnimationFrame(() => {
           hoverFrame = 0
-          map.getCanvas().style.cursor = pickFeature(map, event.point) ? 'pointer' : ''
+          map.getCanvas().style.cursor = pickPlace(map, event.point) || pickFeature(map, event.point) ? 'pointer' : ''
         })
       })
     }
 
     const unsubscribe = store.subscribe((state, previous) => {
       const appearanceChanged = (['priceType', 'theme', 'compare', 'mix', 'filters'] as const).some((key) => state[key] !== previous[key])
-      if (appearanceChanged && map.isStyleLoaded()) applyAppearance(map, state)
+      const overlaysChanged = state.overlays !== previous.overlays
+      if (appearanceChanged && styleLoaded) applyAppearance(map, state)
+      if (overlaysChanged && styleLoaded) applyOverlays(map, state.overlays)
       if (state.selection !== previous.selection) showSelection(state.selection)
-      if (appearanceChanged || state.selection !== previous.selection) syncHash()
+      if (state.placeSelection !== previous.placeSelection) showPlace(state.placeSelection)
+      if (appearanceChanged || overlaysChanged || state.selection !== previous.selection) syncHash()
       const request = state.flyRequest
       if (request && request !== previous.flyRequest) {
         map.flyTo({ center: [request.lng, request.lat], zoom: request.zoom, essential: true, animate: !matchMedia(REDUCED_MOTION).matches })
@@ -212,7 +255,7 @@ export function MapView({ manifest }: MapViewProps) {
       detachFrame()
       map.remove()
     }
-  }, [manifest])
+  }, [manifest, overlays])
 
   return <div ref={container} className="map" role="region" aria-label={t('status.mapLabel')} />
 }

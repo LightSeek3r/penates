@@ -2,8 +2,9 @@ import { create } from 'zustand'
 import type { Mix } from '../domain/combine'
 import { type FilterKey, type FilterValue, type Filters, withFilter, withoutFilters } from '../domain/filters'
 import { type TileFields, isAvailable, layerById } from '../domain/layers'
+import { type OverlayId, type OverlaySources, type PlaceSelection, isOverlayAvailable, withOverlay } from '../domain/overlays'
 import type { Place, PriceType } from '../domain/place'
-import type { ThemeId } from '../domain/themes'
+import { type ThemeId, isTheme } from '../domain/themes'
 import type { Lang, UrlState } from './urlState'
 
 export interface Selection {
@@ -34,6 +35,12 @@ interface AppState {
   compare: ThemeId | null
   mix: Mix
   filters: Filters
+  /** Overlays that are on, in catalogue order. */
+  overlays: readonly OverlayId[]
+  /** What the overlays archive holds; null while its manifest is unknown or when there is none. */
+  overlaySources: OverlaySources | null
+  /** The dot the visitor clicked; independent of the selected commune. */
+  placeSelection: PlaceSelection | null
   /** Opt-in layers (recorded crime) are listed, drawn and filtered only once the visitor asks for them. */
   showOptIn: boolean
   /** Properties the communes tiles carry; null until the tile metadata is read. */
@@ -52,6 +59,12 @@ interface AppState {
   setMix: (mix: Mix) => void
   setFilter: (key: FilterKey, value: FilterValue) => void
   resetFilters: () => void
+  /** Switches an overlay on or off; one whose data is not there cannot be switched on. */
+  setOverlay: (id: OverlayId, on: boolean) => void
+  clearOverlays: () => void
+  /** Records what the overlays archive holds (null for none) and drops the archive overlays it lacks. */
+  setOverlaySources: (sources: OverlaySources | null) => void
+  selectPlace: (place: PlaceSelection | null) => void
   setShowOptIn: (show: boolean) => void
   setTileFields: (fields: TileFields) => void
   select: (selection: Selection | null) => void
@@ -68,6 +81,15 @@ const isOptIn = (id: string) => layerById(id)?.optIn === true
 const isOffered = (id: string, fields: TileFields) => {
   const def = layerById(id)
   return def !== undefined && isAvailable(def, fields)
+}
+
+/** A clicked dot stays only while its overlay is on. */
+const placeStillShown = (place: PlaceSelection | null, overlays: readonly OverlayId[]) => (place !== null && overlays.includes(place.kind) ? place : null)
+
+/** The overlays the archive manifest still backs; the list asked by a link is kept until the manifest is known. */
+function keepBacked(state: AppState, sources: OverlaySources | null): Partial<AppState> {
+  const overlays = state.overlays.filter((id) => isOverlayAvailable(id, sources))
+  return overlays.length === state.overlays.length ? {} : { overlays, placeSelection: placeStillShown(state.placeSelection, overlays) }
 }
 
 /** What the map draws: the theme, an optional second indicator and the filters. */
@@ -103,6 +125,8 @@ export function createStore(initial: UrlState, showOptIn = false, persistOptIn: 
   const start = showOptIn ? distinct(requested) : withoutOptIn(requested)
   const shown = (state: AppState): Shown => ({ theme: state.theme, compare: state.compare, filters: state.filters })
   const canShow = (id: string, state: AppState) => (state.showOptIn || !isOptIn(id)) && isOffered(id, state.tileFields)
+  // A layer that became an overlay is still a filter, but no longer a theme or a second indicator.
+  const canColour = (id: string, state: AppState) => isTheme(id) && canShow(id, state)
   return create<AppState>((set) => ({
     lang: initial.lang,
     priceType: initial.type,
@@ -110,6 +134,10 @@ export function createStore(initial: UrlState, showOptIn = false, persistOptIn: 
     compare: start.compare,
     mix: initial.mix,
     filters: start.filters,
+    // Kept as the link asked: the archive manifest is not known yet, and setOverlaySources drops what it lacks.
+    overlays: initial.overlays,
+    overlaySources: null,
+    placeSelection: null,
     showOptIn,
     tileFields: null,
     selection: null,
@@ -121,11 +149,20 @@ export function createStore(initial: UrlState, showOptIn = false, persistOptIn: 
     manifest: null,
     setPriceType: (priceType) => set({ priceType }),
     // Choosing the second indicator as the theme swaps the two, so both stay on the map.
-    setTheme: (theme) => set((state) => (!canShow(theme, state) ? {} : theme === state.compare ? { theme, compare: state.theme } : { theme })),
-    setCompare: (compare) => set((state) => (compare !== null && (compare === state.theme || !canShow(compare, state)) ? {} : { compare })),
+    setTheme: (theme) => set((state) => (!canColour(theme, state) ? {} : theme === state.compare ? { theme, compare: state.theme } : { theme })),
+    setCompare: (compare) => set((state) => (compare !== null && (compare === state.theme || !canColour(compare, state)) ? {} : { compare })),
     setMix: (mix) => set({ mix }),
     setFilter: (key, value) => set((state) => (canShow(key, state) ? { filters: withFilter(state.filters, key, value) } : {})),
     resetFilters: () => set({ filters: {} }),
+    setOverlay: (id, on) =>
+      set((state) => {
+        if (state.overlays.includes(id) === on || (on && !isOverlayAvailable(id, state.overlaySources))) return {}
+        const overlays = withOverlay(state.overlays, id, on)
+        return { overlays, placeSelection: placeStillShown(state.placeSelection, overlays) }
+      }),
+    clearOverlays: () => set((state) => (state.overlays.length === 0 ? {} : { overlays: [], placeSelection: null })),
+    setOverlaySources: (overlaySources) => set((state) => ({ overlaySources, ...keepBacked(state, overlaySources) })),
+    selectPlace: (placeSelection) => set({ placeSelection }),
     setShowOptIn: (show) => {
       persistOptIn(show)
       set((state) => (show ? { showOptIn: true } : { showOptIn: false, ...withoutOptIn(shown(state)) }))

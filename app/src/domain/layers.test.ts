@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { THEMES as COUNTED_THEMES, FILTERS as COUNTED_FILTERS } from '../../functions/_lib/events'
 import { dictionaries } from '../i18n'
 import { FILTER_DEFS, type FilterDef, type FilterValue, type Filters, formatFilters, matchExpression, normaliseFilter, parseFilters } from './filters'
-import { GROUPS, LADDERS, LAYERS as CATALOGUE, NO_DATA_COLOR, tileFieldsOf, type LayerDef, layerColors, layersByGroup, pickLadder, readLayerValue, visibleLayers } from './layers'
+import { GROUPS, LADDERS, LAYERS as CATALOGUE, NO_DATA_COLOR, colourLayers, tileFieldsOf, type LayerDef, layerById, layerColors, layersByGroup, pickLadder, readLayerValue, visibleLayers } from './layers'
+import { isOverlayId } from './overlays'
 import { fillExpression } from './themes'
 
 const LAYERS: readonly LayerDef[] = CATALOGUE
@@ -154,6 +155,55 @@ describe('layer catalogue', () => {
     const counted = LAYERS.filter((def) => !def.optIn).map((def) => def.id)
     expect([...COUNTED_THEMES].sort()).toEqual([...counted].sort())
     expect([...COUNTED_FILTERS].sort()).toEqual([...counted].sort())
+  })
+})
+
+describe('layers that became overlays', () => {
+  const OVERLAY_OF: Record<string, string> = {
+    seismic: 'seismic',
+    flood: 'flood',
+    clay: 'clay',
+    radon: 'radon',
+    cavities: 'cavities',
+    hospital: 'hos',
+    gp: 'gp',
+    pharmacy: 'pha',
+    dentist: 'den',
+    creche: 'cre',
+    school: 'pri',
+    college: 'col',
+    lycee: 'lyc',
+    supermarket: 'sup',
+    bakery: 'bak',
+    post: 'pos',
+    pool: 'pool',
+    station: 'sta',
+  }
+
+  it('name their overlay, each overlay once, and only these layers do', () => {
+    expect(Object.fromEntries(LAYERS.filter((def) => def.overlay !== undefined).map((def) => [def.id, def.overlay]))).toEqual(OVERLAY_OF)
+    const overlays = Object.values(OVERLAY_OF)
+    expect(new Set(overlays).size).toBe(overlays.length)
+    for (const overlay of overlays) expect(isOverlayId(overlay), overlay).toBe(true)
+  })
+
+  it('leave the colour list but not the filters or the details panel', () => {
+    const colour = colourLayers(true).map((def) => def.id)
+    expect(colour).toEqual(LAYERS.filter((def) => !(def.id in OVERLAY_OF)).map((def) => def.id))
+    for (const id of Object.keys(OVERLAY_OF)) {
+      expect(colour, id).not.toContain(id)
+      expect(visibleLayers(false).map((def) => def.id), id).toContain(id)
+      expect(FILTER_DEFS.map((def) => def.id), id).toContain(id)
+    }
+  })
+
+  it('keep the opt-in rule and the tile-field rule of the full list', () => {
+    expect(colourLayers(false).some((def) => def.optIn)).toBe(false)
+    expect(colourLayers(true).map((def) => def.id)).toEqual(expect.arrayContaining(['violence', 'burglary']))
+    const fields = new Set(['code', 'p_all', 'sz', 'd_hos', 'alt'])
+    expect(colourLayers(true, fields).map((def) => def.id)).toEqual(['price', 'altitude'])
+    expect(colourLayers(false, null)).toHaveLength(visibleLayers(false).filter((def) => def.overlay === undefined).length)
+    expect(layerById('hospital')?.overlay).toBe('hos')
   })
 })
 

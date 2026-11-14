@@ -35,6 +35,8 @@ registerRoute(
 
 // PMTiles are read with HTTP Range requests. When the user saved the file for offline use it is
 // served from the cache (sliced to the requested range); otherwise the request goes to the network.
+// The overlays archive takes this route too and is never saved (saveTiles keeps the communes tiles alone), so it is
+// always read from the network and the overlays are simply absent offline.
 registerRoute(
   ({ url }) => url.pathname.endsWith('.pmtiles'),
   async ({ request }) => {

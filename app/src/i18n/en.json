@@ -27,6 +27,7 @@
       "app": "Flats"
     },
     "colourTab": "Colour",
+    "overlaysTab": "Overlays",
     "filtersTab": "Filters",
     "colourBy": "Colour the map by"
   },
@@ -62,7 +63,11 @@
     "marksRough": "Open ring: rough estimate",
     "marksNone": "No disc: no data",
     "marksThinned": "Zoomed out, discs are thinned so they do not overlap: zoom in to see them all.",
-    "tiersNote": "Three tiers per indicator, from its own legend classes; the place details give exact figures."
+    "tiersNote": "Three tiers per indicator, from its own legend classes; the place details give exact figures.",
+    "overlays": "Overlays ({{count}})",
+    "seismicLevel": "Into zone {{value}}",
+    "knownCavities": "Known cavities: {{range}}",
+    "riskMeaning": "A line marks where the commune-level value rises to the level shown. The data is per commune, so a line follows commune borders and a commune at the edge may be only partly affected. A commune with no data is never counted as a lower level."
   },
   "inspector": {
     "title": "Place details",
@@ -127,7 +132,7 @@
       "osm": "Basemap: © OpenStreetMap contributors, OpenMapTiles, via OpenFreeMap"
     },
     "privacy": "No account, no cookies. Only anonymous usage totals are counted (see below). Map tiles are loaded from OpenFreeMap and Cloudflare.",
-    "methodExtra": "The other indicators (risks, altitude, climate, distances, fibre, rent, land tax, recorded crime on request) are values per commune from public data; an unknown stays empty, never 0. Risks do not describe your plot and do not replace the official risk statement (ERRIAL). Climate is interpolated from nearby stations. Distances run in a straight line from a point in the commune to the nearest facility in INSEE's permanent facilities base: they are not travel times. Rent is an asking rent, and the land-tax rate is not the tax bill.",
+    "methodExtra": "The other indicators (risks, altitude, climate, distances, fibre, rent, land tax, recorded crime on request) are values per commune from public data; an unknown stays empty, never 0. Risks do not describe your plot and do not replace the official risk statement (ERRIAL). Climate is interpolated from nearby stations. Distances run in a straight line from a point in the commune to the nearest facility in INSEE's permanent facilities base: they are not travel times. Rent is an asking rent, and the land-tax rate is not the tax bill. Overlays draw places from the same base at their own position (names only for institutions such as schools, hospitals and stations, never for doctors or shops) and seismic zone lines traced from the zone of each commune.",
     "pages": "Documentation pages",
     "methodPage": "Detailed method",
     "sourcesPage": "Sources and licences",
@@ -433,5 +438,136 @@
   "optIn": {
     "label": "Show recorded crime",
     "note": "Off by default. This choice stays in this browser and is never sent anywhere."
+  },
+  "overlays": {
+    "intro": "Lines for risks and dots for places, over any colour. Switch on as many as you like.",
+    "none": "No overlay is available in the data loaded right now. The colours and the filters still work.",
+    "clear": "Clear overlays",
+    "onCount_one": "{{count}} on",
+    "onCount_other": "{{count}} on",
+    "groups": {
+      "risk": "Natural risks",
+      "health": "Health",
+      "education": "Education",
+      "daily": "Daily life",
+      "leisure": "Leisure"
+    },
+    "notes": {
+      "risk": "Indicative, and never a replacement for the official risk statement (ERRIAL). Every risk is a value per commune, so its lines follow commune borders. No line is not proof of safety: the data may be missing.",
+      "places": "From INSEE's permanent facilities base (BPE 2025). Dots appear as you zoom in. A dot marked approximate may be a few hundred metres off. Names are shown for schools, hospitals, stations and similar institutions, never for doctors, pharmacies or shops."
+    }
+  },
+  "ov": {
+    "seismic": {
+      "name": "Seismic zone boundaries",
+      "about": "Lines where the regulatory seismic zone rises to 2, 3 or 4, drawn from the zone of each commune (Géorisques). The zone sets building rules; it is not a forecast and says nothing about your plot."
+    },
+    "flood": {
+      "name": "Flooding: State procedures",
+      "about": "Lines where the State's flood procedures rise to stage 1 (flood atlas or departmental file), 2 (prevention plan prescribed) or 3 (approved), from the value of each commune (Géorisques, GASPAR). A line follows commune borders, not the flood zone, and a commune at the edge may be only partly affected. No line means no procedure recorded, not no risk."
+    },
+    "clay": {
+      "name": "Clay shrink-swell",
+      "about": "Lines where clay exposure rises to low (class 1), medium (2) or high (3), from the value of each commune (BRGM, 2026 map). A line follows commune borders, so a commune at the edge may be only partly affected. It is a sign that a soil study is worth doing before building, not the state of your land."
+    },
+    "radon": {
+      "name": "Radon",
+      "about": "Lines where the radon category rises to 2 (low potential with aggravating geology) or 3 (significant potential), from the value of each commune (ASNR, formerly IRSN). Category 1 is not drawn. A line follows commune borders, so a commune at the edge may be only partly affected. Only a measurement inside the home gives the real exposure."
+    },
+    "cavities": {
+      "name": "Underground cavities",
+      "about": "Lines where the number of cavities the BRGM inventory records in a commune rises to 1, 5 or 25. A line follows commune borders, so a commune at the edge may be only partly affected. The inventory is incomplete: no line means none recorded, not none present."
+    },
+    "hos": {
+      "name": "Hospitals and clinics",
+      "one": "Hospital or clinic",
+      "about": "Short-stay hospitals and clinics, public or private. Not whether there is an emergency department."
+    },
+    "gp": {
+      "name": "General practitioners",
+      "one": "General practitioner",
+      "about": "GP practices. Not whether they take new patients; no name is shown."
+    },
+    "pha": {
+      "name": "Pharmacies",
+      "one": "Pharmacy",
+      "about": "Pharmacies, dispensing doctors included. No name is shown."
+    },
+    "den": {
+      "name": "Dentists",
+      "one": "Dentist",
+      "about": "Dental practices. No name is shown."
+    },
+    "cre": {
+      "name": "Crèches",
+      "one": "Crèche",
+      "about": "Childcare centres and micro-crèches. Not whether a place is free; no name is shown."
+    },
+    "mat": {
+      "name": "Nursery schools",
+      "one": "Nursery school",
+      "about": "Public and private nursery schools (écoles maternelles)."
+    },
+    "pri": {
+      "name": "Primary schools",
+      "one": "Primary school",
+      "about": "Public and private primary schools (écoles élémentaires and primaires)."
+    },
+    "col": {
+      "name": "Collèges (lower secondary)",
+      "one": "Collège",
+      "about": "Public and private collèges, ages 11 to 15."
+    },
+    "lyc": {
+      "name": "Lycées (upper secondary)",
+      "one": "Lycée",
+      "about": "General, technological, vocational and agricultural lycées, public and private."
+    },
+    "uni": {
+      "name": "Universities and grandes écoles",
+      "one": "University or grande école",
+      "about": "University sites and higher-education schools (engineering, business, agricultural)."
+    },
+    "sup": {
+      "name": "Supermarkets",
+      "one": "Supermarket",
+      "about": "Supermarkets and hypermarkets. No shop name is shown."
+    },
+    "bak": {
+      "name": "Bakeries",
+      "one": "Bakery",
+      "about": "Bakeries. No shop name is shown."
+    },
+    "pos": {
+      "name": "Post offices",
+      "one": "Post office",
+      "about": "Post offices, post office relays in shops and community post agencies."
+    },
+    "sta": {
+      "name": "Train stations",
+      "one": "Train station",
+      "about": "SNCF passenger stations. Not how often trains stop."
+    },
+    "pool": {
+      "name": "Swimming pools",
+      "one": "Swimming pool",
+      "about": "Indoor and outdoor pools. The source cannot tell public pools from private ones such as fitness clubs: check that it is open to the public."
+    },
+    "cin": {
+      "name": "Cinemas",
+      "one": "Cinema",
+      "about": "Cinemas."
+    },
+    "lib": {
+      "name": "Libraries",
+      "one": "Library",
+      "about": "Public libraries and media libraries."
+    }
+  },
+  "card": {
+    "close": "Close the place card",
+    "count": "{{value}} of this kind at this address",
+    "approximate": "Position approximate: it may be a few hundred metres off.",
+    "source": "Source: INSEE, permanent facilities base (BPE 2025)."
   }
 }

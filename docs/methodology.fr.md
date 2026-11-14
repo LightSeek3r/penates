@@ -44,7 +44,7 @@ Prix au m² = valeur de la vente ÷ surface réelle bâtie. Pour une maison, la 
 
 ## Risques : zone sismique, inondation, argiles, radon, cavités
 
-Ce sont des indicateurs de repérage. Ils disent si une question mérite d'être posée pour une commune, pas quelle est la réponse pour un logement donné. Aucun ne remplace l'état des risques réglementaire (ERRIAL) joint à une vente ou à un bail, et aucun ne décrit votre parcelle.
+Ce sont des indicateurs de repérage. Ils disent si une question mérite d'être posée pour une commune, pas quelle est la réponse pour un logement donné. Ils sont proposés comme filtres, figurent dans la fiche du lieu et se dessinent en calques (voir Calques) ; ce ne sont pas des couleurs de la carte. Aucun ne remplace l'état des risques réglementaire (ERRIAL) joint à une vente ou à un bail, et aucun ne décrit votre parcelle.
 
 ### Zone sismique
 
@@ -117,9 +117,9 @@ La zone sismique réglementaire de chaque commune (propriété `sz`, de 1, très
 
 ## Distances aux services
 
-Pour chaque commune, la distance à vol d'oiseau en mètres, arrondie à 100 m, entre un point situé dans la commune (pas son centre) et l'équipement le plus proche de chaque type en France métropolitaine et en Corse, d'après la base permanente des équipements de l'Insee (BPE 2025, géographie au 2025-01-01). Les types d'équipements (codes BPE) sont :
+Pour chaque commune, la distance à vol d'oiseau en mètres, arrondie à 100 m, entre un point situé dans la commune (pas son centre) et l'équipement le plus proche de chaque type en France métropolitaine et en Corse, d'après la base permanente des équipements de l'Insee (BPE 2025, géographie au 2025-01-01). Elles sont proposées comme filtres et figurent dans la fiche du lieu ; les équipements eux-mêmes peuvent s'afficher en points (voir Calques). Les types d'équipements (codes BPE) sont :
 
-| Thème | Propriété | Codes BPE |
+| Équipement | Propriété | Codes BPE |
 | --- | --- | --- |
 | Hôpital (court séjour) | `d_hos` | D101 |
 | Médecin généraliste | `d_gp` | D265 |
@@ -181,15 +181,67 @@ Les lieux d'accueil enfants-parents et les relais petite enfance (D503, D504) n'
 - **Donnée inconnue** : une commune fusionnée reprend le taux de ses communes anciennes seulement s'il est identique pour toutes à une décimale près ; sinon elle n'a pas de valeur. Les arrondissements de Paris, Lyon et Marseille prennent le taux unique de leur ville.
 - **Limites** : **le taux n'est pas le montant de l'impôt**. Il s'applique à une base (la moitié de la valeur locative cadastrale) propre à chaque logement : deux logements de la même commune peuvent payer des montants très différents.
 
+## Calques : lignes de risque et lieux
+
+Les calques se dessinent par-dessus la couleur choisie, et on peut en afficher autant qu'on veut. Aucun n'est affiché par défaut. Un calque absent des données chargées n'est pas proposé. Les calques s'activent dans l'onglet Calques et sont rappelés dans la légende ; ils font partie du lien (`ov=` dans l'adresse).
+
+### Lieux
+
+**En clair** : où se trouvent les hôpitaux, médecins, écoles, commerces, gares, piscines, cinémas et bibliothèques, un point par lieu.
+
+- **Source** : la base permanente des équipements de l'Insee (BPE 2025, géographie au 2025-01-01), le même fichier que pour les distances ci-dessus, à la position propre de chaque équipement. Licence Ouverte v2.0. Les types et leurs codes BPE :
+
+| Calque | `k` | Codes BPE | Nom affiché |
+| --- | --- | --- | --- |
+| Hôpitaux et cliniques (court séjour) | `hos` | D101 | oui |
+| Médecins généralistes | `gp` | D265 | non |
+| Pharmacies | `pha` | D307 | non |
+| Chirurgiens-dentistes | `den` | D277 | non |
+| Crèches et micro-crèches | `cre` | D502, D509 | non |
+| Écoles maternelles | `mat` | C107 | oui |
+| Écoles élémentaires et primaires | `pri` | C108, C109 | oui |
+| Collèges | `col` | C201 | oui |
+| Lycées | `lyc` | C301, C302, C303, C304, C305 | oui |
+| Universités et grandes écoles | `uni` | C501, C502, C503, C504, C505 | oui |
+| Supermarchés et hypermarchés | `sup` | B104, B105 | non |
+| Boulangeries | `bak` | B207 | non |
+| Bureaux et relais de poste | `pos` | A206, A207, A208 | oui |
+| Gares | `sta` | E107, E108, E109 | oui |
+| Piscines | `pool` | F101 | oui |
+| Cinémas | `cin` | F303 | oui |
+| Bibliothèques | `lib` | F307 | oui |
+
+- **Ce que porte un point** (couche `places` de `overlays.pmtiles`) : `k` le type, `n` le nom pour les types marqués « oui » ci-dessus, `c` le nombre d'équipements du type à cette position exacte (seulement à partir de 2 : ils sont regroupés en un seul point), `a` = 1 quand l'Insee qualifie la position d'approximative (qualité « M » : la rue n'est que probable, ou le point peut être décalé de 500 m ou plus, mais dans la bonne commune). La fiche du lieu indique alors « Position approximative ».
+- **Ce qui est écarté** : les lignes en diffusion partielle (`STATUT_DIFFUSION = P` de l'Insee, publiées sans tout le détail) ne deviennent jamais un point ; pas plus que les équipements sans coordonnées valides ou hors de France métropolitaine et de Corse. Rien d'autre d'une ligne (adresse, numéro SIRET, capacité) ne sort du calcul.
+- **Noms** : gardés seulement pour les établissements ouverts au public (hôpitaux, écoles, bureaux de poste, gares, piscines, cinémas, bibliothèques), avec majuscules initiales et coupés à 60 caractères. Médecins, dentistes, pharmacies, crèches, supermarchés et boulangeries n'ont jamais de nom, car le nom d'un cabinet ou d'un commerce est souvent celui d'une personne. Aucune personne n'est nommée nulle part.
+- **Zoom** : les points apparaissent selon le zoom pour que la vue nationale reste lisible : hôpitaux dès le zoom 6, universités et gares dès 7, collèges, lycées, piscines et cinémas dès 8, supermarchés et bibliothèques dès 9, le reste dès 10.
+- **Limites** : la BPE dit qu'un équipement existe, pas qu'il accepte de nouveaux patients ou élèves, ni ses horaires. Les **piscines** comprennent des piscines privées (de salles de sport, par exemple), car la source ne distingue pas les publiques des privées. Un point absent ne prouve pas qu'il n'y a pas de tel lieu.
+
+### Limites des zones sismiques
+
+**En clair** : des lignes là où la zone sismique réglementaire augmente, tracées d'après la zone de chaque commune.
+
+- **Ce qui est tracé** (couche `seismic`, propriété `z`) : pour chaque zone de 2 à 5, la limite de l'ensemble des communes classées dans cette zone ou au-dessus. `z` est la zone atteinte en franchissant la ligne. Les tronçons le long des côtes et de la frontière sont omis, car la zone n'y change pas. En France métropolitaine, seules des lignes vers les zones 2, 3 et 4 existent.
+- **Source** : le zonage par commune de Géorisques décrit sous Zone sismique (`sz`), sur les contours de communes de l'IGN. Licence Ouverte.
+- **Limites** : la ligne suit les limites communales parce que le zonage est fixé par commune ; ce n'est pas une faille et elle ne décrit pas votre parcelle. Comme la zone elle-même, elle ne remplace pas l'état des risques réglementaire (ERRIAL).
+
+### Lignes de risque : inondation, argiles, radon et cavités
+
+**En clair** : des lignes là où la valeur communale d'un de ces quatre risques passe à un niveau, tracées comme les limites des zones sismiques.
+
+- **Ce qui est tracé** (couche `risk` de `overlays.pmtiles`, propriétés `r` et `z`) : `r` est le risque (`flood`, `clay`, `radon` ou `cavities`) et `z` le niveau atteint en franchissant la ligne. Pour chaque niveau, la ligne est la limite de l'ensemble des communes dont la valeur est à ce niveau ou au-dessus, d'après les valeurs communales décrites dans la partie Risques (`fl`, `cl`, `rn`, `cv`). Les niveaux sont l'étape 1, 2 et 3 pour l'inondation ; la classe 1, 2 et 3 pour les argiles ; la catégorie 2 et 3 pour le radon (la catégorie 1, « potentiel faible », couvre l'essentiel du Massif central et de la Bretagne et n'est pas tracée) ; et 1, 5 et 25 cavités recensées. Plus la ligne est épaisse, plus le niveau est haut. Les tronçons le long des côtes et de la frontière sont omis, car la valeur n'y change pas. La légende nomme chaque niveau avec les noms de classes de la fiche du lieu.
+- **Sans donnée** : une commune sans valeur pour un risque est inconnue, jamais une classe plus basse : aucune ligne n'est tracée le long de celle-ci, et l'absence de ligne ne prouve pas l'absence de risque.
+- **Limites** : les valeurs sont communales, donc une ligne suit les limites des communes et n'est jamais le bord d'une zone inondable, d'une zone argileuse ou d'une cavité ; une commune au bord d'une ligne peut n'être touchée qu'en partie. L'inventaire des cavités est incomplet. Ce sont des indicateurs de repérage : aucun ne remplace l'ERRIAL. Ils ne sont plus proposés comme couleurs ; ils restent des filtres et figurent dans la fiche du lieu.
+
 ## Filtres
 
 Un filtre conserve les communes dont la valeur respecte la limite choisie : au plus une valeur (par exemple un hôpital à moins de 15 km), au moins une valeur (ensoleillement, fibre), ou entre deux valeurs (altitude, loyer). Les communes qui ne remplissent pas tous les filtres actifs sont grisées. Une commune sans valeur pour un critère actif ne le remplit pas : une donnée inconnue n'est jamais comptée comme satisfaite.
 
 ## Deux indicateurs à la fois
 
-Sous la liste des couleurs, vous pouvez ajouter un second indicateur, montré de l'une de deux façons :
+Sous la liste des couleurs, vous pouvez ajouter un second indicateur, choisi parmi les couleurs (risques et distances sont des filtres et des calques, pas des seconds indicateurs), montré de l'une de deux façons :
 
-- **Couleurs croisées.** Chaque indicateur est découpé en trois tranches (bas, moyen, haut) faites de classes entières de sa propre légende, par exemple moins de 1 500, de 1 500 à 3 500 et 3 500 €/m² ou plus pour le prix, moins de 2, de 2 à 10 et 10 km ou plus pour les distances, les zones 1 à 2, 3 et 4 à 5 pour la zone sismique. Chaque commune prend alors l'une de neuf couleurs, lue dans la grille 3 x 3 : les lignes donnent le second indicateur, les colonnes le premier. Elle répond à des questions comme « où le prix est-il bas et l'hôpital proche ».
+- **Couleurs croisées.** Chaque indicateur est découpé en trois tranches (bas, moyen, haut) faites de classes entières de sa propre légende, par exemple moins de 1 500, de 1 500 à 3 500 et 3 500 €/m² ou plus pour le prix, moins de 300, de 300 à 1 000 et 1 000 m ou plus pour l'altitude. Chaque commune prend alors l'une de neuf couleurs, lue dans la grille 3 x 3 : les lignes donnent le second indicateur, les colonnes le premier. Elle répond à des questions comme « où le prix est-il bas et l'ensoleillement fort ».
 - **Disques.** Les couleurs gardent le premier indicateur, et un disque de trois tailles montre la tranche du second.
 
 Comment les lire, et leurs limites :

@@ -11,6 +11,7 @@
   "features": [
     "See the median price per m² of every commune, for all dwellings, houses or flats.",
     "Read how solid the figure is: fewer than 10 sales, no sale kept, outside the DVF database.",
+    "Switch on overlays: seismic zone boundaries and other risks as lines, hospitals, schools, shops and stations as dots.",
     "Search for a commune, share a link to an exact view, use the map in French or English.",
     "Use the app with no account, no cookie and no individual tracking, and install it on your device."
   ],

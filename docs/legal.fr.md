@@ -1,6 +1,6 @@
 # Mentions légales et confidentialité
 
-Dernière mise à jour : 6 novembre 2026. Ces informations concernent settling-map (settling.unit42.fr). Les mentions légales du domaine principal figurent sur [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
+Dernière mise à jour : 13 novembre 2026. Ces informations concernent settling-map (settling.unit42.fr). Les mentions légales du domaine principal figurent sur [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
 
 ## Éditeur
 
@@ -14,7 +14,7 @@ Le site est hébergé par [Cloudflare, Inc.](https://www.cloudflare.com), 101 To
 
 ## Données et crédits
 
-Les données utilisées, leurs licences et les mentions de crédit à respecter sont détaillées sur la page [Sources et licences](/sources/). La façon dont les chiffres sont calculés est expliquée sur la page [Méthode](/methodologie/). Les prix affichés sont des agrégats par commune ; aucune vente individuelle n'est publiée.
+Les données utilisées, leurs licences et les mentions de crédit à respecter sont détaillées sur la page [Sources et licences](/sources/). La façon dont les chiffres sont calculés est expliquée sur la page [Méthode](/methodologie/). Les prix affichés sont des agrégats par commune ; aucune vente individuelle n'est publiée. Le calque des lieux est différent : il montre un par un les équipements de la base permanente des équipements (BPE) de l'Insee, à la position publiée par l'Insee. Un point de médecin généraliste ou de dentiste peut donc marquer le cabinet d'une personne ; son nom n'est jamais affiché, et seuls les écoles, hôpitaux et cliniques, universités, gares, bureaux de poste, piscines, cinémas et bibliothèques portent le nom de l'établissement (la source ne distingue pas une piscine publique d'une piscine de club privé). Les lignes que l'Insee publie en diffusion partielle sont écartées, et rien d'autre d'un équipement (adresse, numéro SIRET) n'est publié.
 
 ## Propriété intellectuelle
 
@@ -36,7 +36,7 @@ Par ailleurs, utiliser la carte fait transiter des données techniques vers les 
 - **OpenFreeMap** fournit le fond de carte (tuiles et polices) : il reçoit votre adresse IP et la zone de carte consultée.
 - **API Géo du gouvernement français** (geo.api.gouv.fr) reçoit le texte que vous saisissez dans le champ de recherche de commune (à partir de deux caractères) pour proposer des communes.
 
-Le contenu de l'adresse après le signe # (position de la carte, commune sélectionnée, thème, filtres) reste dans votre navigateur : il n'est pas envoyé aux serveurs. Il est repris dans les liens que vous choisissez de partager.
+Le contenu de l'adresse après le signe # (position de la carte, commune sélectionnée, thème, calques, filtres) reste dans votre navigateur : il n'est pas envoyé aux serveurs. Il est repris dans les liens que vous choisissez de partager.
 
 **Base légale** : intérêt légitime à fournir et sécuriser le site (RGPD, art. 6.1.f). **Durée de conservation** : selon les politiques de conservation de Cloudflare, d'OpenFreeMap et de l'API Géo ; settling-map ne conserve rien de son côté.
 

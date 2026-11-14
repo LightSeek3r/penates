@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { luminance } from './colour'
 import { activeFilterCount, formatFilters, matchExpression, parseFilters, withFilter } from './filters'
-import { LADDERS, classIndex, layerById, layerColors, type LayerDef } from './layers'
+import { LADDERS, LAYERS, classIndex, colourLayers, layerById, layerColors, type LayerDef } from './layers'
 import { PRICE_COLORS } from './priceLadder'
-import { doubtFilters, themeFillExpression } from './themes'
+import { THEMES, doubtFilters, fillExpression, isTheme, themeDef, themeFillExpression } from './themes'
 
 const def = (id: string): LayerDef => {
   const found = layerById(id)
@@ -40,19 +40,43 @@ describe('theme ladders', () => {
   })
 
   it('colours by the right tile property', () => {
-    expect(JSON.stringify(themeFillExpression('hospital', 'all'))).toContain('d_hos')
-    expect(JSON.stringify(themeFillExpression('seismic', 'all'))).toContain('"sz"')
     expect(JSON.stringify(themeFillExpression('price', 'app'))).toContain('p_app')
-    expect(JSON.stringify(themeFillExpression('flood', 'all'))).toContain('"fl"')
+    expect(JSON.stringify(themeFillExpression('altitude', 'all'))).toContain('"alt"')
+    expect(JSON.stringify(themeFillExpression('heat2050', 'all'))).toContain('"h50"')
+    // Layers that became overlays keep a fill expression, which only the generic code paths still use.
+    expect(JSON.stringify(fillExpression(def('hospital'), 'all'))).toContain('d_hos')
+    expect(JSON.stringify(fillExpression(def('seismic'), 'all'))).toContain('"sz"')
+    expect(JSON.stringify(fillExpression(def('flood'), 'all'))).toContain('"fl"')
   })
 
   it('hatches rough rent estimates only, with the ink flipping inside the ladder', () => {
     expect(doubtFilters('price', 'all')).toBeNull()
-    expect(doubtFilters('hospital', 'all')).toBeNull()
+    expect(doubtFilters('altitude', 'all')).toBeNull()
     const rent = doubtFilters('rent', 'all')
     expect(JSON.stringify(rent?.light)).toContain('"rtq"')
     // Neither filter uses an infinity, which JSON would turn into null.
     expect(JSON.stringify(rent)).not.toContain('null')
+  })
+})
+
+describe('themes', () => {
+  const OVERLAID = ['seismic', 'flood', 'clay', 'radon', 'cavities', 'hospital', 'gp', 'pharmacy', 'dentist', 'creche', 'school', 'college', 'lycee', 'supermarket', 'bakery', 'post', 'pool', 'station']
+
+  it('are the catalogue layers that did not become an overlay', () => {
+    expect(THEMES).toEqual(LAYERS.filter((layer) => !OVERLAID.includes(layer.id)).map((layer) => layer.id))
+    expect(THEMES).toEqual(colourLayers(true).map((layer) => layer.id))
+    expect(THEMES).toEqual(expect.arrayContaining(['price', 'altitude', 'relief', 'sunshine', 'heat', 'heat2050', 'fibre', 'rent', 'landtax', 'violence', 'burglary']))
+  })
+
+  it('no longer accept a layer that became an overlay, though it stays a layer', () => {
+    for (const id of OVERLAID) {
+      expect(isTheme(id), id).toBe(false)
+      expect(layerById(id)?.overlay, id).toBeDefined()
+    }
+    expect(isTheme('price')).toBe(true)
+    expect(isTheme('nope')).toBe(false)
+    expect(isTheme(null)).toBe(false)
+    expect(themeDef('sunshine').id).toBe('sunshine')
   })
 })
 

@@ -2,14 +2,17 @@ import { useId, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MIXES } from '../domain/combine'
 import { type FilterDef, type FilterKey, type FilterValue, activeFilterCount, isFilterable } from '../domain/filters'
-import { LAYERS, type LayerDef, type LayerGroup, isAvailable, layersByGroup, visibleLayers } from '../domain/layers'
+import { LAYERS, type LayerDef, type LayerGroup, colourLayers, isAvailable, layersByGroup, visibleLayers } from '../domain/layers'
+import { OVERLAY_GROUPS, OVERLAYS, type OverlayDef, type OverlayGroup, type OverlayId, isOverlayAvailable } from '../domain/overlays'
 import { PRICE_TYPES } from '../domain/place'
 import { type ThemeId, isTheme } from '../domain/themes'
 import { useAppStore } from '../state/appStore'
 import { className, filterValueText } from './layerText'
+import { OverlaySymbol } from './OverlaySymbol'
 
-type Tab = 'colour' | 'filters'
-const TABS: readonly Tab[] = ['colour', 'filters']
+type Tab = 'colour' | 'overlays' | 'filters'
+const TABS: readonly Tab[] = ['colour', 'overlays', 'filters']
+const TAB_LABELS: Record<Tab, string> = { colour: 'layers.colourTab', overlays: 'layers.overlaysTab', filters: 'layers.filtersTab' }
 
 function Chevron() {
   return (
@@ -19,20 +22,19 @@ function Chevron() {
   )
 }
 
-interface GroupProps {
-  group: LayerGroup
+interface GroupProps<Id extends string> {
+  group: Id
+  title: string
   /** Single-entry groups are always shown: collapsing one line would only cost a click. */
   collapsible: boolean
   open: boolean
-  onOpen: (group: LayerGroup | null) => void
+  onOpen: (group: Id | null) => void
   meta?: ReactNode
   children: ReactNode
 }
 
-/** One heading per indicator family; one tab stop (its summary) when closed, opening one closes the others. */
-function Group({ group, collapsible, open, onOpen, meta, children }: GroupProps) {
-  const { t } = useTranslation()
-  const title = t(`groups.${group}.title`)
+/** One heading per family; one tab stop (its summary) when closed, opening one closes the others. */
+function Group<Id extends string>({ group, title, collapsible, open, onOpen, meta, children }: GroupProps<Id>) {
   if (!collapsible) {
     return (
       <div className="group group--fixed" role="group" aria-label={title}>
@@ -87,7 +89,7 @@ function ThemeList() {
   const setTheme = useAppStore((state) => state.setTheme)
   const showOptIn = useAppStore((state) => state.showOptIn)
   const tileFields = useAppStore((state) => state.tileFields)
-  const groups = layersByGroup(visibleLayers(showOptIn, tileFields))
+  const groups = layersByGroup(colourLayers(showOptIn, tileFields))
   const current = groups.find((entry) => entry.layers.some((def) => def.id === theme))?.group ?? null
   const [open, setOpen] = useState<LayerGroup | null>(current)
   const base = useId()
@@ -100,6 +102,7 @@ function ThemeList() {
           <Group
             key={group}
             group={group}
+            title={t(`groups.${group}.title`)}
             collapsible={layers.length > 1}
             open={open === group}
             onOpen={setOpen}
@@ -163,7 +166,7 @@ function SecondIndicator() {
   const setMix = useAppStore((state) => state.setMix)
   const showOptIn = useAppStore((state) => state.showOptIn)
   const tileFields = useAppStore((state) => state.tileFields)
-  const groups = layersByGroup(visibleLayers(showOptIn, tileFields).filter((def) => def.id !== theme))
+  const groups = layersByGroup(colourLayers(showOptIn, tileFields).filter((def) => def.id !== theme))
   const base = useId()
 
   return (
@@ -320,7 +323,7 @@ function FilterList() {
         {groups.map(({ group, layers }) => {
           const active = activeIn(layers)
           return (
-            <Group key={group} group={group} collapsible={layers.length > 1} open={open === group} onOpen={setOpen} meta={active > 0 ? <span className="badge">{active}</span> : undefined}>
+            <Group key={group} group={group} title={t(`groups.${group}.title`)} collapsible={layers.length > 1} open={open === group} onOpen={setOpen} meta={active > 0 ? <span className="badge">{active}</span> : undefined}>
               {layers.filter(isFilterable).map((def) => {
                 const value = filters[def.id as FilterKey]
                 const props: ControlProps = { def, value, id: `${base}-${def.id}`, onChange: (next) => setFilter(def.id as FilterKey, next) }
@@ -343,12 +346,107 @@ function FilterList() {
   )
 }
 
+function OverlayRow({ def, on, onChange }: { def: OverlayDef; on: boolean; onChange: (on: boolean) => void }) {
+  const { t } = useTranslation()
+  const about = useId()
+  return (
+    <div>
+      <label className="theme overlay">
+        <input type="checkbox" checked={on} aria-describedby={on ? about : undefined} onChange={(event) => onChange(event.target.checked)} />
+        <OverlaySymbol id={def.id} />
+        <span>{t(`ov.${def.id}.name`)}</span>
+      </label>
+      {on && (
+        <p id={about} className="theme__about">
+          {t(`ov.${def.id}.about`)}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** The overlay families with the overlays the loaded data can draw; families left empty are dropped. */
+function useOfferedOverlays() {
+  const sources = useAppStore((state) => state.overlaySources)
+  return OVERLAY_GROUPS.flatMap((group) => {
+    const members = OVERLAYS.filter((def) => def.group === group && isOverlayAvailable(def.id, sources))
+    return members.length === 0 ? [] : [{ group, members }]
+  })
+}
+
+/** Risks as lines and places as dots, drawn over whichever colour is chosen; any number can be on at once. */
+function OverlayList() {
+  const { t } = useTranslation()
+  const overlays = useAppStore((state) => state.overlays)
+  const setOverlay = useAppStore((state) => state.setOverlay)
+  const on = new Set<OverlayId>(overlays)
+  const groups = useOfferedOverlays()
+  const activeIn = (members: readonly OverlayDef[]) => members.filter((def) => on.has(def.id)).length
+  const [open, setOpen] = useState<OverlayGroup | null>(() => groups.find((entry) => activeIn(entry.members) > 0)?.group ?? null)
+
+  if (groups.length === 0) return <p className="filters__intro">{t('overlays.none')}</p>
+
+  return (
+    <div className="filters overlays">
+      <p className="filters__intro">{t('overlays.intro')}</p>
+      <div className="groups">
+        {groups.map(({ group, members }) => {
+          const active = activeIn(members)
+          return (
+            <Group
+              key={group}
+              group={group}
+              title={t(`overlays.groups.${group}`)}
+              collapsible={members.length > 1}
+              open={open === group}
+              onOpen={setOpen}
+              meta={
+                active > 0 ? (
+                  <span className="badge">
+                    <span aria-hidden="true">{active}</span>
+                    <span className="visually-hidden">{t('overlays.onCount', { count: active })}</span>
+                  </span>
+                ) : undefined
+              }
+            >
+              <div className="overlay__rows">
+                {members.map((def) => (
+                  <OverlayRow key={def.id} def={def} on={on.has(def.id)} onChange={(next) => setOverlay(def.id, next)} />
+                ))}
+              </div>
+              <p className="overlay__note">{t(group === 'risk' ? 'overlays.notes.risk' : 'overlays.notes.places')}</p>
+            </Group>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Stays under the scrolling list, like the second indicator, so it is in reach whatever family is open. */
+function ClearOverlays() {
+  const { t } = useTranslation()
+  const count = useAppStore((state) => state.overlays.length)
+  const clearOverlays = useAppStore((state) => state.clearOverlays)
+  const offered = useOfferedOverlays()
+  if (offered.length === 0) return null
+  return (
+    <div className="overlay__foot">
+      <button type="button" className="button" disabled={count === 0} onClick={clearOverlays}>
+        {t('overlays.clear')}
+      </button>
+    </div>
+  )
+}
+
 export function ControlPanel() {
   const { t } = useTranslation()
   const open = useAppStore((state) => state.layersOpen)
   const setOpen = useAppStore((state) => state.setLayersOpen)
   const count = activeFilterCount(useAppStore((state) => state.filters))
+  const overlayCount = useAppStore((state) => state.overlays.length)
   const [tab, setTab] = useState<Tab>('colour')
+  const badges: Record<Tab, number> = { colour: 0, overlays: overlayCount, filters: count }
   const base = useId()
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -375,8 +473,8 @@ export function ControlPanel() {
               tabIndex={tab === id ? 0 : -1}
               onClick={() => setTab(id)}
             >
-              {t(id === 'colour' ? 'layers.colourTab' : 'layers.filtersTab')}
-              {id === 'filters' && count > 0 && <span className="badge">{count}</span>}
+              {t(TAB_LABELS[id])}
+              {badges[id] > 0 && <span className="badge">{badges[id]}</span>}
             </button>
           ))}
         </div>
@@ -385,8 +483,13 @@ export function ControlPanel() {
         </button>
       </div>
       <div role="tabpanel" id={`${base}-panel`} aria-labelledby={`${base}-tab-${tab}`} className="controls__panel">
-        <div className="controls__body">{tab === 'colour' ? <ThemeList /> : <FilterList />}</div>
+        <div className="controls__body">
+          {tab === 'colour' && <ThemeList />}
+          {tab === 'overlays' && <OverlayList />}
+          {tab === 'filters' && <FilterList />}
+        </div>
         {tab === 'colour' && <SecondIndicator />}
+        {tab === 'overlays' && <ClearOverlays />}
       </div>
     </section>
   )

@@ -2,20 +2,23 @@ import { type ComponentType, Suspense, lazy, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { afterFirstPaint } from './afterFirstPaint'
 import { track } from './analytics/track'
-import { loadManifest, tileUrl } from './data/manifest'
+import { type OverlaysManifest, loadManifest, loadOverlaysManifest, tileUrl } from './data/manifest'
 import { refreshOfflineStatus } from './pwa/register'
 import type { MapViewProps } from './map/MapView'
 import { useAppStore } from './state/appStore'
 import { Inspector } from './ui/Inspector'
 import { Legend } from './ui/Legend'
 import { ControlPanel } from './ui/ControlPanel'
+import { PlaceCard } from './ui/PlaceCard'
 import { SourcesDialog } from './ui/SourcesDialog'
 import { TopBar } from './ui/TopBar'
 import { UpdateNotice } from './ui/UpdateNotice'
 
-// The manifest request starts as soon as this module runs. MapLibre (most of the JavaScript) is requested once
-// the shell is on screen, so neither its download nor its start-up delays the first paint.
+// The manifest requests start as soon as this module runs. MapLibre (most of the JavaScript) is requested once
+// the shell is on screen, so neither its download nor its start-up delays the first paint. The overlays manifest
+// never fails (no archive reads as null), so it can only hold the map back for as long as its short timeout.
 const manifestRequest = loadManifest()
+const overlaysRequest = loadOverlaysManifest()
 const mapModule = afterFirstPaint().then(() => import('./map/MapView')).then(
   (module): { default: ComponentType<MapViewProps> } => ({ default: module.MapView }),
   () => ({ default: MapUnavailable }),
@@ -34,10 +37,12 @@ export default function App() {
   const lang = useAppStore((state) => state.lang)
   const manifest = useAppStore((state) => state.manifest)
   const setManifest = useAppStore((state) => state.setManifest)
+  const setOverlaySources = useAppStore((state) => state.setOverlaySources)
   const mapStatus = useAppStore((state) => state.mapStatus)
   const layersOpen = useAppStore((state) => state.layersOpen)
   const setMapStatus = useAppStore((state) => state.setMapStatus)
   const [failed, setFailed] = useState(false)
+  const [overlays, setOverlays] = useState<OverlaysManifest | null>(null)
 
   useEffect(() => {
     void i18n.changeLanguage(lang)
@@ -50,9 +55,12 @@ export default function App() {
 
   useEffect(() => {
     let active = true
-    manifestRequest.then(
-      (loaded) => {
-        if (active) setManifest(loaded)
+    Promise.all([manifestRequest, overlaysRequest]).then(
+      ([loaded, loadedOverlays]) => {
+        if (!active) return
+        setOverlaySources(loadedOverlays?.sources ?? null)
+        setOverlays(loadedOverlays)
+        setManifest(loaded)
       },
       () => {
         if (!active) return
@@ -64,7 +72,7 @@ export default function App() {
     return () => {
       active = false
     }
-  }, [setManifest, setMapStatus])
+  }, [setManifest, setOverlaySources, setMapStatus])
 
   return (
     <div className="app">
@@ -75,7 +83,7 @@ export default function App() {
       <main id="map" className="stage" data-layers-open={layersOpen} data-map-status={mapStatus}>
         {manifest && (
           <Suspense fallback={null}>
-            <MapView manifest={manifest} />
+            <MapView manifest={manifest} overlays={overlays} />
           </Suspense>
         )}
         <div className="stage__left">
@@ -83,6 +91,7 @@ export default function App() {
           <Legend />
         </div>
         <div className="stage__right">
+          <PlaceCard />
           <Inspector />
         </div>
         {mapStatus === 'loading' && !failed && (

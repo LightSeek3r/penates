@@ -31,3 +31,26 @@ export async function communeTileFields(): Promise<Set<string> | null> {
   const communes = metadata.vector_layers?.find((layer) => layer.id === 'communes')
   return new Set(Object.keys(communes?.fields ?? {}))
 }
+
+/**
+ * The overlays manifest the local or deployed data host serves, or null when it has none (the app then offers no
+ * overlay) or the data host is unknown, so overlay tests can skip until the pipeline has delivered the archive.
+ */
+export type OverlayManifest = { layers?: Record<string, unknown> }
+
+export async function overlayManifest(): Promise<OverlayManifest | null> {
+  const remote = process.env.E2E_BASE_URL
+  const base = process.env.E2E_DATA_BASE ?? (remote ? null : `http://localhost:${process.env.DATA_PORT ?? 8788}`)
+  if (!base) return null
+  const response = await fetch(`${base}/overlays.json`)
+  return response.ok ? ((await response.json()) as OverlayManifest) : null
+}
+
+/**
+ * Whether the manifest's `risk` layer holds a line of this risk at any level (`lines: { flood: { "1": 90 } }`), the rule
+ * the app uses to offer the overlay; false for a manifest with no `risk` layer.
+ */
+export function hasRiskLines(manifest: OverlayManifest | null, id: string): boolean {
+  const risk = manifest?.layers?.risk as { lines?: Record<string, Record<string, number>> } | undefined
+  return Object.values(risk?.lines?.[id] ?? {}).some((count) => count > 0)
+}

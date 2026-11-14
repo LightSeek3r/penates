@@ -1,5 +1,7 @@
 import { type Mix, isMix } from '../domain/combine'
 import { type Filters, formatFilters, parseFilters } from '../domain/filters'
+import { layerById } from '../domain/layers'
+import { type OverlayId, formatOverlays, parseOverlays } from '../domain/overlays'
 import { PRICE_TYPES, type PriceType } from '../domain/place'
 import { type ThemeId, isTheme } from '../domain/themes'
 
@@ -18,6 +20,8 @@ export interface UrlState {
   /** How the second indicator is drawn; kept while there is none, so adding one again reuses the last choice. */
   mix: Mix
   filters: Filters
+  /** Overlays drawn over the colour, in catalogue order. */
+  overlays: readonly OverlayId[]
   /** False when the link carries no map position, so the app frames the whole country. */
   viewProvided: boolean
 }
@@ -25,6 +29,12 @@ export interface UrlState {
 export const DEFAULT_VIEW = { lng: 2.4, lat: 46.6, zoom: 5 } as const
 
 const COMMUNE_CODE = /^[0-9AB]{5}$/
+
+/**
+ * Links shared while the retired colour themes existed (`th=seismic`, `th2=hospital`): the id is not a theme any more,
+ * and the overlay that replaced it is the one worth switching on.
+ */
+const overlayOfRetiredTheme = (id: string | null): string | null => (id === null ? null : (layerById(id)?.overlay ?? null))
 
 function finite(value: string | null, min: number, max: number): number | null {
   if (value === null) return null
@@ -39,8 +49,10 @@ export function parseHash(hash: string, lang: Lang): UrlState {
   const selected = params.get('c')
   const requested = params.get('th')
   const theme: ThemeId = isTheme(requested) ? requested : 'price'
-  const compare = params.get('th2')
+  const requestedSecond = params.get('th2')
+  const compare = isTheme(requestedSecond) ? requestedSecond : null
   const mix = params.get('mix')
+  const overlayNames = [params.get('ov'), overlayOfRetiredTheme(requested), overlayOfRetiredTheme(requestedSecond)]
   const lng = finite(params.get('lng'), -180, 180)
   const lat = finite(params.get('lat'), -90, 90)
   const zoom = finite(params.get('z'), 0, 22)
@@ -53,9 +65,10 @@ export function parseHash(hash: string, lang: Lang): UrlState {
     selected: selected !== null && COMMUNE_CODE.test(selected) ? selected : null,
     lang,
     theme,
-    compare: isTheme(compare) && compare !== theme ? compare : null,
+    compare: compare !== theme ? compare : null,
     mix: isMix(mix) ? mix : 'cross',
     filters: parseFilters(params.get('f')),
+    overlays: parseOverlays(overlayNames.filter((name) => name !== null).join(',')),
   }
 }
 
@@ -73,5 +86,7 @@ export function formatHash(state: Omit<UrlState, 'viewProvided' | 'lang'>): stri
   }
   const filters = formatFilters(state.filters)
   if (filters) params.set('f', filters)
-  return `#${params.toString()}`
+  if (state.overlays.length > 0) params.set('ov', formatOverlays(state.overlays))
+  // A comma is legal in a fragment and only the overlay list has one, so the link stays readable.
+  return `#${params.toString().replaceAll('%2C', ',')}`
 }

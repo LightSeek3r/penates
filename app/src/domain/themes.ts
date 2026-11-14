@@ -1,15 +1,18 @@
 import type { ExpressionSpecification } from 'maplibre-gl'
 import { contrast } from './colour'
-import { LAYERS, NO_DATA_COLOR, type LayerDef, type LayerId, isLayerId, layerById, layerColors, propertyOf } from './layers'
+import { LAYERS, NO_DATA_COLOR, type ColourLayerId, type LayerDef, isColourLayer, layerById, layerColors, propertyOf } from './layers'
 import type { PriceType } from './place'
 import { HATCH_INK_DARK, HATCH_INK_LIGHT } from './priceLadder'
 
-/** Every catalogue layer can colour the map. */
-export type ThemeId = LayerId
+/** The layers that colour the map or serve as a second indicator; the others became overlays (layers.ts, `overlay`). */
+export type ThemeId = ColourLayerId
 
-export const THEMES: readonly ThemeId[] = LAYERS.map((def) => def.id)
+// deliberate: a cast; ColourLayerId (type) and isColourLayer (value) state the same rule, and themes.test.ts checks they agree.
+export const THEMES: readonly ThemeId[] = LAYERS.filter(isColourLayer).map((def) => def.id as ThemeId)
 
-export const isTheme = (value: string | null): value is ThemeId => isLayerId(value)
+const THEME_SET: ReadonlySet<string> = new Set(THEMES)
+
+export const isTheme = (value: string | null): value is ThemeId => value !== null && THEME_SET.has(value)
 
 export function themeDef(theme: ThemeId): LayerDef {
   const def = layerById(theme)

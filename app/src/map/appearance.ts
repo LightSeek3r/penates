@@ -1,9 +1,10 @@
 import type { ExpressionSpecification, Map as MapLibreMap } from 'maplibre-gl'
 import { type Mix, crossDoubtFilters, crossFillExpression, marksFilter, marksIconExpression } from '../domain/combine'
 import { activeFilterCount, matchExpression, type Filters } from '../domain/filters'
+import { type OverlayId, RISK_OVERLAYS, placeKindsOf } from '../domain/overlays'
 import type { PriceType } from '../domain/place'
 import { type ThemeId, doubtFilters, themeDef, themeFillExpression } from '../domain/themes'
-import { COMMUNES_FROM_TILE_ZOOM, DOUBT_LAYERS, FADE_FROM, LAYER_IDS, MARK_LAYERS, NOTHING, SELECTION_LAYERS, fade, patternFilters } from './style'
+import { COMMUNES_FROM_TILE_ZOOM, DOUBT_LAYERS, FADE_FROM, LAYER_IDS, MARK_LAYERS, NOTHING, PLACE_LAYERS, SELECTION_LAYERS, fade, patternFilters, placeKindsFilter, riskLayerIds } from './style'
 
 export interface Appearance {
   theme: ThemeId
@@ -75,5 +76,22 @@ function applyMarks(map: MapLibreMap, second: ThemeId | null, priceType: PriceTy
     map.setFilter(id, marksFilter(def, priceType))
     map.setLayoutProperty(id, 'icon-image', marksIconExpression(def, priceType))
     map.setPaintProperty(id, 'icon-opacity', match ? ['case', match, 1, DIMMED_MARK_OPACITY] : 1)
+  }
+}
+
+/**
+ * Shows the overlays that are on. Layers the style lacks are skipped: every overlay layer exists only when the
+ * overlays archive was added to the style.
+ */
+export function applyOverlays(map: MapLibreMap, overlays: readonly OverlayId[]): void {
+  const showIfPresent = (id: string, visible: boolean) => {
+    if (map.getLayer(id)) show(map, id, visible)
+  }
+  for (const id of RISK_OVERLAYS) for (const layer of riskLayerIds(id)) showIfPresent(layer, overlays.includes(id))
+  const kinds = placeKindsOf(overlays)
+  for (const id of Object.values(PLACE_LAYERS)) {
+    if (!map.getLayer(id)) continue
+    map.setFilter(id, placeKindsFilter(kinds))
+    show(map, id, kinds.length > 0)
   }
 }

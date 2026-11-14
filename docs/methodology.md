@@ -44,7 +44,7 @@ Price per m² = sale value ÷ real built surface. For houses the sale value incl
 
 ## Risks: seismic zone, flood, clay, radon, cavities
 
-These are screening indicators. They say whether a question is worth asking about a commune, not what the answer is for a given home. None of them replaces the legal risk statement (*état des risques*, ERRIAL) that comes with a sale or a lease, and none describes your plot.
+These are screening indicators. They say whether a question is worth asking about a commune, not what the answer is for a given home. They are offered as filters, listed in the details panel and drawn as overlays (see Overlays); they are not colours of the map. None of them replaces the legal risk statement (*état des risques*, ERRIAL) that comes with a sale or a lease, and none describes your plot.
 
 ### Seismic zone
 
@@ -117,9 +117,9 @@ The regulatory seismic zone of each commune (property `sz`, 1 very low to 5 stro
 
 ## Distances to services
 
-For each commune, the straight-line distance in metres, rounded to 100 m, from one point inside the commune (not its centre) to the nearest facility of each kind in metropolitan France and Corsica, from the INSEE permanent facilities base (BPE 2025, geography at 2025-01-01). The facility types (BPE codes) are:
+For each commune, the straight-line distance in metres, rounded to 100 m, from one point inside the commune (not its centre) to the nearest facility of each kind in metropolitan France and Corsica, from the INSEE permanent facilities base (BPE 2025, geography at 2025-01-01). They are offered as filters and listed in the details panel; the facilities themselves can be shown as dots (see Overlays). The facility types (BPE codes) are:
 
-| Theme | Property | BPE codes |
+| Facility | Property | BPE codes |
 | --- | --- | --- |
 | Hospital (short-stay) | `d_hos` | D101 |
 | General practitioner | `d_gp` | D265 |
@@ -181,15 +181,67 @@ Parent-child meeting places and childcare information offices (D503, D504) are n
 - **Unknown**: a merged commune takes its former communes' rate only if they all share it to one decimal; otherwise it has no value. Paris, Lyon and Marseille arrondissements take their city's single rate.
 - **Limits**: **the rate is not the bill**. It applies to a base (half the cadastral rental value) that differs for every home, so two homes in the same commune can pay very different amounts.
 
+## Overlays: risk lines and places
+
+Overlays are drawn over whichever colour is chosen, and any number can be on at once. Nothing is on by default. An overlay the loaded data does not carry is not offered. Overlays are switched on in the Overlays tab and listed in the legend; they are part of the link (`ov=` in the address).
+
+### Places
+
+**In plain words**: where hospitals, doctors, schools, shops, stations, pools, cinemas and libraries are, one dot per place.
+
+- **Source**: the INSEE permanent facilities base (BPE 2025, geography at 2025-01-01), the same file as the distances above, at each facility's own position. Licence Ouverte v2.0. The kinds and their BPE codes:
+
+| Overlay | `k` | BPE codes | Name shown |
+| --- | --- | --- | --- |
+| Hospitals and clinics (short stay) | `hos` | D101 | yes |
+| General practitioners | `gp` | D265 | no |
+| Pharmacies | `pha` | D307 | no |
+| Dentists | `den` | D277 | no |
+| Crèches and micro-crèches | `cre` | D502, D509 | no |
+| Nursery schools | `mat` | C107 | yes |
+| Primary schools | `pri` | C108, C109 | yes |
+| Collèges | `col` | C201 | yes |
+| Lycées | `lyc` | C301, C302, C303, C304, C305 | yes |
+| Universities and grandes écoles | `uni` | C501, C502, C503, C504, C505 | yes |
+| Supermarkets and hypermarkets | `sup` | B104, B105 | no |
+| Bakeries | `bak` | B207 | no |
+| Post offices and relays | `pos` | A206, A207, A208 | yes |
+| Train stations | `sta` | E107, E108, E109 | yes |
+| Swimming pools | `pool` | F101 | yes |
+| Cinemas | `cin` | F303 | yes |
+| Libraries | `lib` | F307 | yes |
+
+- **What a dot carries** (layer `places` of `overlays.pmtiles`): `k` the kind, `n` the name for the kinds marked "yes" above, `c` how many facilities of the kind share that exact position (only when 2 or more: they are collapsed into one dot), `a` = 1 when INSEE marks the position approximate (quality "M": the street is only probable, or the point can be 500 m or more off, but still in the right commune). The place card says "Position approximate" for those.
+- **What is left out**: rows in partial diffusion (INSEE's `STATUT_DIFFUSION = P`, published without full detail) never become a dot; nor do facilities without valid coordinates or outside metropolitan France and Corsica. Nothing else of a row (address, SIRET number, capacity) leaves the build.
+- **Names**: kept only for public-facing institutions (hospitals, schools, post offices, stations, pools, cinemas, libraries), in title case and cut at 60 characters. Doctors, dentists, pharmacies, crèches, supermarkets and bakeries never carry a name, because the name of a practice or a shop is often a person's. No individual is named anywhere.
+- **Zoom**: dots appear by zoom so the national view stays readable: hospitals from zoom 6, universities and stations from 7, collèges, lycées, pools and cinemas from 8, supermarkets and libraries from 9, the rest from 10.
+- **Limits**: the BPE says a facility exists, not that it takes new patients or pupils, nor its opening hours. **Swimming pools** include private ones (fitness clubs, for example), because the source cannot tell public pools from private ones. A missing dot is not proof that there is no such place.
+
+### Seismic zone lines
+
+**In plain words**: lines where the regulatory seismic zone rises, drawn from the zone of each commune.
+
+- **What is drawn** (layer `seismic`, property `z`): for each zone from 2 to 5, the boundary of the area made of the communes in that zone or above. `z` is the zone the ground rises to across the line. Stretches along the coast and the national border are left out, since the zone does not change there. In metropolitan France only lines into zones 2, 3 and 4 occur.
+- **Source**: the commune zoning of Géorisques described under Seismic zone (`sz`), on the IGN commune outlines. Licence Ouverte.
+- **Limits**: the line follows commune boundaries because the zoning is set per commune; it is not a fault line and does not describe your plot. Like the zone itself, it does not replace the legal *état des risques* (ERRIAL).
+
+### Risk lines for flood, clay, radon and cavities
+
+**In plain words**: lines where the commune-level value of one of these four risks rises to a level, drawn like the seismic zone lines.
+
+- **What is drawn** (layer `risk` of `overlays.pmtiles`, properties `r` and `z`): `r` is the risk (`flood`, `clay`, `radon` or `cavities`) and `z` the level the value rises to across the line. For each level, the line is the boundary of the area made of the communes whose value is that level or above, from the commune values described in the Risks section (`fl`, `cl`, `rn`, `cv`). The levels are flood stage 1, 2 and 3; clay class 1, 2 and 3; radon category 2 and 3 (category 1, "low potential", covers most of the Massif central and Brittany and is not drawn); and for cavities 1, 5 and 25 known. A heavier line is a higher level. Stretches along the coast and the national border are left out, since the value does not change there. The legend names each level with the class names of the details panel.
+- **No data**: a commune with no value for a risk is unknown, never a lower class: no line is drawn along it, and no line is not proof of safety.
+- **Limits**: the values are per commune, so a line follows commune borders and is never the edge of a flood zone, a clay area or a cavity; a commune at the edge of a line may be only partly affected. The inventory of cavities is incomplete. These stay screening indicators: none replaces the ERRIAL. They are no longer offered as colours; they remain filters and are listed in the details panel.
+
 ## Filters
 
 A filter keeps the communes whose value is within the limit you set: at most a value (for example a hospital within 15 km), at least a value (sunshine, fibre), or between two values (altitude, rent). Communes that do not meet every active filter are greyed out. A commune with no value for an active criterion does not match it: an unknown is never counted as a pass.
 
 ## Two indicators at once
 
-Under the list of colours you can add a second indicator, shown in one of two ways:
+Under the list of colours you can add a second indicator, chosen among the colours (risks and distances are filters and overlays, not second indicators), shown in one of two ways:
 
-- **Crossed colours.** Each indicator is cut into three tiers (low, middle, high) made of whole classes of its own legend, for example under 1,500, 1,500 to 3,500 and 3,500 €/m² or more for price, under 2, 2 to 10 and 10 km or more for distances, zones 1 to 2, 3 and 4 to 5 for the seismic zone. Each commune then takes one of nine colours, read from the 3 x 3 key: rows are the second indicator, columns the first. It answers questions such as "where is the price low and the hospital near".
+- **Crossed colours.** Each indicator is cut into three tiers (low, middle, high) made of whole classes of its own legend, for example under 1,500, 1,500 to 3,500 and 3,500 €/m² or more for price, under 300, 300 to 1,000 and 1,000 m or more for altitude. Each commune then takes one of nine colours, read from the 3 x 3 key: rows are the second indicator, columns the first. It answers questions such as "where is the price low and the sunshine high".
 - **Discs.** The colours keep the first indicator, and a disc of three sizes shows the tier of the second.
 
 How to read them, and their limits:

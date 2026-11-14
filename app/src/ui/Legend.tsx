@@ -1,11 +1,15 @@
-import { type CSSProperties, useId } from 'react'
+import { type CSSProperties, useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CROSS_COLORS, MARK_DIAMETERS, TIERS, type Tier, crossColor, roughCondition } from '../domain/combine'
 import { activeFilterCount } from '../domain/filters'
-import { type LayerDef, layerColors } from '../domain/layers'
+import { type LayerDef, layerById, layerColors } from '../domain/layers'
+import { type OverlayId, type RiskOverlayId, SEISMIC_LEVELS, isPlaceKind, overlayById, riskLevels } from '../domain/overlays'
 import { themeDef } from '../domain/themes'
 import { useAppStore } from '../state/appStore'
-import { legendRows, tierLabels } from './layerText'
+import type { Lang } from '../state/urlState'
+import { formatNumber } from './format'
+import { type Translate, className, legendRows, tierLabels } from './layerText'
+import { OverlaySymbol, RiskLine } from './OverlaySymbol'
 
 /** The hatch sample sits on a colour the map can actually show under it, never on another quantity's colour. */
 const swatch = (colour: string) => ({ '--swatch': colour }) as CSSProperties
@@ -168,6 +172,117 @@ function MarksKey({ second }: { second: LayerDef }) {
   )
 }
 
+// Below this width the legend is the strip at the foot of the map (same breakpoint as app.css).
+const PHONE = '(max-width: 719px)'
+const isPhone = () => window.matchMedia(PHONE).matches
+// Zone 5 occurs only overseas, which the map does not show.
+const METROPOLITAN_LEVELS = SEISMIC_LEVELS.filter((level) => level < 5)
+
+/** One label per line weight of a risk overlay: the zone a seismic line rises to, the class a commune value rises to, or a count of known cavities. */
+function riskLevelLabels(t: Translate, id: RiskOverlayId, lang: Lang): string[] {
+  if (id === 'seismic') return METROPOLITAN_LEVELS.map((level) => t('legend.seismicLevel', { value: level }))
+  const def = layerById(id)
+  const levels = riskLevels(id)
+  if (def?.scale.kind === 'classes') return levels.map((code) => t(`ind.${id}.classLabel`, { value: code, name: className(t, def, code) }))
+  return levels.map((count) => t('legend.knownCavities', { range: t('legend.over', { value: formatNumber(count, lang) }) }))
+}
+
+function OverlayEntry({ id }: { id: OverlayId }) {
+  const { t } = useTranslation()
+  const lang = useAppStore((state) => state.lang)
+  if (isPlaceKind(id)) {
+    return (
+      <li className="ov-key__row">
+        <OverlaySymbol id={id} />
+        <span>{t(`ov.${id}.name`)}</span>
+      </li>
+    )
+  }
+  return (
+    <li className="ov-key__risk">
+      <span>{t(`ov.${id}.name`)}</span>
+      <ul className="ov-key__levels">
+        {riskLevelLabels(t, id, lang).map((label, step) => (
+          <li key={label} className="ov-key__row">
+            <RiskLine id={id} step={step} />
+            <span>{label}</span>
+          </li>
+        ))}
+      </ul>
+    </li>
+  )
+}
+
+/**
+ * Key of the overlays switched on, folded under the colour legend. On phones it starts closed as a chip in the strip,
+ * and opening it closes the layers sheet, so two bottom sheets never stand over each other.
+ */
+function OverlayKey() {
+  const { t } = useTranslation()
+  const overlays = useAppStore((state) => state.overlays)
+  const layersOpen = useAppStore((state) => state.layersOpen)
+  const setLayersOpen = useAppStore((state) => state.setLayersOpen)
+  const [open, setOpen] = useState(() => !isPhone())
+  // Opening the layers sheet on a phone folds the key back into its chip (state adjusted while rendering).
+  const [layersSeen, setLayersSeen] = useState(layersOpen)
+  if (layersOpen !== layersSeen) {
+    setLayersSeen(layersOpen)
+    if (layersOpen && isPhone()) setOpen(false)
+  }
+
+  const shown = overlays.filter((id) => overlayById(id) !== undefined)
+  if (shown.length === 0) return null
+  return (
+    <details
+      className="ov-key"
+      open={open}
+      onToggle={(event) => {
+        const next = event.currentTarget.open
+        if (next === open) return
+        setOpen(next)
+        if (next && layersOpen && isPhone()) setLayersOpen(false)
+      }}
+    >
+      <summary className="ov-key__head">
+        <span>{t('legend.overlays', { count: shown.length })}</span>
+        <svg className="group__chevron" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+      </summary>
+      {/* The body scrolls on its own on phones, so an open key never takes more than its share of the screen. */}
+      <div className="ov-key__body">
+        <ul className="ov-key__list">
+          {shown.map((id) => (
+            <OverlayEntry key={id} id={id} />
+          ))}
+        </ul>
+        {/* Said once for all the risk lines, after them. */}
+        {shown.some((id) => !isPlaceKind(id)) && <p className="legend__caveat">{t('legend.riskMeaning')}</p>}
+      </div>
+    </details>
+  )
+}
+
+/**
+ * Publishes the legend's height on the stage as `--legend-height`, so on phones the details sheet sits just above the
+ * strip however many rows the strip has (a second indicator, filters, the overlay chip) and never covers it.
+ */
+function useLegendHeight() {
+  const legend = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const element = legend.current
+    const stage = element?.closest<HTMLElement>('.stage')
+    if (!element || !stage) return
+    const observer = new ResizeObserver(() => stage.style.setProperty('--legend-height', `${element.offsetHeight}px`))
+    observer.observe(element)
+    return () => {
+      observer.disconnect()
+      stage.style.removeProperty('--legend-height')
+    }
+  }, [])
+  return legend
+}
+
 export function Legend() {
   const { t } = useTranslation()
   const theme = themeDef(useAppStore((state) => state.theme))
@@ -178,9 +293,10 @@ export function Legend() {
   const cross = second !== null && mix === 'cross'
   const title = cross ? t('legend.crossTitle', { theme: t(`ind.${theme.id}.name`), second: t(`ind.${second.id}.name`) }) : t(`ind.${theme.id}.legend`)
   const optIn = [theme, second].find((def) => def?.optIn)
+  const strip = useLegendHeight()
 
   return (
-    <section className="panel legend" aria-label={title}>
+    <section ref={strip} className="panel legend" aria-label={title}>
       <h2 className="panel__title">{title}</h2>
       {cross ? <CrossKey theme={theme} second={second} /> : <Ladder def={theme} />}
       {theme.id === 'price' && !cross && <h3 className="legend__subtitle">{t('legend.stateTitle')}</h3>}
@@ -208,6 +324,7 @@ export function Legend() {
       {cross && <p className="legend__caveat">{t('legend.tiersNote')}</p>}
       {second !== null && !cross && <MarksKey second={second} />}
       {optIn && <p className="legend__caveat">{t(`groups.${optIn.group}.note`)}</p>}
+      <OverlayKey />
     </section>
   )
 }
