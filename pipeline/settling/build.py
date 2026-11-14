@@ -7,14 +7,10 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import logging
 import os
 import time
 from collections import Counter
-from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,29 +18,20 @@ from pathlib import Path
 import duckdb
 import requests
 import shapely
-import truststore
 
 import numpy as np
 
 from settling import aggregate as agg
 from settling import layers as layer_registry
-from settling import proximity, seismic
+from settling import proximity
 from settling.aggregate import AreaResult
 from settling.boundaries import Area, Boundaries, load_boundaries
 from settling.clean import CleanResult, clean_sales
+from settling.inputs import open_session, resolve_bpe, resolve_seismic_zones, sha256_of
 from settling.join import JoinReport, check_unmatched, reconcile_codes
-from settling.reporting import area_rows, indicator_spot_checks, spot_checks, tile_stats
+from settling.reporting import area_rows, indicator_spot_checks, spot_checks, tile_stats, timed, write_json
 from settling.seismic import SeismicReport
-from settling.sources import (
-    BPE_EDITION,
-    BPE_URL,
-    fetch_admin_express,
-    fetch_bpe,
-    fetch_dvf,
-    fetch_seismic_zones,
-    resolve_bpe_release,
-    retrying_session,
-)
+from settling.sources import fetch_admin_express, fetch_dvf
 from settling.tiles import TileFeature, TileLayer, build_tiles, to_web_mercator, write_pmtiles
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -61,7 +48,6 @@ COMMUNES_ZOOMS = (4, 10)
 # about 10% and stays invisible; 8 units saves 2% more and lets neighbours drift apart by 1 px.
 COMMUNES_SIMPLIFY_UNITS = {4: 4.0, 5: 4.0}
 CENTER_ZOOM = 5
-USER_AGENT = "settling-map-pipeline"
 
 log = logging.getLogger("settling")
 
@@ -71,39 +57,38 @@ def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     started = time.perf_counter()
     timings: dict[str, float] = {}
-    # Use the OS trust store: TLS-inspecting corporate proxies install their root CA there, not in certifi.
-    truststore.inject_into_ssl()
-    session = retrying_session()
-    session.headers["User-Agent"] = USER_AGENT
+    session = open_session()
 
-    with _timed("fetch", timings):
+    with timed("fetch", timings):
         dvf_path, dvf_source = _dvf_source(session, args.raw, args.dvf_file)
         edition, boundary_paths = fetch_admin_express(session, args.raw)
     con = _open_duckdb(args.raw)
-    with _timed("clean", timings):
+    with timed("clean", timings):
         cleaned = clean_sales(con, dvf_path, args.dep)
         log.info("cleaning steps: %s", cleaned.steps)
-    with _timed("boundaries_and_join", timings):
+    with timed("boundaries_and_join", timings):
         boundaries = load_boundaries(boundary_paths, args.dep)
         join = reconcile_codes(con, boundaries)
         log.info("unmatched sales after crosswalk: %d (%.3f%%)", join.unmatched_sales_after, 100 * join.unmatched_share_after)
         check_unmatched(join)
-    with _timed("seismic_and_distances", timings):
+    with timed("seismic_and_distances", timings):
         commune_codes = [a.code for a in boundaries.communes]
-        seismic_source, zones, seismic_report = _seismic_zones(session, args, boundaries.communes, boundaries.merged_codes)
-        bpe_path, bpe_source = _bpe_source(session, args.raw, args.bpe_file)
+        seismic_source, zones, seismic_report = resolve_seismic_zones(
+            session, args.raw, args.seismic_file, boundaries.communes, boundaries.merged_codes
+        )
+        bpe_path, bpe_source = resolve_bpe(session, args.raw, args.bpe_file)
         equipments = proximity.read_equipments(bpe_path)
         origins = proximity.representative_points_l93([a.geometry for a in boundaries.communes])
         distances = proximity.nearest_distances(origins, equipments)
         indicators = _indicators(commune_codes, zones, distances)
         log.info("seismic zones: %s", seismic_report.by_method)
         layer_results = _run_layers(session, args, boundaries, origins, indicators)
-    with _timed("aggregate", timings):
+    with timed("aggregate", timings):
         window_by_months = agg.windows(con, cleaned.newest_date)
         communes = _area_results(con, boundaries.communes, "code_commune", window_by_months, with_trend=True)
         departments = _area_results(con, boundaries.departments, "code_departement", window_by_months, with_trend=False)
     con.close()
-    with _timed("tiles", timings):
+    with timed("tiles", timings):
         tile_path = args.out / TILE_FILE
         tiles = _write_tiles(
             tile_path, boundaries, communes, departments, indicators, window_by_months, args.workers, layer_results
@@ -120,10 +105,10 @@ def main(argv: list[str] | None = None) -> None:
     indicator_report = _indicator_report(seismic_report, equipments, distances, communes, indicators) | {
         "layers": {name: result.report for name, result in layer_results.items()}
     }
-    _write_json(
+    write_json(
         args.out / "manifest.json", _manifest(tile_path, sources, cleaned, join, communes, departments, indicators, layer_results)
     )
-    _write_json(
+    write_json(
         args.out / "build-report.json",
         _report(args, sources, cleaned, join, window_by_months, communes, departments, tiles, timings)
         | {"indicators": indicator_report},
@@ -160,7 +145,7 @@ def _run_layers(
     )
     results = {}
     for layer in selected:
-        with _timed(f"layer_{layer.name}", {}):
+        with timed(f"layer_{layer.name}", {}):
             result = layer.compute(context)
         stray = result.properties.keys() - indicators.keys()
         if stray:
@@ -243,38 +228,9 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 def _dvf_source(session: requests.Session, raw: Path, override: Path | None) -> tuple[Path, dict]:
     if override is not None:
-        return override, {"local_file": override.name, "bytes": override.stat().st_size, "sha256": _sha256(override)}
+        return override, {"local_file": override.name, "bytes": override.stat().st_size, "sha256": sha256_of(override)}
     resource, path = fetch_dvf(session, raw)
     return path, asdict(resource)
-
-
-def _bpe_source(session: requests.Session, raw: Path, override: Path | None) -> tuple[Path, dict]:
-    path = override if override is not None else fetch_bpe(session, raw)
-    try:
-        release = resolve_bpe_release(session)
-    except requests.RequestException as error:
-        log.warning("BPE release date unavailable: %s", error)
-        release = None
-    if release is None:
-        log.warning("BPE release date not found on the INSEE page; the manifest records only the file hash")
-    source = {"edition": BPE_EDITION, "url": BPE_URL, "page_release_date": release,
-              "bytes": path.stat().st_size, "sha256": _sha256(path)}
-    return path, source | ({"local_file": path.name} if override is not None else {})
-
-
-def _seismic_zones(
-    session: requests.Session, args: argparse.Namespace, communes: list[Area], merged_codes: dict[str, str]
-) -> tuple[dict, dict[str, int], SeismicReport]:
-    commune_codes = [a.code for a in communes]
-    if args.seismic_file is not None:
-        path = args.seismic_file
-        source = {"local_file": path.name}
-    else:
-        resource, path = fetch_seismic_zones(session, args.raw, seismic.codes_to_query(commune_codes, merged_codes))
-        source = asdict(resource)
-    zones, report = seismic.assign_zones(commune_codes, seismic.read_zone_csv(path), merged_codes)
-    zones, report = seismic.fill_from_neighbours(zones, report, communes)
-    return source | {"sha256": _sha256(path)}, zones, report
 
 
 def _indicators(
@@ -402,7 +358,7 @@ def _manifest(
         "version": datetime.now(UTC).date().isoformat(),
         "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "sources": sources | {"transactions": {"from": str(cleaned.oldest_date), "to": str(cleaned.newest_date)}},
-        "tiles": {"file": tile_path.name, "bytes": tile_path.stat().st_size, "sha256": _sha256(tile_path)},
+        "tiles": {"file": tile_path.name, "bytes": tile_path.stat().st_size, "sha256": sha256_of(tile_path)},
         "counts": {
             "retained_sales": join.retained_sales,
             "communes": len(communes),
@@ -481,26 +437,6 @@ def _report(
         "timings_s": timings,
         "areas": {"communes": area_rows(communes), "departments": area_rows(departments)},
     }
-
-
-@contextmanager
-def _timed(name: str, timings: dict[str, float]) -> Iterator[None]:
-    log.info("step %s", name)
-    started = time.perf_counter()
-    yield
-    timings[name] = round(time.perf_counter() - started, 1)
-
-
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def _write_json(path: Path, payload: dict) -> None:
-    path.write_text(json.dumps(payload, indent=1, ensure_ascii=False, default=str), encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -79,7 +79,7 @@ def read_equipments(path: Path) -> Equipments:
     tallies: dict[str, Counter[str]] = {prop: Counter() for prop in AMENITIES}
     for typequ, epsg, quality, x, y in rows:
         prop = type_to_property[typequ]
-        outcome = _classify(epsg, quality, x, y)
+        outcome = classify_position(epsg, quality, x, y)
         tallies[prop][outcome] += 1
         if outcome.startswith("kept"):
             points[prop].append((x, y))
@@ -132,7 +132,7 @@ def distance_quantiles(distances: dict[str, np.ndarray]) -> dict[str, dict[str, 
     return summary
 
 
-def _classify(epsg: str | None, quality: str | None, x: float | None, y: float | None) -> str:
+def classify_position(epsg: str | None, quality: str | None, x: float | None, y: float | None) -> str:
     if epsg != METROPOLE_EPSG:
         return "outside_metropole"
     if x is None or y is None or not (L93_BOUNDS[0] <= x <= L93_BOUNDS[2] and L93_BOUNDS[1] <= y <= L93_BOUNDS[3]):

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import requests
 
-from settling.sources import DOWNLOAD_RETRY_DELAYS_S, SourceError, download
+from settling.sources import DOWNLOAD_RETRY_DELAYS_S, SourceError, download, fetch_communes_archive
 
 PAYLOAD = bytes(range(256)) * 40  # 10,240 bytes
 URL = "https://static.example/file.bin"
@@ -112,3 +112,12 @@ def test_a_partial_file_from_an_earlier_run_is_not_continued(tmp_path: Path) -> 
     download(session, URL, dest, len(PAYLOAD), hashlib.sha1(PAYLOAD).hexdigest(), sleep=_no_sleep)
     assert session.requested_ranges == [None]
     assert dest.read_bytes() == PAYLOAD
+
+
+def test_a_communes_archive_is_cached_under_a_name_made_from_its_url(tmp_path: Path) -> None:
+    session = ScriptedSession(Answer(), Answer())
+    first = fetch_communes_archive(session, tmp_path, URL)
+    assert first.parent == tmp_path / "communes" and first.read_bytes() == PAYLOAD
+    assert fetch_communes_archive(session, tmp_path, URL) == first
+    assert len(session.requested_ranges) == 1, "the second call reads the cache"
+    assert fetch_communes_archive(session, tmp_path, URL + "?v=2") != first, "another URL is another file"

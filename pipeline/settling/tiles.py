@@ -1,4 +1,4 @@
-"""Pure-Python vector tiler: shapely polygons -> gzipped MVT tiles -> one PMTiles archive."""
+"""Pure-Python vector tiler: shapely points, lines and polygons -> gzipped MVT tiles -> one PMTiles archive."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import shapely
 from mapbox_vector_tile.encoder import on_invalid_geometry_make_valid
 from pmtiles.tile import Compression, TileType, tileid_to_zxy, zxy_to_tileid
 from pmtiles.writer import Writer
-from shapely.geometry import MultiPolygon, Polygon, box
+from shapely.geometry import LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon, box
 from shapely.geometry.base import BaseGeometry
 
 EXTENT = 4096
@@ -35,7 +35,8 @@ Properties = dict[str, int | str]
 class TileFeature:
     fid: int
     properties: Properties
-    geometry: BaseGeometry  # Web Mercator metres
+    geometry: BaseGeometry  # Web Mercator metres: points, lines or polygons, one kind per layer
+    minzoom: int | None = None  # first zoom the feature is in; None means the layer's own minzoom
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,7 @@ class TileLayer:
     maxzoom: int
     features: list[TileFeature]
     # zoom -> Douglas-Peucker tolerance in tile units, for zooms that need coarser shapes than SIMPLIFY_UNITS
+    # (a point is never moved by it)
     simplify_units: Mapping[int, float] = field(default_factory=dict)
 
 
@@ -79,6 +81,8 @@ def build_tiles(layers: list[TileLayer], workers: int) -> dict[int, bytes]:
     min_zoom = min(layer.minzoom for layer in layers)
     max_zoom = max(layer.maxzoom for layer in layers)
     tasks = [task for z in range(min_zoom, max_zoom + 1) for task in _zoom_tasks(layers, z)]
+    if workers == 1:  # starting a process costs more than the encoding of a small build
+        return {tile_id: data for tile_id, data in map(encode_tile, tasks) if data is not None}
     with ProcessPoolExecutor(max_workers=workers) as pool:
         results = pool.map(encode_tile, tasks, chunksize=8)
         return {tile_id: data for tile_id, data in results if data is not None}
@@ -99,9 +103,9 @@ def encode_tile(task: TileTask) -> tuple[int, bytes | None]:
         local = shapely.transform(clipped, to_tile_units)
         snapped = shapely.set_precision(local, 1.0)
         encoded = [
-            {"id": fid, "properties": props, "geometry": polygon}
-            for (fid, props, _), unsnapped, geometry in zip(features, local, snapped)
-            if (polygon := _polygonal(geometry) or _unit_square(unsnapped)) is not None
+            {"id": fid, "properties": props, "geometry": encodable}
+            for (fid, props, original), unsnapped, geometry in zip(features, local, snapped)
+            if (encodable := _encodable(original, unsnapped, geometry)) is not None
         ]
         if encoded:
             encoded_layers.append({"name": name, "features": encoded})
@@ -154,11 +158,14 @@ def _zoom_tasks(layers: list[TileLayer], z: int) -> list[TileTask]:
     for layer in layers:
         if not layer.minzoom <= z <= layer.maxzoom:
             continue
-        geometries = np.asarray([f.geometry for f in layer.features], dtype=object)
+        features = [f for f in layer.features if f.minzoom is None or f.minzoom <= z]
+        if not features:
+            continue
+        geometries = np.asarray([f.geometry for f in features], dtype=object)
         tolerance = layer.simplify_units.get(z, SIMPLIFY_UNITS) * span / EXTENT
         simplified = shapely.simplify(geometries, tolerance, preserve_topology=True)
         simplified = np.where(shapely.is_empty(simplified), geometries, simplified)
-        for feature, geometry, (gx0, gy0, gx1, gy1) in zip(layer.features, simplified, shapely.bounds(simplified)):
+        for feature, geometry, (gx0, gy0, gx1, gy1) in zip(features, simplified, shapely.bounds(simplified)):
             if shapely.is_empty(geometry):
                 continue
             # tile x counts from the west edge, tile y from the north edge of the world
@@ -176,14 +183,25 @@ def _index_range(low: float, high: float, span: float, z: int) -> range:
     return range(first, last + 1)
 
 
-def _polygonal(geometry: BaseGeometry) -> Polygon | MultiPolygon | None:
+def _encodable(original: BaseGeometry, unsnapped: BaseGeometry, snapped: BaseGeometry) -> BaseGeometry | None:
+    """What to encode for one feature in one tile, of the feature's own kind; None when nothing is left of it."""
+    kind = original.geom_type
+    if kind in ("Point", "MultiPoint"):
+        return _flatten(snapped, Point, MultiPoint)
+    if kind in ("LineString", "MultiLineString"):
+        return _flatten(snapped, LineString, MultiLineString)
+    return _flatten(snapped, Polygon, MultiPolygon) or _unit_square(unsnapped)
+
+
+def _flatten(geometry: BaseGeometry, single: type, multi: type) -> BaseGeometry | None:
+    """The `single` and `multi` parts of a clipping result, which can be a collection, as one geometry."""
     if geometry is None or geometry.is_empty:
         return None
-    if isinstance(geometry, (Polygon, MultiPolygon)):
+    if isinstance(geometry, (single, multi)):
         return geometry
-    polygons = [p for part in getattr(geometry, "geoms", []) if (p := _polygonal(part)) is not None]
-    flat = [g for p in polygons for g in (p.geoms if isinstance(p, MultiPolygon) else [p])]
-    return MultiPolygon(flat) if flat else None
+    parts = [p for part in getattr(geometry, "geoms", []) if (p := _flatten(part, single, multi)) is not None]
+    flat = [g for p in parts for g in (p.geoms if isinstance(p, multi) else [p])]
+    return multi(flat) if flat else None
 
 
 def _unit_square(geometry: BaseGeometry) -> Polygon | None:

@@ -54,6 +54,26 @@ jobs:
           curl -sS -o live.pmtiles "$TILES/$file"
           pip install -q -r pipeline/requirements.txt
           python pipeline/check_tiles.py live.pmtiles
+      - name: Overlays manifest, Range, CORS and magic
+        run: |
+          set -euo pipefail
+          curl -sS -D overlays-headers.txt -o overlays.json "$TILES/overlays.json"
+          head -1 overlays-headers.txt
+          grep -qi '^HTTP/.* 200' overlays-headers.txt
+          file=$(python3 -c "import json; print(json.load(open('overlays.json'))['tiles']['file'])")
+          python3 -c "import json; m=json.load(open('overlays.json')); print('overlays version', m['version'], 'layers', sorted(m['layers']))"
+          curl -sS -D overlays-range.txt -o overlays-range.bin -H "Origin: $ORIGIN" -H "Range: bytes=0-16383" "$TILES/$file"
+          grep -qi '^HTTP/.* 206' overlays-range.txt
+          grep -qi "^access-control-allow-origin: \($ORIGIN\|\*\)" overlays-range.txt
+          head -c 7 overlays-range.bin | grep -q PMTiles
+          echo "overlays range + CORS + magic OK"
+      - name: Live overlays pass their plausibility gate
+        run: |
+          set -euo pipefail
+          file=$(python3 -c "import json; print(json.load(open('overlays.json'))['tiles']['file'])")
+          curl -sS -o live-overlays.pmtiles "$TILES/$file"
+          pip install -q -r pipeline/requirements.txt
+          python pipeline/check_overlays.py live-overlays.pmtiles
       - name: CORS preflight
         run: |
           file=$(python3 -c "import json; print(json.load(open('manifest.json'))['tiles']['file'])")

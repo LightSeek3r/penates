@@ -37,8 +37,9 @@ Outputs in `--out`:
   `indicators`: seismic join methods and zone histogram, BPE equipments kept/skipped per type, distance
   quantiles per type, indicator spot checks.
 
-No output or log contains per-sale or per-equipment data. The cleaned sales exist only inside the in-memory DuckDB
-connection (spill files, if any, go to `data/raw/duckdb-tmp/`).
+No output or log of `settling.build` contains per-sale or per-equipment data (the places archive below is built apart,
+on purpose, and has its own rules). The cleaned sales exist only inside the in-memory DuckDB connection (spill files,
+if any, go to `data/raw/duckdb-tmp/`).
 
 ## Sources
 
@@ -156,6 +157,103 @@ differ by up to 1 unit. `# deliberate:` this is invisible at that size and avoid
 Communes use 4 units (0.5 px) at z4 and z5. A polygon that snapping erases (smaller than one unit) is
 replaced by a 1-unit square at its inner point, in the one tile that contains that point, so every
 commune exists at every zoom (the plausibility gate checks z4 against z8).
+
+The tiler also writes points and lines (the overlays archive): points are clipped to the tile and its buffer, lines
+are clipped the same way and simplified per zoom by the same tolerances (`simplify_units`), and a feature can carry its
+own `minzoom`, so it is only in the tiles of that zoom and above. A line that snapping collapses to a point is dropped.
+A point never moves except onto the integer grid, and two points can share a unit.
+
+## Overlays archive (`settling/overlays`)
+
+`overlays.pmtiles` holds what the map draws on top of the colour theme, built apart from `communes.pmtiles` with its
+own manifest (`overlays.json`) and workflow (`build-overlays.yml`), so a refresh of the places or of the zoning never
+needs the DVF build. It never writes `communes.pmtiles` or `manifest.json`.
+
+- Layer `places` (z5-12, points): one dot per kind and exact position. Properties: `k` kind id (the ids, families, BPE
+  codes and first zoom of each kind are in `settling/overlays/kinds.json`, the contract with the app), `n` name (named
+  kinds only, title case, at most 60 characters), `c` rows of the kind at that position (only when 2 or more), `a` = 1
+  when the position is approximate (`QUALITE_XY = M`). A dot is in the tiles from its kind's `minzoom`.
+- Layer `seismic` (z3-10, lines): `z` = 2..5. For each zone level present in the data, the boundary of the union of
+  the communes in that zone or above, minus the stretches that follow the outline of the zoned communes (coast, border).
+  That is the commune boundaries where the zone rises, not the national outline: it is cut away with a negative buffer
+  of the union of all zoned communes in Lambert-93 (30 m), so lines stop 30 m short of the coast and no exact vertex
+  match is needed. A zone that jumps two levels has a line at each level. Lines are cut into parts of about 25 km, since
+  a tile feature is copied into every tile its bounding box touches, and simplified hard at low zooms.
+- Layer `risk` (z3-10, lines): `r` = the overlay id (`flood`, `clay`, `radon`, `cavities`) and `z` = the level, an
+  integer: the line marks where the class rises to at least `z`, exactly like the seismic lines. The levels are in one
+  table, `RISKS` in `settling/overlays/risk_lines.py`, which mirrors `RISK_LINES` in `app/src/domain/overlays.ts` (a
+  pytest reads that file and compares ids, properties and levels): flood `fl` 1, 2, 3; clay `cl` 1, 2, 3; radon `rn`
+  2, 3 (class 1 is "low potential" and covers most of the Massif central and Brittany); cavities `cv` 1, 5, 25 (counts).
+  The geometry is the Admin Express boundaries, the values are read from a communes archive (below). Same method and
+  simplification as `seismic` (`settling/overlays/isolines.py` is the one function behind both). A level gets lines
+  when some commune has a value from that level up to the next one, so a level that would repeat the line of the next
+  level is left out (cavities: if no commune has between 1 and 4 cavities, there is no level 1).
+
+The risk lines are cut from commune classes, not from the Géorisques files: they come from the `communes` layer of a
+`communes.pmtiles` (properties `fl`, `cl`, `rn`, `cv`; `settling.build` computes them). The reader
+(`settling/overlays/commune_classes.py`) decodes the lowest zoom of that layer (z4: the tiler writes every commune at
+every zoom, checked on `national-p2`, 34,788 communes at z4 and at z5, 6, 7, 8 and 10 alike), keys communes by their
+`code` (Paris, Lyon and Marseille are their 45 municipal arrondissements in both the tiles and the boundaries, so the
+join is by code with no special case), merges a commune cut by a tile border (identical values, else an error) and turns
+a whole number the tile stored as a float into an integer.
+
+Honesty rule: a commune without the property has no value and is never read as class 0. Its ground is unknown, so
+every stretch of boundary that touches it is dropped, the way the coast is: the "known" ground is the union of the
+communes that have a value for that property, shrunk by 30 m, and only the parts of the lines inside it are kept. A
+line therefore never implies "lower class" across ground nobody measured, and it ends 30 m short of an unknown commune.
+Known gaps in the classes: `cv` is absent for the Lyon arrondissements and for the departments Géorisques does not
+publish (75, 78, 91 to 95), `cl` for Paris. `overlays-report.json` lists, per overlay id, how many communes of the
+boundaries have no value (with their departments and 20 codes) and how many communes of the archive have no boundary.
+
+```sh
+pipeline/.venv/Scripts/python -m settling.overlays --out data/build/overlays-national --communes-file communes.pmtiles
+pipeline/.venv/Scripts/python -m settling.overlays --dep 69 23 --out data/build/slice-p3 --bpe-file data/raw/bpe/BPE25.parquet --communes-file data/build/slice-p3/communes.pmtiles
+pipeline/.venv/Scripts/python pipeline/check_overlays.py data/build/overlays-national/overlays.pmtiles   # --slice for a department
+```
+
+Options: `--dep` (department codes; the isolines of a slice leave out the border with the next department, which is
+outline there), `--raw DIR`, `--bpe-file PATH`, `--seismic-file PATH` (CSV `code_insee,code_zone`), `--communes-file PATH`
+(a local `communes.pmtiles`) or `--communes-url URL` (downloaded to `raw/communes/` with the retrying, resuming
+downloader; the cache name comes from the URL; one or the other), `--only places|seismic|risk` (repeatable; the archive
+then holds those layers only), `--workers N`. Without `--communes-file` or `--communes-url` the `risk` layer is skipped
+with a log line and places and seismic still build; `--only risk` without one stops with a message. Outputs in `--out`:
+`overlays.pmtiles`, `overlays.json` (`version`, `sources` with sha256 and editions of the BPE, the seismic zoning,
+ADMIN EXPRESS and the communes archive (file or URL, bytes, sha256, version, zoom read), `tiles` file/bytes/sha256,
+`layers.places.kinds` dots per kind and `rows_skipped`, `layers.seismic.lines` and `length_km` per zone,
+`layers.risk` = `lines` and `length_km` per overlay id and level, and `source` = `communes_version` (the archive's
+metadata, else the `manifest.json` next to it), `sha256`, `bytes`) and `overlays-report.json` (rows, dots, shared
+positions, approximate dots, named dots per kind, skip reasons, the risk counts above, tile sizes per zoom, timings).
+The workflow downloads the file named by `tiles.file` in the live `manifest.json`, checks its size and sha256 against
+that manifest, and passes it with `--communes-file`; it then publishes `v<version>/overlays.pmtiles` (immutable) and
+`overlays.json` (5 minutes), rewriting `tiles.file` to the versioned path as Build data does.
+
+Privacy rules, applied in `places.py` and checked again by the gate:
+
+- rows in partial diffusion (`STATUT_DIFFUSION = P`) are skipped (the file gives them no coordinates anyway);
+- a name is kept only for the kinds marked `named` in `kinds.json` (public institutions and public-facing venues:
+  hospitals, schools, universities, post offices, stations, pools, cinemas, libraries), never for GPs, dentists,
+  pharmacies, crèches, bakeries or supermarkets, whose name is often a person's. The BPE cannot tell a public pool from a
+  club's, so a pool can carry the club's name;
+- no address, SIRET, capacity or other column reaches the tiles or the reports; no per-person name exists in them;
+- rows of one kind at the same coordinates collapse into one dot with a count (59,495 GP rows are 30,019 dots).
+
+Rows are kept when `EPSG = 2154` and the Lambert-93 position is inside the metropolitan extent (the rule of
+`proximity.classify_position`, shared with the distances); `QUALITE_XY = M` is kept and flagged `a`. Names are
+normalised in `names.py`: title case, French small words (de, du, des, la, le, les, et, sur, sous, en, au, aux and
+d', l' after the first word) in lower case, a short fixed list of accents restored (école, collège, lycée,
+bibliothèque, médiathèque, cinéma, hôpital, université, ...), a short list of abbreviations kept in capitals (CHU, LPO,
+BP, UFR, ...), a cut at 60 characters on a word with an ellipsis. Rows at one position with different names show the
+most frequent one.
+
+National build of 2026-11-13 (BPE page release 2026-11-02): 248,362 dots from 303,089 rows; 16.1 MB archive, 15,637
+tiles; the largest tile is z10 over central Paris, 195 KB gzipped (seismic lines: 7 KB). Seismic isolines: zone 2 11
+lines / 3,777 km, zone 3 8 / 3,660 km, zone 4 6 / 2,046 km. `check_overlays.py` fails on a kind missing or outside its
+national range (-15% / +25% around these counts), an unknown kind id, a name on an unnamed kind or over 60 characters,
+a dot outside metropolitan France, a dot below its kind's `minzoom`, a seismic `z` outside 2..5, no line for the
+zones 2, 3 and 4, a risk feature that is not a line, has properties other than `r` and `z`, an `r` outside the table or
+a `z` that is not a level of its `r`, in the national mode a missing `risk` layer or an overlay id with no line at its
+lowest level (flood, clay, radon, cavities: the gate names the id and the communes property to check), a tile over
+400 KB gzipped, or an unreadable file. `--slice` skips the national ranges and the required layers.
 
 ## Known limits and shortcuts
 

@@ -1,0 +1,22 @@
+{
+  "_comment": "Contract between the pipeline (producer) and the app (app/src/domain/overlays.ts). The tile property `k` of the `places` layer is one of these ids. `bpe` lists INSEE BPE 2025 TYPEQU codes (verified against TYPEQU_2025.csv). `minzoom` is the lowest zoom at which the dot is in the tiles. `named` kinds keep the establishment name (hospitals, schools, universities, stations, post offices, pools, cinemas, libraries; a pool can be a private club's); the others never carry a name, because they are private practices and shops whose name is often a person's.",
+  "places": [
+    { "id": "hos", "family": "health", "bpe": ["D101"], "minzoom": 6, "named": true },
+    { "id": "gp", "family": "health", "bpe": ["D265"], "minzoom": 10, "named": false },
+    { "id": "pha", "family": "health", "bpe": ["D307"], "minzoom": 10, "named": false },
+    { "id": "den", "family": "health", "bpe": ["D277"], "minzoom": 10, "named": false },
+    { "id": "cre", "family": "education", "bpe": ["D502", "D509"], "minzoom": 10, "named": false },
+    { "id": "mat", "family": "education", "bpe": ["C107"], "minzoom": 10, "named": true },
+    { "id": "pri", "family": "education", "bpe": ["C108", "C109"], "minzoom": 10, "named": true },
+    { "id": "col", "family": "education", "bpe": ["C201"], "minzoom": 8, "named": true },
+    { "id": "lyc", "family": "education", "bpe": ["C301", "C302", "C303", "C304", "C305"], "minzoom": 8, "named": true },
+    { "id": "uni", "family": "education", "bpe": ["C501", "C502", "C503", "C504", "C505"], "minzoom": 7, "named": true },
+    { "id": "sup", "family": "daily", "bpe": ["B104", "B105"], "minzoom": 9, "named": false },
+    { "id": "bak", "family": "daily", "bpe": ["B207"], "minzoom": 10, "named": false },
+    { "id": "pos", "family": "daily", "bpe": ["A206", "A207", "A208"], "minzoom": 10, "named": true },
+    { "id": "sta", "family": "daily", "bpe": ["E107", "E108", "E109"], "minzoom": 7, "named": true },
+    { "id": "pool", "family": "leisure", "bpe": ["F101"], "minzoom": 8, "named": true },
+    { "id": "cin", "family": "leisure", "bpe": ["F303"], "minzoom": 8, "named": true },
+    { "id": "lib", "family": "leisure", "bpe": ["F307"], "minzoom": 9, "named": true }
+  ]
+}

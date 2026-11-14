@@ -176,6 +176,13 @@ def fetch_bpe(session: requests.Session, raw_dir: Path) -> Path:
     return dest
 
 
+def fetch_communes_archive(session: requests.Session, raw_dir: Path, url: str) -> Path:
+    """A communes.pmtiles by URL, cached under a name derived from the URL (the live files are versioned paths)."""
+    dest = raw_dir / "communes" / f"communes-{hashlib.sha1(url.encode()).hexdigest()[:12]}.pmtiles"
+    download(session, url, dest, expected_size=None, override_flag="--communes-file")
+    return dest
+
+
 def resolve_bpe_release(session: requests.Session) -> str | None:
     """ISO date of the current BPE file release, scraped from the page; None if the page changed."""
     response = session.get(BPE_PAGE, timeout=TIMEOUT_S)

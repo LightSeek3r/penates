@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import statistics
+import time
 from collections import defaultdict
+from collections.abc import Iterator
+from contextlib import contextmanager
+from pathlib import Path
 
 from pmtiles.tile import tileid_to_zxy
 
@@ -14,6 +20,8 @@ PLM_PREFIXES = {"paris": "751", "lyon": "6938", "marseille": "132"}
 CHEAP_DEPARTMENT = "23"
 CHEAP_THRESHOLD = 1500
 LARGEST_N = 10
+
+log = logging.getLogger("settling")
 
 
 def area_rows(results: list[Result]) -> list[list]:
@@ -85,3 +93,15 @@ def indicator_spot_checks(communes: list[Result], indicators: dict[str, dict[str
         "known": [{"code": c, "name": names[c]} | indicators[c] for c in SPOT_COMMUNES if c in indicators],
         "farthest_from_hospital": [{"code": c, "name": names[c]} | indicators[c] for c in farthest],
     }
+
+
+@contextmanager
+def timed(name: str, timings: dict[str, float]) -> Iterator[None]:
+    log.info("step %s", name)
+    started = time.perf_counter()
+    yield
+    timings[name] = round(time.perf_counter() - started, 1)
+
+
+def write_json(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, indent=1, ensure_ascii=False, default=str), encoding="utf-8")
