@@ -32,6 +32,8 @@ jobs:
       - run: pnpm e2e
         env:
           E2E_BASE_URL: ${{ inputs.url }}
+          # Tests of indicators and overlays read the live tile host to know what the data carries, and skip without it.
+          E2E_DATA_BASE: https://settling-tiles.unit42.fr
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
