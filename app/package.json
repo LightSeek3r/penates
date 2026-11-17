@@ -15,12 +15,12 @@
   },
   "dependencies": {
     "@fontsource-variable/noto-sans": "^5.3.0",
-    "i18next": "^26.7.1",
-    "maplibre-gl": "^6.16.0",
+    "i18next": "^26.7.2",
+    "maplibre-gl": "^6.18.0",
     "pmtiles": "^4.5.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-i18next": "^17.1.12",
+    "react-i18next": "^17.1.13",
     "web-vitals": "^6.2.3",
     "workbox-cacheable-response": "^7.4.1",
     "workbox-core": "^7.4.1",
@@ -30,26 +30,26 @@
     "workbox-routing": "^7.4.1",
     "workbox-strategies": "^7.4.1",
     "workbox-window": "^7.4.1",
-    "zustand": "^5.0.16"
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261104.1",
-    "@maplibre/maplibre-gl-style-spec": "26.5.1",
-    "@playwright/test": "^1.64.1",
+    "@cloudflare/workers-types": "^5.20261114.1",
+    "@maplibre/maplibre-gl-style-spec": "26.8.0",
+    "@playwright/test": "^1.65.1",
     "@types/markdown-it": "^14.2.0",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vite-pwa/assets-generator": "^2.0.0",
-    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-react": "^6.3.0",
     "markdown-it": "^15.0.3",
-    "oxlint": "^1.89.0",
+    "oxlint": "^1.93.0",
     "typescript": "~7.0.2",
-    "vite": "^8.3.5",
+    "vite": "^8.3.8",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.1.0",
     "workbox-build": "^7.4.1",
-    "wrangler": "^4.158.0"
+    "wrangler": "^4.162.0"
   },
   "packageManager": "pnpm@10.34.7"
 }
