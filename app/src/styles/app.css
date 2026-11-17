@@ -590,6 +590,11 @@ ol {
   font-size: var(--text-sm);
 }
 
+.dialog .dialog__about {
+  color: var(--text-dim);
+  font-size: var(--text-xs);
+}
+
 .dialog__head {
   display: flex;
   justify-content: space-between;

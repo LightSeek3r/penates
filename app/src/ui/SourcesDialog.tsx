@@ -51,6 +51,12 @@ export function SourcesDialog() {
       </ul>
       <PwaSection />
       <PrivacySwitch />
+      <p className="dialog__about">
+        Pénates v{__APP_VERSION__} ·{' '}
+        <a href="https://github.com/LightSeek3r/penates" target="_blank" rel="noopener noreferrer">
+          GitHub
+        </a>
+      </p>
     </dialog>
   )
 }

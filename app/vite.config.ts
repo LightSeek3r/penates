@@ -6,11 +6,14 @@ import { defineConfig } from 'vitest/config'
 import { securityHeaders } from './vite/headers.ts'
 import { webManifest } from './vite/manifest.ts'
 import { englishManifestPlugin, seoPlugin } from './vite/seo.ts'
+import pkg from './package.json' with { type: 'json' }
 
 const dataBase = process.env.VITE_DATA_BASE
 const here = fileURLToPath(new URL('.', import.meta.url))
 
 export default defineConfig({
+  // Shown at the bottom of the Sources and limits dialog.
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
     react(),
     seoPlugin(dataBase),
