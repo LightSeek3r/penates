@@ -1,0 +1,12 @@
+Pénates includes and depends on third-party material.
+
+The code is MIT-licensed (see LICENSE). The data is NOT: each source keeps its own licence, listed with the
+credits to display in docs/data-licences.md. In short:
+
+  Property sales (DVF), boundaries, facilities, hazards, climate, fibre, crime, rent and tax figures
+  come from French public bodies, mostly under the Licence Ouverte / Open Licence v2.0.
+  Basemap data © OpenStreetMap contributors (ODbL), served by OpenFreeMap.
+
+Typeface: Noto Sans Variable (SIL Open Font License 1.1), bundled through @fontsource-variable/noto-sans.
+
+Libraries are listed in app/package.json and pipeline/requirements.txt and keep their own licences.
