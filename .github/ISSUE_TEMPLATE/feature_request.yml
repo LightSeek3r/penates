@@ -1,0 +1,16 @@
+name: Feature request
+description: An idea for Pénates
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to see?
+      description: The question you are trying to answer matters more than the feature you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Is there an open dataset for it?
+      description: A link, and its licence if you know it. New layers need a documented open source.

@@ -1,0 +1,31 @@
+name: Data problem
+description: A figure that looks wrong, or a source that could be added
+labels: [data]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The method and its limits are in [docs/methodology.md](https://github.com/LightSeek3r/penates/blob/main/docs/methodology.md).
+        A figure that follows the documented rules, even a surprising one, is not a bug: say what you think the rules miss.
+  - type: input
+    id: commune
+    attributes:
+      label: Commune
+      description: Name or INSEE code.
+      placeholder: Rennes (35238)
+    validations:
+      required: true
+  - type: input
+    id: indicator
+    attributes:
+      label: Indicator
+      placeholder: Median price per m², altitude, fibre...
+    validations:
+      required: true
+  - type: textarea
+    id: shown
+    attributes:
+      label: What the map shows, and what you expected
+      description: With a source (a link, a document) if you have one.
+    validations:
+      required: true

@@ -1,0 +1,24 @@
+name: Translation problem
+description: A wrong, clumsy or truncated French or English text
+labels: [translation]
+body:
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language
+      options: [Français, English]
+    validations:
+      required: true
+  - type: textarea
+    id: shown
+    attributes:
+      label: Text as shown
+      description: Where it appears (a panel, a legend, a page) and what it says.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What it should say
+    validations:
+      required: true
