@@ -25,6 +25,14 @@ First public release of the source. The map runs at <https://penates.unit42.fr>.
   request templates, Dependabot, and a release workflow driven by this changelog. The CI actions are
   on v7.
 
+### Security
+
+- Dependencies updated within their ranges (MapLibre GL 6.19, vite 8.3.8, wrangler 4.164, Playwright 1.65,
+  zustand 5.1...), the style-spec pin follows MapLibre, and `glob` is overridden to ^14.0.6 inside
+  `workbox-build`, which clears the build-time `glob` and `minimatch` advisories. The one remaining
+  `pnpm audit` finding is a ReDoS in vite's `picomatch`, which has no patched release yet; it only
+  affects the dev and build tooling, never the shipped app.
+
 ## [0.7.0] - 2026-11-14
 
 ### Added
