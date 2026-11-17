@@ -25,7 +25,7 @@ export interface SeoContent {
   pages: Record<PageId, PageCopy>
 }
 
-export const SITE = 'https://settling.unit42.fr'
+export const SITE = 'https://penates.unit42.fr'
 export const LANGS: readonly Lang[] = ['fr', 'en']
 
 export const landingPath = (lang: Lang) => (lang === 'fr' ? '/' : '/en/')
@@ -58,7 +58,7 @@ export function headTags({ lang, title, description, path, alternates, locale, j
     `<link rel="alternate" hreflang="en" href="${absolute(alternates.en)}" />`,
     `<link rel="alternate" hreflang="x-default" href="${absolute(alternates.fr)}" />`,
     `<meta property="og:type" content="website" />`,
-    `<meta property="og:site_name" content="settling-map" />`,
+    `<meta property="og:site_name" content="Pénates" />`,
     `<meta property="og:title" content="${escapeHtml(title)}" />`,
     `<meta property="og:description" content="${escapeHtml(description)}" />`,
     `<meta property="og:url" content="${absolute(path)}" />`,
@@ -81,12 +81,12 @@ export function landingJsonLd(lang: Lang, content: SeoContent) {
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      { '@type': 'WebSite', '@id': `${SITE}/#website`, url: `${SITE}/`, name: 'settling-map', inLanguage: ['fr', 'en'] },
+      { '@type': 'WebSite', '@id': `${SITE}/#website`, url: `${SITE}/`, name: 'Pénates', inLanguage: ['fr', 'en'] },
       {
         '@type': 'WebApplication',
         '@id': `${absolute(landingPath(lang))}#app`,
         url: absolute(landingPath(lang)),
-        name: 'settling-map',
+        name: 'Pénates',
         description: content.description,
         inLanguage: lang,
         applicationCategory: 'UtilitiesApplication',
@@ -172,7 +172,7 @@ export function docPageHtml({ lang, content, page, bodyHtml, pages, alternatePat
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="${landingPath(lang)}">settling-map</a>
+      <a class="brand" href="${landingPath(lang)}">Pénates</a>
       <nav aria-label="${escapeHtml(content.navTitle)}">${nav}</nav>
       <a class="lang" href="${alternatePath}" hreflang="${lang === 'fr' ? 'en' : 'fr'}" lang="${lang === 'fr' ? 'en' : 'fr'}">${escapeHtml(content.languageSwitch)}</a>
     </header>

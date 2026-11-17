@@ -9,7 +9,7 @@ related_targets: []
 
 ## Scope and mode
 
-Operate. Explore is the first screen of settling-map: a working map tool, mobile-first and desktop equally, bilingual FR/EN, WCAG AA, no account or tracking. Search mode (constraints, affordability) is a later surface on the same constraint engine.
+Operate. Explore is the first screen of Pénates: a working map tool, mobile-first and desktop equally, bilingual FR/EN, WCAG AA, no account or tracking. Search mode (constraints, affordability) is a later surface on the same constraint engine.
 
 ## Task and constraints
 

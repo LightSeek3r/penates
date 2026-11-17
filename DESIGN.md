@@ -1,5 +1,5 @@
 ---
-name: settling-map
+name: Pénates
 description: A France map printed as an IGN sheet in midnight enamel, where price is a luminous blue ladder and doubt is drawn as texture.
 colors:
   ground: "#0B1B3A"
@@ -91,13 +91,13 @@ components:
     height: "40px"
 ---
 
-# Design System: settling-map
+# Design System: Pénates
 
 ## Overview
 
 **Creative North Star: "The Midnight Sheet"**
 
-settling-map is one national map sheet in the manner of an IGN Top 25 map, printed in midnight-blue enamel. Everything the visitor reads sits on a single cold ground (#0B1B3A): the map, the panels, the margin that carries the coordinates. Price is the one thing allowed to glow, so the whole country reads as a ladder of blue from deep cobalt to porcelain white. The interface is a working tool first (Operate mode): standard controls, tight hierarchy, nothing decorative that does not carry data.
+Pénates is one national map sheet in the manner of an IGN Top 25 map, printed in midnight-blue enamel. Everything the visitor reads sits on a single cold ground (#0B1B3A): the map, the panels, the margin that carries the coordinates. Price is the one thing allowed to glow, so the whole country reads as a ladder of blue from deep cobalt to porcelain white. The interface is a working tool first (Operate mode): standard controls, tight hierarchy, nothing decorative that does not carry data.
 
 The system's second idea is honesty drawn as material. A figure that rests on few sales, a commune with no sale at all, and a region the source does not cover each get their own texture instead of a colour, so uncertainty is never mistaken for a low price. The sheet furniture (neatline, Lambert-93 kilometre ticks, alternating scale bar) is there to make the map read as a real, measured document and to anchor the data to the ground.
 

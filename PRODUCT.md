@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-React + TypeScript + Vite, MapLibre GL for the map, PMTiles for vector tiles. Confirmed by the user ("sure, if there's nothing better"). Static app on Cloudflare Pages; tile and data files on Cloudflare R2; Supabase only for optional saved shortlists. Intended domain: unit42.fr (settling.unit42.fr for the app).
+React + TypeScript + Vite, MapLibre GL for the map, PMTiles for vector tiles. Confirmed by the user ("sure, if there's nothing better"). Static app on Cloudflare Pages; tile and data files on Cloudflare R2; Supabase only for optional saved shortlists. Intended domain: unit42.fr (penates.unit42.fr for the app).
 
 ## Users
 
@@ -37,11 +37,11 @@ Two modes on one shared constraint engine: Explore (toggle layers and read the m
 - On-demand per-address sun shading is planned, subject to LiDAR HD coverage (unverified).
 - Data limits that must stay visible: DVF excludes Alsace-Moselle (57, 67, 68) and Mayotte; DVF is aggregated only (no per-sale pages, not search-indexable, no re-identification); small communes are hidden in crime data; risk layers are indicative and do not replace the legal ERRIAL; rents are asking rents.
 - Required attributions are tracked in docs/data-licences.md.
-- Undecided: grid below commune/IRIS (200 m), overseas territories, public launch date, whether the repo stays private until launch.
+- Undecided: grid below commune/IRIS (200 m), overseas territories, public launch date.
 
 ## Brand Commitments
 
-Name: settling-map. No logo, voice or visual identity decided; none binding.
+Name: Pénates. No logo, voice or visual identity decided; none binding.
 
 ## Evidence on Hand
 

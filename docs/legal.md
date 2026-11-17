@@ -1,10 +1,10 @@
 # Legal notice and privacy
 
-Last updated: November 13, 2026. This covers settling-map (settling.unit42.fr). The legal notice of the main domain is at [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
+Last updated: November 13, 2026. This covers Pénates (penates.unit42.fr). The legal notice of the main domain is at [unit42.fr/legal-notice](https://unit42.fr/legal-notice).
 
 ## Publisher
 
-settling-map is published by **Nicolas Opal**, as an individual. Publication director: Nicolas Opal.
+Pénates is published by **Nicolas Opal**, as an individual. Publication director: Nicolas Opal.
 
 Contact: [n.opal@unit42.fr](mailto:n.opal@unit42.fr)
 
@@ -18,11 +18,11 @@ The data used, its licences and the credits to display are detailed on the [Sour
 
 ## Intellectual property
 
-The settling-map code is published under the MIT licence. The data remains under its original licences (mostly Licence Ouverte v2.0, and ODbL for the OpenStreetMap basemap). Names and trademarks mentioned belong to their owners.
+The Pénates code is published under the MIT licence. The data remains under its original licences (mostly Licence Ouverte v2.0, and ODbL for the OpenStreetMap basemap). Names and trademarks mentioned belong to their owners.
 
 ## Personal data
 
-settling-map has no user accounts and no cookies. It counts anonymously how the site is used, to learn what is used and what breaks:
+Pénates has no user accounts and no cookies. It counts anonymously how the site is used, to learn what is used and what breaks:
 
 - **What is counted**: page views, language, device type (phone or computer), the site a visit came from (domain name only, never the full address), country (worked out by Cloudflare, never the IP address), the name of the colour theme and of the filter used (never the values chosen), the number of communes selected and of searches (never the text typed), app installs, maps saved offline, map loading errors, and perceived loading speed (good, average or poor).
 - **How**: each event adds one to the day's total in a Cloudflare D1 database. There is no identifier, no cookie, no IP address stored and no row per visitor; these totals cannot be used to recognise a person.
@@ -38,7 +38,7 @@ Using the map also sends technical data to the following services, as with any w
 
 What follows the # sign in the address (map position, selected commune, theme, overlays, filters) stays in your browser: it is not sent to servers. It is included in links you choose to share.
 
-**Legal basis**: legitimate interest in providing and securing the site (GDPR art. 6(1)(f)). **Retention**: according to the retention policies of Cloudflare, OpenFreeMap and the Geo API; settling-map keeps nothing itself.
+**Legal basis**: legitimate interest in providing and securing the site (GDPR art. 6(1)(f)). **Retention**: according to the retention policies of Cloudflare, OpenFreeMap and the Geo API; Pénates keeps nothing itself.
 
 The privacy policy of the main domain, which covers the other pages of unit42.fr, is at [unit42.fr/privacy](https://unit42.fr/privacy).
 
@@ -48,4 +48,4 @@ The site sets no cookies. The only things it keeps in your browser by itself are
 
 ## Your rights
 
-You can ask for access to, correction or erasure of data about you, object to processing or ask for it to be restricted, by writing to [n.opal@unit42.fr](mailto:n.opal@unit42.fr). Because settling-map keeps no personal data itself, most such requests concern the services named above. If you think your rights are not respected, you can complain to the CNIL ([cnil.fr](https://www.cnil.fr)) or to the authority of the EU country where you live.
+You can ask for access to, correction or erasure of data about you, object to processing or ask for it to be restricted, by writing to [n.opal@unit42.fr](mailto:n.opal@unit42.fr). Because Pénates keeps no personal data itself, most such requests concern the services named above. If you think your rights are not respected, you can complain to the CNIL ([cnil.fr](https://www.cnil.fr)) or to the authority of the EU country where you live.

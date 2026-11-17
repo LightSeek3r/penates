@@ -2,7 +2,7 @@ import type { Lang } from './seo-content.ts'
 
 const COPY = {
   fr: {
-    name: "settling-map : prix de l'immobilier en France",
+    name: "Pénates : prix de l'immobilier en France",
     description: "Prix de vente médian au m² par commune en France, avec la fiabilité de chaque chiffre.",
     start_url: '/',
     lang: 'fr',
@@ -12,7 +12,7 @@ const COPY = {
     shortcutUrl: '/en/',
   },
   en: {
-    name: 'settling-map: French property prices',
+    name: 'Pénates: French property prices',
     description: 'Median sale price per m² by commune in France, with how reliable each figure is.',
     start_url: '/en/',
     lang: 'en',
@@ -28,7 +28,7 @@ export function webManifest(lang: Lang) {
   return {
     id: copy.start_url,
     name: copy.name,
-    short_name: 'settling-map',
+    short_name: 'Pénates',
     description: copy.description,
     lang: copy.lang,
     dir: 'ltr',

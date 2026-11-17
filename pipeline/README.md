@@ -1,4 +1,4 @@
-# settling-map pipeline
+# Pénates data pipeline
 
 Builds `communes.pmtiles`: median property price per m² (DVF) by commune and by department, plus, per
 commune, the seismic zone (Géorisques) and straight-line distances to six kinds of amenities (INSEE BPE),

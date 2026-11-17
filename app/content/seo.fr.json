@@ -1,6 +1,6 @@
 {
   "locale": "fr_FR",
-  "title": "Prix de l'immobilier en France par commune · settling-map",
+  "title": "Prix de l'immobilier en France par commune · Pénates",
   "description": "Carte interactive gratuite : prix de vente médian au m² par commune en France et fiabilité de chaque chiffre, à partir des données ouvertes DVF.",
   "h1": "Prix de l'immobilier en France, et leur fiabilité",
   "intro": [
@@ -25,20 +25,20 @@
     "methodology": {
       "slug": "methodologie",
       "label": "Méthode",
-      "title": "Méthode : prix au m², risques, services, climat et coûts · settling-map",
-      "description": "Comment settling-map calcule le prix médian au m² par commune (DVF), et chaque indicateur affiché : risques, relief, climat, services, fibre, loyers, taxe foncière, délinquance enregistrée. Sources, seuils et limites."
+      "title": "Méthode : prix au m², risques, services, climat et coûts · Pénates",
+      "description": "Comment Pénates calcule le prix médian au m² par commune (DVF), et chaque indicateur affiché : risques, relief, climat, services, fibre, loyers, taxe foncière, délinquance enregistrée. Sources, seuils et limites."
     },
     "sources": {
       "slug": "sources",
       "label": "Sources et licences",
-      "title": "Sources de données et licences · settling-map",
-      "description": "Les jeux de données ouverts utilisés par settling-map, leurs licences et les mentions de crédit à respecter."
+      "title": "Sources de données et licences · Pénates",
+      "description": "Les jeux de données ouverts utilisés par Pénates, leurs licences et les mentions de crédit à respecter."
     },
     "legal": {
       "slug": "mentions-legales",
       "label": "Mentions légales",
-      "title": "Mentions légales et confidentialité · settling-map",
-      "description": "Éditeur, hébergeur et politique de confidentialité de settling-map."
+      "title": "Mentions légales et confidentialité · Pénates",
+      "description": "Éditeur, hébergeur et politique de confidentialité de Pénates."
     }
   }
 }

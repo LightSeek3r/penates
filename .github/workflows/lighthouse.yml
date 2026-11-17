@@ -8,7 +8,7 @@ on:
     inputs:
       site:
         description: Site to audit
-        default: https://settling.unit42.fr
+        default: https://penates.unit42.fr
 
 permissions:
   contents: read
@@ -22,7 +22,7 @@ jobs:
         page: ['/', '/en/', '/methodologie/']
         preset: [mobile, desktop]
     steps:
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       - name: Run Lighthouse
@@ -46,7 +46,7 @@ jobs:
             const bad = Object.entries(floor).filter(([k, min]) => s[k] < min);
             if (bad.length) { console.error("below floor:", JSON.stringify(bad)); process.exit(1); }
           '
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: lighthouse-${{ strategy.job-index }}

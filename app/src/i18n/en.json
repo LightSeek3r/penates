@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "settling-map",
+    "title": "Pénates",
     "tagline": "French property prices, and how reliable they are"
   },
   "search": {
@@ -177,7 +177,7 @@
   },
   "privacy": {
     "title": "Anonymous usage counts",
-    "explain": "settling-map counts, without identifying you, how often pages and features are used: totals per day, with no IP address, no cookie and no typed text. The Do Not Track signal is respected.",
+    "explain": "Pénates counts, without identifying you, how often pages and features are used: totals per day, with no IP address, no cookie and no typed text. The Do Not Track signal is respected.",
     "optOut": "Do not count my visits"
   },
   "groups": {

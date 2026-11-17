@@ -36,12 +36,12 @@ function head(lang: Lang) {
 describe('landing head', () => {
   it.each(['fr', 'en'] as const)('has a complete, self-consistent head in %s', (lang) => {
     const html = head(lang)
-    const canonical = lang === 'fr' ? 'https://settling.unit42.fr/' : 'https://settling.unit42.fr/en/'
+    const canonical = lang === 'fr' ? 'https://penates.unit42.fr/' : 'https://penates.unit42.fr/en/'
     expect(html).toContain(`<link rel="canonical" href="${canonical}" />`)
-    expect(html).toContain('hreflang="fr" href="https://settling.unit42.fr/"')
-    expect(html).toContain('hreflang="en" href="https://settling.unit42.fr/en/"')
-    expect(html).toContain('hreflang="x-default" href="https://settling.unit42.fr/"')
-    expect(html).toContain(`property="og:image" content="https://settling.unit42.fr/og-image-${lang}.png"`)
+    expect(html).toContain('hreflang="fr" href="https://penates.unit42.fr/"')
+    expect(html).toContain('hreflang="en" href="https://penates.unit42.fr/en/"')
+    expect(html).toContain('hreflang="x-default" href="https://penates.unit42.fr/"')
+    expect(html).toContain(`property="og:image" content="https://penates.unit42.fr/og-image-${lang}.png"`)
     expect(html).toContain('name="twitter:card" content="summary_large_image"')
     expect(html.match(/<title>/g)).toHaveLength(1)
   })
@@ -80,7 +80,7 @@ describe('documentation pages', () => {
   it('declare language, alternates and breadcrumbs', () => {
     const html = docPageHtml({ lang: 'fr', content: content.fr, page: 'methodology', bodyHtml: '<h1>x</h1>', pages: PAGES, alternatePath: '/en/methodology/', locale })
     expect(html).toContain('<html lang="fr">')
-    expect(html).toContain('hreflang="en" href="https://settling.unit42.fr/en/methodology/"')
+    expect(html).toContain('hreflang="en" href="https://penates.unit42.fr/en/methodology/"')
     expect(html).toContain('"@type":"BreadcrumbList"')
     expect(html).toContain('aria-current="page"')
   })
@@ -90,15 +90,15 @@ describe('sitemap and robots', () => {
   it('lists every page in both languages with alternates', () => {
     const xml = sitemapXml([{ fr: '/', en: '/en/' }, { fr: '/methodologie/', en: '/en/methodology/' }])
     expect(xml.match(/<url>/g)).toHaveLength(4)
-    expect(xml).toContain('<loc>https://settling.unit42.fr/en/methodology/</loc>')
-    expect(xml).toContain('hreflang="x-default" href="https://settling.unit42.fr/methodologie/"')
+    expect(xml).toContain('<loc>https://penates.unit42.fr/en/methodology/</loc>')
+    expect(xml).toContain('hreflang="x-default" href="https://penates.unit42.fr/methodologie/"')
   })
 
   it('allows crawling and points to the sitemap', () => {
     expect(robotsTxt()).toContain('Allow: /')
     expect(robotsTxt()).toContain('Disallow: /admin/')
     expect(robotsTxt()).toContain('Disallow: /api/')
-    expect(robotsTxt()).toContain('Sitemap: https://settling.unit42.fr/sitemap.xml')
+    expect(robotsTxt()).toContain('Sitemap: https://penates.unit42.fr/sitemap.xml')
   })
 })
 

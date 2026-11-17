@@ -105,7 +105,7 @@ describe('Cloudflare Access verification', () => {
     return `${head}.${body}.${bytesToB64Url(signature)}`
   }
 
-  const requestWith = (jwt: string | null) => new Request('https://settling.unit42.fr/api/admin/stats', { headers: jwt ? { 'Cf-Access-Jwt-Assertion': jwt } : {} })
+  const requestWith = (jwt: string | null) => new Request('https://penates.unit42.fr/api/admin/stats', { headers: jwt ? { 'Cf-Access-Jwt-Assertion': jwt } : {} })
   const good = { aud: [audience], iss: `https://${team}`, exp: Math.floor(Date.now() / 1000) + 600, email: 'owner@example.com' }
   const env = { ACCESS_TEAM_DOMAIN: team, ACCESS_AUD: audience }
 

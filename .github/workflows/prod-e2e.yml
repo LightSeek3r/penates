@@ -6,7 +6,7 @@ on:
     inputs:
       url:
         description: Site to test
-        default: https://settling.unit42.fr
+        default: https://penates.unit42.fr
 
 permissions:
   contents: read
@@ -18,11 +18,11 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           package_json_file: app/package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -34,7 +34,7 @@ jobs:
           E2E_BASE_URL: ${{ inputs.url }}
           # Tests of indicators and overlays read the live tile host to know what the data carries, and skip without it.
           E2E_DATA_BASE: https://settling-tiles.unit42.fr
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-traces

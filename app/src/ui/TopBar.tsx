@@ -27,7 +27,7 @@ export function TopBar() {
           {t('pwa.offlineBadge')}
         </p>
       )}
-      <nav className="topbar__actions" aria-label="settling-map">
+      <nav className="topbar__actions" aria-label="Pénates">
         <button type="button" className="button button--layers" aria-expanded={layersOpen} onClick={() => setLayersOpen(!layersOpen)}>
           {t('layers.title')}
         </button>

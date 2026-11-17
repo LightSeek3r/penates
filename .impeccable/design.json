@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-11-05T11:27:32+00:00",
-  "title": "Design System: settling-map",
+  "title": "Design System: Pénates",
   "extensions": {
     "colorMeta": {
       "ground": {
@@ -324,7 +324,7 @@
   ],
   "narrative": {
     "northStar": "The Midnight Sheet",
-    "overview": "**Creative North Star: \"The Midnight Sheet\"**\n\nsettling-map is one national map sheet in the manner of an IGN Top 25 map, printed in midnight-blue enamel. Everything the visitor reads sits on a single cold ground (#0B1B3A): the map, the panels, the margin that carries the coordinates. Price is the one thing allowed to glow, so the whole country reads as a ladder of blue from deep cobalt to porcelain white. The interface is a working tool first (Operate mode): standard controls, tight hierarchy, nothing decorative that does not carry data.\n\nThe system's second idea is honesty drawn as material. A figure that rests on few sales, a commune with no sale at all, and a region the source does not cover each get their own texture instead of a colour, so uncertainty is never mistaken for a low price. The sheet furniture (neatline, Lambert-93 kilometre ticks, alternating scale bar) is there to make the map read as a real, measured document and to anchor the data to the ground.\n\nIt refuses the listing-site look (banners, orange calls to action, agent cards), the dated government GIS look (dense grey toolbars), the flashy dataviz demo (neon on black, showy motion) and alarmist styling (red warnings on risks).",
+    "overview": "**Creative North Star: \"The Midnight Sheet\"**\n\nPénates is one national map sheet in the manner of an IGN Top 25 map, printed in midnight-blue enamel. Everything the visitor reads sits on a single cold ground (#0B1B3A): the map, the panels, the margin that carries the coordinates. Price is the one thing allowed to glow, so the whole country reads as a ladder of blue from deep cobalt to porcelain white. The interface is a working tool first (Operate mode): standard controls, tight hierarchy, nothing decorative that does not carry data.\n\nThe system's second idea is honesty drawn as material. A figure that rests on few sales, a commune with no sale at all, and a region the source does not cover each get their own texture instead of a colour, so uncertainty is never mistaken for a low price. The sheet furniture (neatline, Lambert-93 kilometre ticks, alternating scale bar) is there to make the map read as a real, measured document and to anchor the data to the ground.\n\nIt refuses the listing-site look (banners, orange calls to action, agent cards), the dated government GIS look (dense grey toolbars), the flashy dataviz demo (neon on black, showy motion) and alarmist styling (red warnings on risks).",
     "keyCharacteristics": [
       "One cold midnight ground; price is the only luminous element.",
       "Luminance-ordered single-hue ladder, safe without colour vision.",

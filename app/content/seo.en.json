@@ -1,6 +1,6 @@
 {
   "locale": "en_GB",
-  "title": "French property prices by commune · settling-map",
+  "title": "French property prices by commune · Pénates",
   "description": "Free interactive map of French property prices: median sale price per m² by commune and how reliable each figure is, built from open DVF data.",
   "h1": "French property prices, and how reliable they are",
   "intro": [
@@ -25,20 +25,20 @@
     "methodology": {
       "slug": "methodology",
       "label": "Method",
-      "title": "Method: price per m², risks, services, climate and costs · settling-map",
-      "description": "How settling-map computes the median price per m² by commune (DVF) and every indicator it shows: risks, relief, climate, services, fibre, rents, land tax, recorded crime. Sources, thresholds and limits."
+      "title": "Method: price per m², risks, services, climate and costs · Pénates",
+      "description": "How Pénates computes the median price per m² by commune (DVF) and every indicator it shows: risks, relief, climate, services, fibre, rents, land tax, recorded crime. Sources, thresholds and limits."
     },
     "sources": {
       "slug": "sources",
       "label": "Sources and licences",
-      "title": "Data sources and licences · settling-map",
-      "description": "The open datasets used by settling-map, their licences and the credits to display."
+      "title": "Data sources and licences · Pénates",
+      "description": "The open datasets used by Pénates, their licences and the credits to display."
     },
     "legal": {
       "slug": "legal",
       "label": "Legal notice",
-      "title": "Legal notice and privacy · settling-map",
-      "description": "Publisher, host and privacy policy of settling-map."
+      "title": "Legal notice and privacy · Pénates",
+      "description": "Publisher, host and privacy policy of Pénates."
     }
   }
 }

@@ -63,7 +63,7 @@ export async function fetchEdge(env: EdgeEnv, days: number, fetcher: typeof fetc
     const response = await fetcher('https://api.cloudflare.com/client/v4/graphql', {
       method: 'POST',
       headers: { authorization: `Bearer ${env.CF_ANALYTICS_TOKEN}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ query: QUERY, variables: { zone: env.CF_ZONE_ID, from, to: now.toISOString(), host: env.SITE_HOST ?? 'settling.unit42.fr' } }),
+      body: JSON.stringify({ query: QUERY, variables: { zone: env.CF_ZONE_ID, from, to: now.toISOString(), host: env.SITE_HOST ?? 'penates.unit42.fr' } }),
     })
     if (!response.ok) return { available: false, reason: `Cloudflare answered ${response.status}.` }
     const body = (await response.json()) as { data?: { viewer?: { zones?: Parameters<typeof summariseEdge>[0][] } }; errors?: { message: string }[] }

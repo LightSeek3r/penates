@@ -14,13 +14,13 @@ permissions:
 
 env:
   TILES: https://settling-tiles.unit42.fr
-  ORIGIN: https://settling.unit42.fr
+  ORIGIN: https://penates.unit42.fr
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Manifest
         run: |
           set -euo pipefail
@@ -82,7 +82,7 @@ jobs:
         run: |
           set -u
           for path in /admin/ /api/admin/stats; do
-            out=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "https://settling.unit42.fr$path")
+            out=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "https://penates.unit42.fr$path")
             echo "$path -> $out"
             case "$out" in
               302*cloudflareaccess.com*|403*) ;;
@@ -92,12 +92,12 @@ jobs:
       - name: Event endpoint accepts a counter and rejects a foreign origin
         run: |
           set -u
-          ok=$(curl -s -o /dev/null -w '%{http_code}' -X POST https://settling.unit42.fr/api/event -H 'content-type: application/json' -d '{"events":[]}')
-          bad=$(curl -s -o /dev/null -w '%{http_code}' -X POST https://settling.unit42.fr/api/event -H 'origin: https://evil.example' -H 'content-type: application/json' -d '{"events":[]}')
+          ok=$(curl -s -o /dev/null -w '%{http_code}' -X POST https://penates.unit42.fr/api/event -H 'content-type: application/json' -d '{"events":[]}')
+          bad=$(curl -s -o /dev/null -w '%{http_code}' -X POST https://penates.unit42.fr/api/event -H 'origin: https://evil.example' -H 'content-type: application/json' -d '{"events":[]}')
           echo "empty batch -> $ok, foreign origin -> $bad"
           [ "$ok" = 204 ] && [ "$bad" = 403 ]
       - name: App responds
         if: ${{ inputs.app_url != '' }}
         run: |
           curl -sS -D - -o app.html "${{ inputs.app_url }}" | head -1
-          grep -q 'settling-map' app.html
+          grep -q 'Pénates' app.html

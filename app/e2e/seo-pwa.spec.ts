@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mapReady } from './helpers'
 
-const SITE = 'https://settling.unit42.fr'
+const SITE = 'https://penates.unit42.fr'
 
 async function rawHtml(page: Page, path: string): Promise<string> {
   const response = await page.request.get(path)

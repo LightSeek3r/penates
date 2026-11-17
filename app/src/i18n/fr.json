@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "settling-map",
+    "title": "Pénates",
     "tagline": "Prix de l'immobilier en France, et leur fiabilité"
   },
   "search": {
@@ -177,7 +177,7 @@
   },
   "privacy": {
     "title": "Mesure d'usage anonyme",
-    "explain": "settling-map compte, sans vous identifier, combien de fois les pages et les fonctions sont utilisées : des totaux par jour, sans adresse IP, sans cookie et sans texte saisi. Le signal « Ne pas me suivre » est respecté.",
+    "explain": "Pénates compte, sans vous identifier, combien de fois les pages et les fonctions sont utilisées : des totaux par jour, sans adresse IP, sans cookie et sans texte saisi. Le signal « Ne pas me suivre » est respecté.",
     "optOut": "Ne pas compter mes visites"
   },
   "groups": {
