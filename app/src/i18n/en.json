@@ -101,6 +101,8 @@
   "listings": {
     "title": "See listings",
     "link": "{{name}} properties for sale on {{portal}} (new tab)",
+    "linkPrefill": "{{name}} search pre-filled on {{portal}}: you will need to run it (new tab)",
+    "prefill": "press search",
     "scope": {
       "mai": "Search limited to houses.",
       "app": "Search limited to flats."

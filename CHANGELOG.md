@@ -11,8 +11,10 @@ tagged retroactively from the development history.
 
 - The meaning and pronunciation of "Pénates" (/pe.nat/) in the empty details panel, in "Sources and
   limits" and on the SEO home page, in French and English.
-- "See listings" links in a commune's details to Bien'ici and Leboncoin searches for that commune,
-  limited to houses or flats when the price layer is filtered that way. The postal code is looked up
+- "See listings" links in a commune's details to Bien'ici, Leboncoin and Zimo (which gathers several
+  portals) searches for that commune, and to SeLoger with its search bar pre-filled with the commune
+  name (SeLoger's location ids are private, so the visitor presses search). Limited to houses or flats
+  when the price layer is filtered that way. The postal code is looked up
   on demand from geo.api.gouv.fr; the links are plain outbound links with no tracking.
 - On phones, where the details panel is hidden, a short gloss of the name replaces the tagline in the
   top bar.

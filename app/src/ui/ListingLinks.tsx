@@ -50,8 +50,14 @@ export function ListingLinks({ code, name }: { code: string; name: string }) {
       <ul className="listings__list">
         {links.map((link) => (
           <li key={link.portal}>
-            <a href={link.url} target="_blank" rel="noopener noreferrer" aria-label={t('listings.link', { portal: link.label, name })}>
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t(link.prefill ? 'listings.linkPrefill' : 'listings.link', { portal: link.label, name })}
+            >
               {link.label}
+              {link.prefill && <span aria-hidden="true"> ({t('listings.prefill')})</span>}
               <span aria-hidden="true"> ↗</span>
             </a>
           </li>

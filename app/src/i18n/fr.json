@@ -101,6 +101,8 @@
   "listings": {
     "title": "Voir les annonces",
     "link": "Annonces de vente à {{name}} sur {{portal}} (nouvel onglet)",
+    "linkPrefill": "Recherche {{name}} pré-remplie sur {{portal}} : il faudra la lancer (nouvel onglet)",
+    "prefill": "à lancer",
     "scope": {
       "mai": "Recherche limitée aux maisons.",
       "app": "Recherche limitée aux appartements."
