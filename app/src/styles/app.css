@@ -91,6 +91,7 @@ ol {
 }
 
 .brand__mark {
+  flex: none;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -652,8 +653,9 @@ ol {
     padding: var(--space-2);
   }
 
+  /* Content-sized basis: the actions wrap to their own row instead of squeezing the brand text and the mark. */
   .brand {
-    flex: 1;
+    flex: 1 1 auto;
   }
 
   .topbar__actions {
