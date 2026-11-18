@@ -7,6 +7,14 @@ tagged retroactively from the development history.
 
 ## [Unreleased]
 
+### Added
+
+- The meaning and pronunciation of "Pénates" (/pe.nat/) in the empty details panel, in "Sources and
+  limits" and on the SEO home page, in French and English.
+- "See listings" links in a commune's details to Bien'ici, Leboncoin and SeLoger searches for that
+  commune. The postal code is looked up on demand from geo.api.gouv.fr; the links are plain outbound
+  links with no tracking.
+
 ## [0.8.0] - 2026-11-17
 
 First public release of the source. The map runs at <https://penates.unit42.fr>.

@@ -1,7 +1,9 @@
 {
   "app": {
     "title": "Pénates",
-    "tagline": "French property prices, and how reliable they are"
+    "tagline": "French property prices, and how reliable they are",
+    "pronunciation": "/pe.nat/",
+    "meaning": "French plural noun, said “pay-NAHT”. The household gods of ancient Rome, protectors of the home; by extension, the home itself (“regagner ses pénates” means “to go back home”)."
   },
   "search": {
     "label": "Search for a commune",
@@ -94,6 +96,11 @@
     "noIndicators": "No other indicators at this level.",
     "doubt": "rough estimate",
     "row": "{{name}}: {{value}}"
+  },
+  "listings": {
+    "title": "See listings",
+    "link": "{{name}} properties for sale on {{portal}} (new tab)",
+    "note": "Third-party sites, independent of Pénates: these are asking prices, not the sale prices shown here."
   },
   "sources": {
     "short": "Sources",

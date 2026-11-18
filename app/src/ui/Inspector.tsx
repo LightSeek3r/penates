@@ -6,6 +6,8 @@ import { useAppStore } from '../state/appStore'
 import type { Lang } from '../state/urlState'
 import { formatChange, formatNumber, formatPeriod } from './format'
 import { type Translate, formatLayerValue } from './layerText'
+import { ListingLinks } from './ListingLinks'
+import { NameMeaning } from './NameMeaning'
 import { Sparkline } from './Sparkline'
 
 const PIPS = [CONFIDENCE.low, CONFIDENCE.medium, CONFIDENCE.high]
@@ -69,6 +71,7 @@ export function Inspector() {
     return (
       <section className="panel inspector inspector--empty" aria-label={t('inspector.title')}>
         <p className="inspector__hint">{t('inspector.empty')}</p>
+        <NameMeaning />
       </section>
     )
   }
@@ -151,6 +154,8 @@ export function Inspector() {
       )}
 
       {place.kind === 'commune' && <Indicators props={selection.props} />}
+
+      {place.kind === 'commune' && <ListingLinks code={place.code} name={place.name} />}
 
       <p className="inspector__disclaimer">{t('inspector.disclaimer')}</p>
     </section>

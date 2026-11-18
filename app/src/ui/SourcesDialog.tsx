@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../state/appStore'
+import { NameMeaning } from './NameMeaning'
 import { PrivacySwitch } from './PrivacySwitch'
 import { PwaSection } from './PwaSection'
 import { SourceCredits } from './SourceCredits'
@@ -31,6 +32,7 @@ export function SourcesDialog() {
           {t('sources.close')}
         </button>
       </div>
+      <NameMeaning />
       <p>{t('sources.method')}</p>
       <p>{t('sources.methodExtra')}</p>
       <p>{t('sources.limits')}</p>

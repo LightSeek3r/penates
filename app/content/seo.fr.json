@@ -5,7 +5,8 @@
   "h1": "Prix de l'immobilier en France, et leur fiabilité",
   "intro": [
     "Carte interactive gratuite : pour chaque commune de France métropolitaine, le prix de vente médian au m² des maisons et des appartements, avec le nombre de ventes qui le fonde, la période couverte et un indice de fiabilité.",
-    "Les chiffres viennent des demandes de valeurs foncières (DVF) publiées par la DGFiP, agrégées par commune. Les communes qui reposent sur peu de ventes sont signalées par une texture sur la carte, et l'Alsace-Moselle et Mayotte, absentes de la base DVF, sont indiquées comme telles plutôt que présentées comme bon marché."
+    "Les chiffres viennent des demandes de valeurs foncières (DVF) publiées par la DGFiP, agrégées par commune. Les communes qui reposent sur peu de ventes sont signalées par une texture sur la carte, et l'Alsace-Moselle et Mayotte, absentes de la base DVF, sont indiquées comme telles plutôt que présentées comme bon marché.",
+    "Pénates (/pe.nat/) : les dieux protecteurs du foyer dans la Rome antique, et par extension la maison où l'on vit. Le nom dit le projet : aider à choisir où poser ses valises."
   ],
   "featuresTitle": "Ce que vous pouvez faire",
   "features": [

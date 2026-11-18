@@ -1510,3 +1510,40 @@ summary.group__head:hover {
     display: none;
   }
 }
+
+/* ---- name meaning and listing links ---- */
+
+.name-meaning {
+  margin: var(--space-3) 0;
+  color: var(--text-dim);
+  font-size: var(--text-sm);
+}
+
+.name-meaning strong {
+  color: var(--text);
+}
+
+.name-meaning__ipa {
+  font-variant-numeric: normal;
+  white-space: nowrap;
+}
+
+.listings {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+
+.listings__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-1) 0;
+}
+
+.listings__list a {
+  display: inline-block;
+  padding: var(--space-1) 0;
+  color: var(--text);
+}

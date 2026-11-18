@@ -5,7 +5,8 @@
   "h1": "French property prices, and how reliable they are",
   "intro": [
     "A free interactive map: for every commune in metropolitan France, the median sale price per m² of houses and flats, with the number of sales behind it, the period covered and a reliability indicator.",
-    "The figures come from the property transactions file (DVF) published by the French tax administration, aggregated by commune. Communes that rest on few sales are marked with a texture on the map, and Alsace-Moselle and Mayotte, which are not in the DVF database, are labelled as such rather than shown as cheap."
+    "The figures come from the property transactions file (DVF) published by the French tax administration, aggregated by commune. Communes that rest on few sales are marked with a texture on the map, and Alsace-Moselle and Mayotte, which are not in the DVF database, are labelled as such rather than shown as cheap.",
+    "Pénates (/pe.nat/, said “pay-NAHT”) comes from the household gods of ancient Rome, protectors of the home. The name says the aim: helping you choose where to settle."
   ],
   "featuresTitle": "What you can do",
   "features": [
