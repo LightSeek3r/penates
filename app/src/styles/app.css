@@ -106,9 +106,15 @@ ol {
   letter-spacing: 0.01em;
 }
 
-.brand__tagline {
+.brand__tagline,
+.brand__gloss {
   font-size: var(--text-xs);
   color: var(--text-dim);
+}
+
+/* The tagline gives way to the gloss on phones, where the details panel that defines the name is hidden. */
+.brand__gloss {
+  display: none;
 }
 
 .topbar__actions {
@@ -634,6 +640,10 @@ ol {
 
   .brand__tagline {
     display: none;
+  }
+
+  .brand__gloss {
+    display: block;
   }
 
   .topbar {

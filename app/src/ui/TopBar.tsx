@@ -19,6 +19,9 @@ export function TopBar() {
         <div>
           <p className="brand__name">{t('app.title')}</p>
           <p className="brand__tagline">{t('app.tagline')}</p>
+          <p className="brand__gloss">
+            <span lang="fr-fonipa">{t('app.pronunciation')}</span> · {t('app.gloss')}
+          </p>
         </div>
       </div>
       <Search />

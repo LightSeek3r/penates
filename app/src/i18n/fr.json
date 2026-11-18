@@ -3,6 +3,7 @@
     "title": "Pénates",
     "tagline": "Prix de l'immobilier en France, et leur fiabilité",
     "pronunciation": "/pe.nat/",
+    "gloss": "dieux du foyer, la maison",
     "meaning": "nom masculin pluriel. Dieux protecteurs du foyer dans la Rome antique ; par extension, la maison où l'on vit (« regagner ses pénates »)."
   },
   "search": {
@@ -100,6 +101,10 @@
   "listings": {
     "title": "Voir les annonces",
     "link": "Annonces de vente à {{name}} sur {{portal}} (nouvel onglet)",
+    "scope": {
+      "mai": "Recherche limitée aux maisons.",
+      "app": "Recherche limitée aux appartements."
+    },
     "note": "Sites tiers, indépendants de Pénates : ce sont des prix demandés, pas les prix de vente affichés ici."
   },
   "sources": {

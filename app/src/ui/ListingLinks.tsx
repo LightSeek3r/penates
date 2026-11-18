@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { listingLinks } from '../domain/listings'
+import { useAppStore } from '../state/appStore'
 
 const ENDPOINT = 'https://geo.api.gouv.fr/communes'
 // Arrondissements are how Paris, Lyon and Marseille sales are keyed, and /communes leaves them out by default.
@@ -16,10 +17,11 @@ async function fetchPostalCode(code: string, signal: AbortSignal): Promise<strin
   return item?.codesPostaux?.[0] ?? null
 }
 
-/** Outbound searches on third-party portals for the selected commune; absent while the postal code is unknown, or offline. */
+/** Outbound searches on third-party portals for the selected commune, narrowed to the property type chosen in the price layer; absent while the postal code is unknown, or offline. */
 export function ListingLinks({ code, name }: { code: string; name: string }) {
   const { t } = useTranslation()
   const base = useId()
+  const type = useAppStore((state) => state.priceType)
   const [found, setFound] = useState<{ code: string; postalCode: string | null } | null>(null)
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export function ListingLinks({ code, name }: { code: string; name: string }) {
   }, [code])
 
   const postalCode = postalCodes.get(code) ?? (found?.code === code ? found.postalCode : null)
-  const links = postalCode ? listingLinks({ code, name, postalCode }) : []
+  const links = postalCode ? listingLinks({ code, name, postalCode }, type) : []
   if (links.length === 0) return null
 
   return (
@@ -55,7 +57,10 @@ export function ListingLinks({ code, name }: { code: string; name: string }) {
           </li>
         ))}
       </ul>
-      <p className="indicators__note">{t('listings.note')}</p>
+      <p className="indicators__note">
+        {type !== 'all' && `${t(`listings.scope.${type}`)} `}
+        {t('listings.note')}
+      </p>
     </div>
   )
 }

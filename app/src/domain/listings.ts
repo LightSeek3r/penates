@@ -1,10 +1,12 @@
 /**
- * Search pages on third-party listing portals, pre-filtered on one commune (sale, houses and flats).
+ * Search pages on third-party listing portals, pre-filtered on one commune (sale; houses, flats or both).
  *
  * The portals own these URL formats and none of them is a documented API, so each portal is one entry in
  * PORTALS: when one breaks, fix or drop that entry. Portals whose search needs a private geographic id that
- * cannot be derived from the INSEE or postal code (PAP, Logic-Immo, Immonot) are deliberately absent.
+ * cannot be derived from the INSEE or postal code (PAP, Logic-Immo, Immonot, SeLoger) are deliberately absent.
  */
+
+import type { PriceType } from './place'
 
 export interface ListingPlace {
   /** INSEE commune code, or municipal-arrondissement code for Paris, Lyon and Marseille. */
@@ -23,7 +25,7 @@ interface Portal {
   id: string
   label: string
   /** Null when the portal cannot be searched for this place. */
-  url: (place: ListingPlace) => string | null
+  url: (place: ListingPlace, type: PriceType) => string | null
 }
 
 /** "Paris 1er Arrondissement" is searched as "Paris": portals know the city plus the postal code. */
@@ -43,41 +45,29 @@ export function slugOf(name: string): string {
     .replace(/^-|-$/g, '')
 }
 
-/**
- * SeLoger's commune key: department, a zero, then the three last digits of the INSEE code (35238 becomes 350238).
- * Corsica (2A, 2B) and overseas codes do not follow that rule, so they get no SeLoger link.
- */
-export function selogerKey(code: string): string | null {
-  return /^\d{5}$/.test(code) && Number(code.slice(0, 2)) < 96 ? `${code.slice(0, 2)}0${code.slice(2)}` : null
-}
+const BIENICI_TYPES: Record<PriceType, string> = { all: 'maisonvilla,appartement', mai: 'maisonvilla', app: 'appartement' }
+// Leboncoin's real_estate_type: 1 is a house, 2 a flat.
+const LEBONCOIN_TYPES: Record<PriceType, string> = { all: '1,2', mai: '1', app: '2' }
 
 const PORTALS: readonly Portal[] = [
   {
     id: 'bienici',
     label: "Bien'ici",
-    url: ({ name, postalCode }) => `https://www.bienici.com/recherche/achat/${slugOf(searchName(name))}-${postalCode}/maisonvilla,appartement`,
+    url: ({ name, postalCode }, type) => `https://www.bienici.com/recherche/achat/${slugOf(searchName(name))}-${postalCode}/${BIENICI_TYPES[type]}`,
   },
   {
     id: 'leboncoin',
     label: 'Leboncoin',
-    url: ({ name, postalCode }) =>
-      `https://www.leboncoin.fr/recherche?category=9&real_estate_type=1,2&locations=${encodeURIComponent(`${searchName(name)}_${postalCode}`)}`,
-  },
-  {
-    id: 'seloger',
-    label: 'SeLoger',
-    url: ({ code }) => {
-      const key = selogerKey(code)
-      return key ? `https://www.seloger.com/list.htm?projects=2&types=1,2&places=${encodeURIComponent(`[{"inseeCodes":[${key}]}]`)}` : null
-    },
+    url: ({ name, postalCode }, type) =>
+      `https://www.leboncoin.fr/recherche?category=9&real_estate_type=${LEBONCOIN_TYPES[type]}&locations=${encodeURIComponent(`${searchName(name)}_${postalCode}`)}`,
   },
 ]
 
 /** One link per portal that can be searched for this place, in a fixed alphabetical order (no ranking). */
-export function listingLinks(place: ListingPlace): ListingLink[] {
+export function listingLinks(place: ListingPlace, type: PriceType = 'all'): ListingLink[] {
   if (!/^\d{5}$/.test(place.postalCode) || place.name.trim() === '') return []
   return PORTALS.flatMap((portal) => {
-    const url = portal.url(place)
+    const url = portal.url(place, type)
     return url ? [{ portal: portal.id, label: portal.label, url }] : []
   })
 }
