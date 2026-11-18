@@ -78,7 +78,7 @@ const PORTALS: readonly Portal[] = [
   {
     id: 'zimo',
     label: 'Zimo',
-    // Zimo gathers listings from several portals; /vente/maison/ is confirmed, the flat and all-types paths follow by analogy.
+    // Zimo gathers listings from several portals.
     url: ({ name, postalCode }, type) => `https://www.zimo.fr/annonces/immobilier/vente/${ZIMO_TYPES[type]}${slugOf(searchName(name))}-${postalCode}`,
   },
 ]
