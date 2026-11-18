@@ -53,8 +53,13 @@ const BIENICI_TYPES: Record<PriceType, string> = { all: 'maisonvilla,appartement
 // Leboncoin's real_estate_type: 1 is a house, 2 a flat.
 const LEBONCOIN_TYPES: Record<PriceType, string> = { all: '1,2', mai: '1', app: '2' }
 
-// SeLoger's estateTypes: omitted for both, since only the single-type values are known to work.
-const SELOGER_TYPES: Record<PriceType, string> = { all: '', mai: '&estateTypes=House', app: '&estateTypes=Apartment' }
+// SeLoger re-reads the typed text when the visitor presses enter and drops estateTypes if the text does not name the
+// type, so each single type is also written as a word after the commune. Both types: no filter, which is known to work.
+const SELOGER_TYPES: Record<PriceType, { param: string; word: string }> = {
+  all: { param: '', word: '' },
+  mai: { param: '&estateTypes=House', word: ' maison' },
+  app: { param: '&estateTypes=Apartment', word: ' appartement' },
+}
 const ZIMO_TYPES: Record<PriceType, string> = { all: '', mai: 'maison/', app: 'appartement/' }
 
 const PORTALS: readonly Portal[] = [
@@ -73,7 +78,10 @@ const PORTALS: readonly Portal[] = [
     id: 'seloger',
     label: 'SeLoger',
     prefill: true,
-    url: ({ name }, type) => `https://www.seloger.com/classified-search?distributionTypes=Buy${SELOGER_TYPES[type]}&initialQuery=${encodeURIComponent(searchName(name))}&method=text`,
+    url: ({ name }, type) => {
+      const { param, word } = SELOGER_TYPES[type]
+      return `https://www.seloger.com/classified-search?distributionTypes=Buy${param}&initialQuery=${encodeURIComponent(searchName(name) + word)}&method=text`
+    },
   },
   {
     id: 'zimo',

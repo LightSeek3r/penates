@@ -27,10 +27,17 @@ describe('listing links', () => {
   it('pre-fills SeLoger with the commune name and says so', () => {
     const links = listingLinks({ code: '35238', name: 'Rennes', postalCode: '35000' }, 'mai')
     const seloger = links.find((link) => link.portal === 'seloger')
-    expect(seloger?.url).toBe('https://www.seloger.com/classified-search?distributionTypes=Buy&estateTypes=House&initialQuery=Rennes&method=text')
+    expect(seloger?.url).toBe('https://www.seloger.com/classified-search?distributionTypes=Buy&estateTypes=House&initialQuery=Rennes%20maison&method=text')
     expect(seloger?.prefill).toBe(true)
     expect(links.filter((link) => link.portal !== 'seloger').every((link) => !link.prefill)).toBe(true)
     expect(listingLinks({ code: '75101', name: 'Paris 1er Arrondissement', postalCode: '75001' }).find((link) => link.portal === 'seloger')?.url).toContain('initialQuery=Paris&')
+  })
+
+  it('names the type in the SeLoger text so pressing enter keeps it', () => {
+    const place = { code: '74298', name: 'Vétraz-Monthoux', postalCode: '74100' }
+    const url = (type: 'all' | 'mai' | 'app') => listingLinks(place, type).find((link) => link.portal === 'seloger')?.url
+    expect(url('app')).toBe('https://www.seloger.com/classified-search?distributionTypes=Buy&estateTypes=Apartment&initialQuery=V%C3%A9traz-Monthoux%20appartement&method=text')
+    expect(url('all')).toContain('initialQuery=V%C3%A9traz-Monthoux&')
   })
 
   it('narrows the search to houses or flats', () => {
